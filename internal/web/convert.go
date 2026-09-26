@@ -116,6 +116,24 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := s.acquireConversionSlot(
+		r.Context(),
+	); err != nil {
+		if errors.Is(
+			err,
+			context.DeadlineExceeded,
+		) {
+			http.Error(
+				w,
+				"conversion queue full",
+				http.StatusServiceUnavailable,
+			)
+		}
+
+		return
+	}
+	defer s.releaseConversionSlot()
+
 	baseName := strings.TrimSuffix(
 		filepath.Base(header.Filename),
 		filepath.Ext(header.Filename),
