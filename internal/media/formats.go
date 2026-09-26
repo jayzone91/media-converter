@@ -161,6 +161,43 @@ var Formats = map[string]Format{
 		Targets:    []string{"mp4", "mkv", "webm", "mov", "avi", "mp3", "wav", "flac", "ogg", "gif"},
 		ProbeNames: []string{"mpeg"},
 	},
+
+	"docx": {
+		ID:       "docx",
+		MIME:     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		Category: CategoryDocument,
+		Targets:  []string{"pdf", "odt"},
+	},
+	"odt": {
+		ID:       "odt",
+		MIME:     "application/vnd.oasis.opendocument.text",
+		Category: CategoryDocument,
+		Targets:  []string{"pdf", "docx"},
+	},
+	"xlsx": {
+		ID:       "xlsx",
+		MIME:     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Category: CategoryDocument,
+		Targets:  []string{"pdf", "ods"},
+	},
+	"ods": {
+		ID:       "ods",
+		MIME:     "application/vnd.oasis.opendocument.spreadsheet",
+		Category: CategoryDocument,
+		Targets:  []string{"pdf", "xlsx"},
+	},
+	"pptx": {
+		ID:       "pptx",
+		MIME:     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		Category: CategoryDocument,
+		Targets:  []string{"pdf", "odp"},
+	},
+	"odp": {
+		ID:       "odp",
+		MIME:     "application/vnd.oasis.opendocument.presentation",
+		Category: CategoryDocument,
+		Targets:  []string{"pdf", "pptx"},
+	},
 }
 
 func FindByMIME(mime string) (Format, bool) {

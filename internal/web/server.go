@@ -12,14 +12,21 @@ type Server struct {
 	imageMagick *converter.ImageMagick
 	ffmpeg      *converter.FFmpeg
 	ffprobe     *media.FFProbe
+	libreOffice *converter.LibreOffice
 	mux         *http.ServeMux
 }
 
-func NewServer(imageMagick *converter.ImageMagick, ffmpeg *converter.FFmpeg, ffprobe *media.FFProbe) *Server {
+func NewServer(
+	imageMagick *converter.ImageMagick,
+	ffmpeg *converter.FFmpeg,
+	ffprobe *media.FFProbe,
+	libreOffice *converter.LibreOffice,
+) *Server {
 	server := &Server{
 		imageMagick: imageMagick,
 		ffmpeg:      ffmpeg,
 		ffprobe:     ffprobe,
+		libreOffice: libreOffice,
 		mux:         http.NewServeMux(),
 	}
 

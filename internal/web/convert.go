@@ -69,6 +69,9 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 	case media.CategoryAudio, media.CategoryVideo:
 		err = s.ffmpeg.Convert(r.Context(), inputPath, outputPath)
 
+	case media.CategoryDocument:
+		err = s.libreOffice.Convert(r.Context(), inputPath, outputPath)
+
 	default:
 		http.Error(w, "converter not implemented for this media type", http.StatusNotImplemented)
 		return

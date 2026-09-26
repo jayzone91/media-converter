@@ -39,6 +39,10 @@ func detectFormat(path string, ffprobe *media.FFProbe) (media.Format, error) {
 		}
 	}
 
+	if format, err := media.DetectDocument(path); err == nil {
+		return format, nil
+	}
+
 	format, err := ffprobe.Detect(path)
 	if err != nil {
 		return media.Format{}, err
