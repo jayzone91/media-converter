@@ -1,9 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("conversion-form");
   const fileInput = document.getElementById("file");
+  const dropZone = document.querySelector(".drop-zone");
   const options = document.getElementById("conversion-options");
   const overlay = document.getElementById("conversion-overlay");
   const errorBox = document.getElementById("conversion-error");
+
+  setupDragAndDrop(dropZone, fileInput, errorBox);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -69,11 +72,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       errorBox.hidden = false;
 
-      /*
-       * Upload-IDs werden einmalig konsumiert.
-       * Nach einem fehlgeschlagenen Convert muss
-       * deshalb eine neue Datei gewählt werden.
-       */
       resetForm(form, fileInput, options);
     } finally {
       overlay.hidden = true;
@@ -84,6 +82,72 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+function setupDragAndDrop(dropZone, fileInput, errorBox) {
+  const preventDefaults = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, preventDefaults);
+  });
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.add("drag-over");
+    });
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    dropZone.addEventListener(eventName, () => {
+      dropZone.classList.remove("drag-over");
+    });
+  });
+
+  dropZone.addEventListener("drop", (event) => {
+    const files = event.dataTransfer?.files;
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    if (files.length > 1) {
+      errorBox.textContent = "Bitte nur eine Datei gleichzeitig auswählen.";
+
+      errorBox.hidden = false;
+
+      return;
+    }
+
+    const file = files[0];
+
+    errorBox.hidden = true;
+    errorBox.textContent = "";
+
+    const transfer = new DataTransfer();
+
+    transfer.items.add(file);
+
+    fileInput.files = transfer.files;
+
+    fileInput.dispatchEvent(
+      new Event("change", {
+        bubbles: true,
+      }),
+    );
+  });
+
+  document.addEventListener("dragover", (event) => {
+    event.preventDefault();
+  });
+
+  document.addEventListener("drop", (event) => {
+    if (!dropZone.contains(event.target)) {
+      event.preventDefault();
+    }
+  });
+}
 
 function getDownloadFilename(contentDisposition) {
   if (!contentDisposition) {
@@ -127,9 +191,9 @@ function resetForm(form, fileInput, options) {
   fileInput.value = "";
 
   options.innerHTML = `
-        <div class="empty-state">
-            Wähle eine Datei aus, um die verfügbaren
-            Zielformate anzuzeigen.
-        </div>
-    `;
+    <div class="empty-state">
+      Wähle eine Datei aus, um die verfügbaren
+      Zielformate anzuzeigen.
+    </div>
+  `;
 }

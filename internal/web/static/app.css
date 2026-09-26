@@ -121,10 +121,11 @@ h1 {
     transform 160ms ease;
 }
 
-.drop-zone:hover {
-  border-color: #71717a;
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: #a1a1aa;
 
-  background: rgba(39, 39, 42, 0.55);
+  background: rgba(39, 39, 42, 0.75);
 
   transform: translateY(-1px);
 }

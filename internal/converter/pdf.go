@@ -2,6 +2,7 @@ package converter
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -20,29 +21,47 @@ type PDF struct {
 	pdfToText   string
 	pdfToPPM    string
 	tesseract   string
+	tessdataDir string
 	libreOffice *LibreOffice
 }
 
 func NewPDF(libreOffice *LibreOffice) (*PDF, error) {
 	pdfToText, err := exec.LookPath("pdftotext")
 	if err != nil {
-		return nil, fmt.Errorf("pdftotext not found: %w", err)
+		return nil, fmt.Errorf(
+			"pdftotext not found: %w",
+			err,
+		)
 	}
 
 	pdfToPPM, err := exec.LookPath("pdftoppm")
 	if err != nil {
-		return nil, fmt.Errorf("pdftoppm not found: %w", err)
+		return nil, fmt.Errorf(
+			"pdftoppm not found: %w",
+			err,
+		)
 	}
 
 	tesseract, err := exec.LookPath("tesseract")
 	if err != nil {
-		return nil, fmt.Errorf("tesseract not found: %w", err)
+		return nil, fmt.Errorf(
+			"tesseract not found: %w",
+			err,
+		)
+	}
+
+	tessdataDir, err := findTessdataDirectory(
+		tesseract,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &PDF{
 		pdfToText:   pdfToText,
 		pdfToPPM:    pdfToPPM,
 		tesseract:   tesseract,
+		tessdataDir: tessdataDir,
 		libreOffice: libreOffice,
 	}, nil
 }
@@ -219,24 +238,35 @@ func (c *PDF) extractTextWithOCR(ctx context.Context, input, output string) erro
 	return nil
 }
 
-func (c *PDF) ocrPage(ctx context.Context, image string) (string, error) {
+func (c *PDF) ocrPage(
+	ctx context.Context,
+	image string,
+) (string, error) {
 	cmd := exec.CommandContext(
 		ctx,
 		c.tesseract,
 		image,
 		"stdout",
+		"--tessdata-dir",
+		c.tessdataDir,
 		"-l",
 		"deu+eng",
 		"--psm",
 		"3",
 	)
 
-	output, err := cmd.CombinedOutput()
+	var stderr bytes.Buffer
+
+	cmd.Stderr = &stderr
+
+	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf(
 			"tesseract failed: %w: %s",
 			err,
-			string(output),
+			strings.TrimSpace(
+				stderr.String(),
+			),
 		)
 	}
 
@@ -339,4 +369,55 @@ func pdfPageNumber(path string) int {
 	}
 
 	return number
+}
+
+func findTessdataDirectory(
+	tesseract string,
+) (string, error) {
+	candidates := []string{
+		os.Getenv("TESSDATA_PREFIX"),
+
+		filepath.Join(
+			filepath.Dir(tesseract),
+			"tessdata",
+		),
+
+		"/usr/share/tesseract-ocr/5/tessdata",
+		"/usr/share/tesseract-ocr/4.00/tessdata",
+		"/usr/share/tessdata",
+	}
+
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(
+			candidate,
+		)
+
+		if candidate == "" {
+			continue
+		}
+
+		deu := filepath.Join(
+			candidate,
+			"deu.traineddata",
+		)
+
+		eng := filepath.Join(
+			candidate,
+			"eng.traineddata",
+		)
+
+		if _, err := os.Stat(deu); err != nil {
+			continue
+		}
+
+		if _, err := os.Stat(eng); err != nil {
+			continue
+		}
+
+		return candidate, nil
+	}
+
+	return "", fmt.Errorf(
+		"tesseract language data not found: deu.traineddata and eng.traineddata are required",
+	)
 }
