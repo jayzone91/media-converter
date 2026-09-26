@@ -1,6 +1,8 @@
 package web
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -77,10 +79,23 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	format, err := detectFormat(
+		r.Context(),
 		inputPath,
 		s.ffprobe,
 	)
 	if err != nil {
+		if errors.Is(
+			err,
+			context.DeadlineExceeded,
+		) {
+			http.Error(
+				w,
+				"media detection timed out",
+				http.StatusGatewayTimeout,
+			)
+			return
+		}
+
 		http.Error(
 			w,
 			"unsupported media type",
@@ -111,20 +126,26 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		baseName+"."+target,
 	)
 
+	conversionCtx, cancel := context.WithTimeout(
+		r.Context(),
+		conversionTimeout,
+	)
+	defer cancel()
+
 	switch format.Category {
 	case media.CategoryImage:
 		switch {
 		case format.ID == "gif" &&
 			(target == "mp4" || target == "webm"):
 			err = s.ffmpeg.Convert(
-				r.Context(),
+				conversionCtx,
 				inputPath,
 				outputPath,
 			)
 
 		default:
 			err = s.imageMagick.Convert(
-				r.Context(),
+				conversionCtx,
 				inputPath,
 				outputPath,
 			)
@@ -132,14 +153,14 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 
 	case media.CategoryAudio, media.CategoryVideo:
 		err = s.ffmpeg.Convert(
-			r.Context(),
+			conversionCtx,
 			inputPath,
 			outputPath,
 		)
 
 	case media.CategoryDocument:
 		err = s.libreOffice.Convert(
-			r.Context(),
+			conversionCtx,
 			inputPath,
 			outputPath,
 		)
@@ -148,7 +169,7 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		switch target {
 		case "docx":
 			err = s.pdf.ConvertToDOCX(
-				r.Context(),
+				conversionCtx,
 				inputPath,
 				outputPath,
 			)
@@ -160,7 +181,7 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 			)
 
 			err = s.pdf.ConvertToImages(
-				r.Context(),
+				conversionCtx,
 				inputPath,
 				outputPath,
 				target,
@@ -181,6 +202,25 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 			"converter not implemented for this media type",
 			http.StatusNotImplemented,
 		)
+		return
+	}
+
+	if errors.Is(
+		conversionCtx.Err(),
+		context.DeadlineExceeded,
+	) {
+		http.Error(
+			w,
+			"conversion timed out",
+			http.StatusGatewayTimeout,
+		)
+		return
+	}
+
+	if errors.Is(
+		conversionCtx.Err(),
+		context.Canceled,
+	) {
 		return
 	}
 

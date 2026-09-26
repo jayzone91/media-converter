@@ -1,6 +1,7 @@
 package media
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -34,8 +35,9 @@ func NewFFProbe() (*FFProbe, error) {
 	}, nil
 }
 
-func (p *FFProbe) Detect(path string) (Format, error) {
-	cmd := exec.Command(
+func (p *FFProbe) Detect(ctx context.Context, path string) (Format, error) {
+	cmd := exec.CommandContext(
+		ctx,
 		p.binary,
 		"-v",
 		"error",
@@ -48,7 +50,14 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return Format{}, fmt.Errorf("ffprobe failed: %w", err)
+		if ctx.Err() != nil {
+			return Format{}, ctx.Err()
+		}
+
+		return Format{}, fmt.Errorf(
+			"ffprobe failed: %w",
+			err,
+		)
 	}
 
 	var result probeResult
@@ -78,7 +87,9 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 		}
 	}
 
-	extension := strings.ToLower(filepath.Ext(path))
+	extension := strings.ToLower(
+		filepath.Ext(path),
+	)
 
 	if hasVideo {
 		switch extension {
@@ -108,22 +119,40 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 		}
 
 		switch {
-		case hasProbeName(result.Format.FormatName, "matroska"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"matroska",
+		):
 			return Formats["mkv"], nil
 
-		case hasProbeName(result.Format.FormatName, "webm"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"webm",
+		):
 			return Formats["webm"], nil
 
-		case hasProbeName(result.Format.FormatName, "avi"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"avi",
+		):
 			return Formats["avi"], nil
 
-		case hasProbeName(result.Format.FormatName, "mpeg"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"mpeg",
+		):
 			return Formats["mpeg"], nil
 
-		case hasProbeName(result.Format.FormatName, "asf"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"asf",
+		):
 			return Formats["wmv"], nil
 
-		case hasProbeName(result.Format.FormatName, "flv"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"flv",
+		):
 			return Formats["flv"], nil
 		}
 	}
@@ -157,25 +186,46 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 
 		switch {
 		case audioCodec == "opus" &&
-			hasProbeName(result.Format.FormatName, "ogg"):
+			hasProbeName(
+				result.Format.FormatName,
+				"ogg",
+			):
 			return Formats["opus"], nil
 
-		case hasProbeName(result.Format.FormatName, "mp3"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"mp3",
+		):
 			return Formats["mp3"], nil
 
-		case hasProbeName(result.Format.FormatName, "wav"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"wav",
+		):
 			return Formats["wav"], nil
 
-		case hasProbeName(result.Format.FormatName, "flac"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"flac",
+		):
 			return Formats["flac"], nil
 
-		case hasProbeName(result.Format.FormatName, "aac"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"aac",
+		):
 			return Formats["aac"], nil
 
-		case hasProbeName(result.Format.FormatName, "ogg"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"ogg",
+		):
 			return Formats["ogg"], nil
 
-		case hasProbeName(result.Format.FormatName, "asf"):
+		case hasProbeName(
+			result.Format.FormatName,
+			"asf",
+		):
 			return Formats["wma"], nil
 		}
 	}
@@ -186,8 +236,11 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 	)
 }
 
-func hasProbeName(formatNames string, name string) bool {
-	for _, candidate := range strings.Split(formatNames, ",") {
+func hasProbeName(formatNames, name string) bool {
+	for _, candidate := range strings.Split(
+		formatNames,
+		",",
+	) {
 		if candidate == name {
 			return true
 		}

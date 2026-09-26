@@ -1,7 +1,9 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 )
@@ -60,10 +62,23 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	format, err := detectFormat(
+		r.Context(),
 		inputPath,
 		s.ffprobe,
 	)
 	if err != nil {
+		if errors.Is(
+			err,
+			context.DeadlineExceeded,
+		) {
+			http.Error(
+				w,
+				"media detection timed out",
+				http.StatusGatewayTimeout,
+			)
+			return
+		}
+
 		http.Error(
 			w,
 			"unsupported media type",
