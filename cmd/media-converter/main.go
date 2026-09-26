@@ -1,0 +1,28 @@
+package main
+
+import (
+	"log"
+
+	"github.com/jayzone91/media-converter/internal/converter"
+	"github.com/jayzone91/media-converter/internal/web"
+)
+
+func main() {
+	imageMagick, err := converter.NewImageMagick()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ffmpeg, err := converter.NewFFmpeg()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server := web.NewServer(imageMagick, ffmpeg)
+
+	log.Println("listening on :8080")
+
+	if err := server.ListenAndServe(":8080"); err != nil {
+		log.Fatal(err)
+	}
+}
