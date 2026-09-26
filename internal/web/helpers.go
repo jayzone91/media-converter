@@ -31,14 +31,16 @@ func saveUpload(file multipart.File, filename string, tempDir string) (string, e
 	return path, nil
 }
 
-func detectFormat(path string) (media.Format, error) {
+func detectFormat(path string, ffprobe *media.FFProbe) (media.Format, error) {
 	detection, err := media.Detect(path)
-	if err != nil {
-		return media.Format{}, err
+	if err == nil {
+		if format, ok := media.FindByMIME(detection.MIME); ok {
+			return format, nil
+		}
 	}
 
-	format, ok := media.FindByMIME(detection.MIME)
-	if !ok {
+	format, err := ffprobe.Detect(path)
+	if err != nil {
 		return media.Format{}, err
 	}
 

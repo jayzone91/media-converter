@@ -5,18 +5,21 @@ import (
 	"net/http"
 
 	"github.com/jayzone91/media-converter/internal/converter"
+	"github.com/jayzone91/media-converter/internal/media"
 )
 
 type Server struct {
 	imageMagick *converter.ImageMagick
 	ffmpeg      *converter.FFmpeg
+	ffprobe     *media.FFProbe
 	mux         *http.ServeMux
 }
 
-func NewServer(imageMagick *converter.ImageMagick, ffmpeg *converter.FFmpeg) *Server {
+func NewServer(imageMagick *converter.ImageMagick, ffmpeg *converter.FFmpeg, ffprobe *media.FFProbe) *Server {
 	server := &Server{
 		imageMagick: imageMagick,
 		ffmpeg:      ffmpeg,
+		ffprobe:     ffprobe,
 		mux:         http.NewServeMux(),
 	}
 

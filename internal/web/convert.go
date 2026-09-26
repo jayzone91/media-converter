@@ -43,7 +43,7 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	format, err := detectFormat(inputPath)
+	format, err := detectFormat(inputPath, s.ffprobe)
 	if err != nil {
 		http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
 		return

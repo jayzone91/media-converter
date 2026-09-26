@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/jayzone91/media-converter/internal/converter"
+	"github.com/jayzone91/media-converter/internal/media"
 	"github.com/jayzone91/media-converter/internal/web"
 )
 
@@ -18,7 +19,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := web.NewServer(imageMagick, ffmpeg)
+	ffprobe, err := media.NewFFProbe()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server := web.NewServer(imageMagick, ffmpeg, ffprobe)
 
 	log.Println("listening on :8080")
 
