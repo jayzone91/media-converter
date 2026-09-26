@@ -66,7 +66,7 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 	case media.CategoryImage:
 		err = s.imageMagick.Convert(r.Context(), inputPath, outputPath)
 
-	case media.CategoryAudio:
+	case media.CategoryAudio, media.CategoryVideo:
 		err = s.ffmpeg.Convert(r.Context(), inputPath, outputPath)
 
 	default:
@@ -94,8 +94,14 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(
 		"Content-Disposition",
-		fmt.Sprintf(`attachment; filename"%s"`, filepath.Base(outputPath)),
+		fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(outputPath)),
 	)
 
-	http.ServeContent(w, r, filepath.Base(outputPath), stat.ModTime(), outputFile)
+	http.ServeContent(
+		w,
+		r,
+		filepath.Base(outputPath),
+		stat.ModTime(),
+		outputFile,
+	)
 }
