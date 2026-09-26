@@ -55,12 +55,12 @@ func (c *PDF) ConvertToDOCX(ctx context.Context, input, output string) error {
 			return err
 		}
 	} else {
-		useable, err := hasUsablePDFText(textPath)
+		usable, err := hasUsablePDFText(textPath)
 		if err != nil {
 			return err
 		}
 
-		if !useable {
+		if !usable {
 			if err := c.extractTextWithOCR(ctx, input, textPath); err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ func (c *PDF) ConvertToImages(ctx context.Context, input, output, format string)
 		return fmt.Errorf("unsupported PDF image format: %s", format)
 	}
 
-	tempDir, err := os.MkdirTemp(filepath.Dir(input), "pdf-images-*")
+	tempDir, err := os.MkdirTemp(filepath.Dir(input), "pdf-pages-*")
 	if err != nil {
 		return fmt.Errorf("failed to create PDF image temp dir: %w", err)
 	}
@@ -101,8 +101,14 @@ func (c *PDF) ConvertToImages(ctx context.Context, input, output, format string)
 	switch format {
 	case "png":
 		args = append(args, "-png")
+
 	case "jpeg":
-		args = append(args, "-jpeg", "-jpegopt", "quality=90")
+		args = append(
+			args,
+			"-jpeg",
+			"-jpegopt",
+			"quality=90",
+		)
 	}
 
 	args = append(args, input, prefix)
@@ -110,12 +116,12 @@ func (c *PDF) ConvertToImages(ctx context.Context, input, output, format string)
 	cmd := exec.CommandContext(ctx, c.pdfToPPM, args...)
 
 	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("pdftoppm failed: %w, %s", err, string(result))
+		return fmt.Errorf("pdftoppm failed: %w: %s", err, string(result))
 	}
 
 	extension := "." + format
 	if format == "jpeg" {
-		extension = ".jpeg"
+		extension = ".jpg"
 	}
 
 	pages, err := filepath.Glob(prefix + "-*" + extension)
@@ -150,7 +156,7 @@ func (c *PDF) extractText(ctx context.Context, input, output string) error {
 	)
 
 	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("pdftotext failed: %w, %s", err, string(result))
+		return fmt.Errorf("pdftotext failed: %w: %s", err, string(result))
 	}
 
 	return nil
@@ -171,7 +177,7 @@ func (c *PDF) extractTextWithOCR(ctx context.Context, input, output string) erro
 	)
 
 	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("pdftoppm failed: %w, %s", err, string(result))
+		return fmt.Errorf("pdftoppm failed: %w: %s", err, string(result))
 	}
 
 	pages, err := filepath.Glob(prefix + "-*.png")
@@ -202,9 +208,14 @@ func (c *PDF) extractTextWithOCR(ctx context.Context, input, output string) erro
 		text.WriteString(pageText)
 	}
 
-	if err := os.WriteFile(output, []byte(text.String()), 0600); err != nil {
+	if err := os.WriteFile(
+		output,
+		[]byte(text.String()),
+		0600,
+	); err != nil {
 		return fmt.Errorf("failed to write OCR text: %w", err)
 	}
+
 	return nil
 }
 
@@ -222,7 +233,11 @@ func (c *PDF) ocrPage(ctx context.Context, image string) (string, error) {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("tesseract failed: %w, %s", err, string(output))
+		return "", fmt.Errorf(
+			"tesseract failed: %w: %s",
+			err,
+			string(output),
+		)
 	}
 
 	return string(output), nil
@@ -286,7 +301,10 @@ func addFileToZIP(archive *zip.Writer, path, name string) error {
 func hasUsablePDFText(path string) (bool, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return false, fmt.Errorf("failed to read extracted PDF text: %w", err)
+		return false, fmt.Errorf(
+			"failed to read extracted PDF text: %w",
+			err,
+		)
 	}
 
 	characters := 0
@@ -305,7 +323,10 @@ func hasUsablePDFText(path string) (bool, error) {
 }
 
 func pdfPageNumber(path string) int {
-	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	name := strings.TrimSuffix(
+		filepath.Base(path),
+		filepath.Ext(path),
+	)
 
 	index := strings.LastIndex(name, "-")
 	if index == -1 {
