@@ -70,11 +70,6 @@ func (s *Server) routes() {
 	)
 
 	s.mux.HandleFunc(
-		"POST /upload",
-		s.handleUpload,
-	)
-
-	s.mux.HandleFunc(
 		"POST /convert",
 		s.handleConvert,
 	)
