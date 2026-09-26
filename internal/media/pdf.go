@@ -5,6 +5,6 @@ func init() {
 		ID:       "pdf",
 		MIME:     "application/pdf",
 		Category: CategoryPDF,
-		Targets:  []string{"docx"},
+		Targets:  []string{"docx", "png", "jpeg"},
 	}
 }

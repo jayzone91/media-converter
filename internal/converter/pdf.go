@@ -1,8 +1,10 @@
 package converter
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -71,6 +73,66 @@ func (c *PDF) ConvertToDOCX(ctx context.Context, input, output string) error {
 
 	if _, err := os.Stat(output); err != nil {
 		return fmt.Errorf("docx output not created: %w", err)
+	}
+
+	return nil
+}
+
+func (c *PDF) ConvertToImages(ctx context.Context, input, output, format string) error {
+	switch format {
+	case "png", "jpeg":
+	default:
+		return fmt.Errorf("unsupported PDF image format: %s", format)
+	}
+
+	tempDir, err := os.MkdirTemp(filepath.Dir(input), "pdf-images-*")
+	if err != nil {
+		return fmt.Errorf("failed to create PDF image temp dir: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	prefix := filepath.Join(tempDir, "page")
+
+	args := []string{
+		"-r",
+		"200",
+	}
+
+	switch format {
+	case "png":
+		args = append(args, "-png")
+	case "jpeg":
+		args = append(args, "-jpeg", "-jpegopt", "quality=90")
+	}
+
+	args = append(args, input, prefix)
+
+	cmd := exec.CommandContext(ctx, c.pdfToPPM, args...)
+
+	if result, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("pdftoppm failed: %w, %s", err, string(result))
+	}
+
+	extension := "." + format
+	if format == "jpeg" {
+		extension = ".jpeg"
+	}
+
+	pages, err := filepath.Glob(prefix + "-*" + extension)
+	if err != nil {
+		return fmt.Errorf("failed to find rendered PDF pages: %w", err)
+	}
+
+	if len(pages) == 0 {
+		return fmt.Errorf("pdftoppm produced no pages")
+	}
+
+	sort.Slice(pages, func(i, j int) bool {
+		return pdfPageNumber(pages[i]) < pdfPageNumber(pages[j])
+	})
+
+	if err := createImageZIP(output, pages, extension); err != nil {
+		return fmt.Errorf("failed to create PDF image archive: %w", err)
 	}
 
 	return nil
@@ -164,6 +226,61 @@ func (c *PDF) ocrPage(ctx context.Context, image string) (string, error) {
 	}
 
 	return string(output), nil
+}
+
+func createImageZIP(output string, pages []string, extension string) error {
+	file, err := os.Create(output)
+	if err != nil {
+		return err
+	}
+
+	archive := zip.NewWriter(file)
+
+	for index, page := range pages {
+		if err := addFileToZIP(
+			archive,
+			page,
+			fmt.Sprintf(
+				"page-%d%s",
+				index+1,
+				extension,
+			),
+		); err != nil {
+			archive.Close()
+			file.Close()
+			return err
+		}
+	}
+
+	if err := archive.Close(); err != nil {
+		file.Close()
+		return err
+	}
+
+	if err := file.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addFileToZIP(archive *zip.Writer, path, name string) error {
+	source, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := archive.Create(name)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(destination, source); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func hasUsablePDFText(path string) (bool, error) {

@@ -54,6 +54,11 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	baseName := strings.TrimSuffix(
+		filepath.Base(header.Filename),
+		filepath.Ext(header.Filename),
+	)
+
 	outputPath := filepath.Join(
 		tempDir,
 		strings.TrimSuffix(
@@ -76,6 +81,14 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		switch target {
 		case "docx":
 			err = s.pdf.ConvertToDOCX(r.Context(), inputPath, outputPath)
+
+		case "png", "jpeg":
+			outputPath = filepath.Join(
+				tempDir,
+				baseName+"-"+target+".zip",
+			)
+
+			err = s.pdf.ConvertToImages(r.Context(), inputPath, outputPath, target)
 
 		default:
 			http.Error(w, "unsupported PDF conversion", http.StatusBadRequest)
