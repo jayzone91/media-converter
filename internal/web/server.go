@@ -13,6 +13,7 @@ type Server struct {
 	ffmpeg      *converter.FFmpeg
 	ffprobe     *media.FFProbe
 	libreOffice *converter.LibreOffice
+	pdf         *converter.PDF
 	mux         *http.ServeMux
 }
 
@@ -21,12 +22,14 @@ func NewServer(
 	ffmpeg *converter.FFmpeg,
 	ffprobe *media.FFProbe,
 	libreOffice *converter.LibreOffice,
+	pdf *converter.PDF,
 ) *Server {
 	server := &Server{
 		imageMagick: imageMagick,
 		ffmpeg:      ffmpeg,
 		ffprobe:     ffprobe,
 		libreOffice: libreOffice,
+		pdf:         pdf,
 		mux:         http.NewServeMux(),
 	}
 

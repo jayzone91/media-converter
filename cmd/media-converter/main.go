@@ -26,7 +26,12 @@ func main() {
 
 	libreoffice, err := converter.NewLibreOffice()
 
-	server := web.NewServer(imageMagick, ffmpeg, ffprobe, libreoffice)
+	pdf, err := converter.NewPDF(libreoffice)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server := web.NewServer(imageMagick, ffmpeg, ffprobe, libreoffice, pdf)
 
 	log.Println("listening on :8080")
 

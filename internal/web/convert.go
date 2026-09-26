@@ -72,6 +72,16 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 	case media.CategoryDocument:
 		err = s.libreOffice.Convert(r.Context(), inputPath, outputPath)
 
+	case media.CategoryPDF:
+		switch target {
+		case "docx":
+			err = s.pdf.ConvertToDOCX(r.Context(), inputPath, outputPath)
+
+		default:
+			http.Error(w, "unsupported PDF conversion", http.StatusBadRequest)
+			return
+		}
+
 	default:
 		http.Error(w, "converter not implemented for this media type", http.StatusNotImplemented)
 		return
