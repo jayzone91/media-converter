@@ -12,45 +12,92 @@ import (
 )
 
 func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(MAX_FILE_SIZE); err != nil {
-		http.Error(w, "invalid multipart form", http.StatusBadRequest)
+	if !parseMultipartForm(w, r) {
 		return
 	}
 
-	target := strings.ToLower(r.FormValue("target"))
+	target := strings.ToLower(
+		r.FormValue("target"),
+	)
 	if target == "" {
-		http.Error(w, "missing target format", http.StatusBadRequest)
+		http.Error(
+			w,
+			"missing target format",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "missing file", http.StatusBadRequest)
+		http.Error(
+			w,
+			"missing file",
+			http.StatusBadRequest,
+		)
 		return
 	}
 	defer file.Close()
 
-	tempDir, err := os.MkdirTemp("", "media-converter-*")
+	if !validateFileSize(header) {
+		http.Error(
+			w,
+			"upload too large",
+			http.StatusRequestEntityTooLarge,
+		)
+		return
+	}
+
+	tempDir, err := os.MkdirTemp(
+		"",
+		"media-converter-*",
+	)
 	if err != nil {
-		http.Error(w, "failed to create temp dir", http.StatusInternalServerError)
+		http.Error(
+			w,
+			"failed to create temp dir",
+			http.StatusInternalServerError,
+		)
 		return
 	}
 	defer os.RemoveAll(tempDir)
 
-	inputPath, err := saveUpload(file, header.Filename, tempDir)
+	inputPath, err := saveUpload(
+		file,
+		header.Filename,
+		tempDir,
+	)
 	if err != nil {
-		http.Error(w, "failed to save upload", http.StatusInternalServerError)
+		http.Error(
+			w,
+			"failed to save upload",
+			http.StatusInternalServerError,
+		)
 		return
 	}
 
-	format, err := detectFormat(inputPath, s.ffprobe)
+	format, err := detectFormat(
+		inputPath,
+		s.ffprobe,
+	)
 	if err != nil {
-		http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
+		http.Error(
+			w,
+			"unsupported media type",
+			http.StatusUnsupportedMediaType,
+		)
 		return
 	}
 
-	if !slices.Contains(format.Targets, target) {
-		http.Error(w, "unsupported conversion", http.StatusBadRequest)
+	if !slices.Contains(
+		format.Targets,
+		target,
+	) {
+		http.Error(
+			w,
+			"unsupported conversion",
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -67,7 +114,8 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 	switch format.Category {
 	case media.CategoryImage:
 		switch {
-		case format.ID == "gif" && (target == "mp4" || target == "webm"):
+		case format.ID == "gif" &&
+			(target == "mp4" || target == "webm"):
 			err = s.ffmpeg.Convert(
 				r.Context(),
 				inputPath,
@@ -137,7 +185,11 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusInternalServerError,
+		)
 		return
 	}
 
