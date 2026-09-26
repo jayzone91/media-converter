@@ -26,6 +26,7 @@ type Server struct {
 	ffprobe         *media.FFProbe
 	libreOffice     *converter.LibreOffice
 	pdf             *converter.PDF
+	uploads         *uploadStore
 	conversionSlots chan struct{}
 	mux             *http.ServeMux
 	httpServer      *http.Server
@@ -44,6 +45,7 @@ func NewServer(
 		ffprobe:     ffprobe,
 		libreOffice: libreOffice,
 		pdf:         pdf,
+		uploads:     newUploadStore(),
 		conversionSlots: make(
 			chan struct{},
 			maxConcurrentConversions,
@@ -57,16 +59,33 @@ func NewServer(
 }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /", s.handleIndex)
-	s.mux.HandleFunc("POST /upload", s.handleUpload)
-	s.mux.HandleFunc("POST /convert", s.handleConvert)
-}
+	s.mux.HandleFunc(
+		"GET /",
+		s.handleIndex,
+	)
 
-func (s *Server) handleIndex(
-	w http.ResponseWriter,
-	_ *http.Request,
-) {
-	_, _ = w.Write([]byte("media-converter"))
+	s.mux.HandleFunc(
+		"POST /detect",
+		s.handleDetect,
+	)
+
+	s.mux.HandleFunc(
+		"POST /upload",
+		s.handleUpload,
+	)
+
+	s.mux.HandleFunc(
+		"POST /convert",
+		s.handleConvert,
+	)
+
+	s.mux.Handle(
+		"GET /static/",
+		http.StripPrefix(
+			"/static/",
+			staticHandler(),
+		),
+	)
 }
 
 func (s *Server) acquireConversionSlot(
@@ -91,7 +110,9 @@ func (s *Server) releaseConversionSlot() {
 	<-s.conversionSlots
 }
 
-func (s *Server) ListenAndServe(addr string) error {
+func (s *Server) ListenAndServe(
+	addr string,
+) error {
 	s.httpServer = &http.Server{
 		Addr:              addr,
 		Handler:           s.mux,
@@ -101,22 +122,35 @@ func (s *Server) ListenAndServe(addr string) error {
 	}
 
 	err := s.httpServer.ListenAndServe()
-	if errors.Is(err, http.ErrServerClosed) {
+
+	if errors.Is(
+		err,
+		http.ErrServerClosed,
+	) {
 		return nil
 	}
 
 	return err
 }
 
-func (s *Server) Shutdown(ctx context.Context) error {
+func (s *Server) Shutdown(
+	ctx context.Context,
+) error {
 	if s.httpServer == nil {
+		s.uploads.Close()
 		return nil
 	}
 
-	return s.httpServer.Shutdown(ctx)
+	err := s.httpServer.Shutdown(ctx)
+
+	s.uploads.Close()
+
+	return err
 }
 
 func (s *Server) Close() error {
+	s.uploads.Close()
+
 	if s.httpServer == nil {
 		return nil
 	}

@@ -1,0 +1,29 @@
+{{ define "detect.html" }}
+
+<input type="hidden" name="upload_id" value="{{ .UploadID }}" />
+
+<div class="detected-file">
+  <div>
+    <span class="label"> Datei </span>
+
+    <strong class="filename"> {{ .Filename }} </strong>
+  </div>
+
+  <span class="format-badge"> {{ upper .Format.ID }} </span>
+</div>
+
+<div class="target-section">
+  <label class="label" for="target"> Konvertieren nach </label>
+
+  <select id="target" name="target" class="target-select" required>
+    <option value="" selected disabled>Zielformat auswählen</option>
+
+    {{ range .Format.Targets }}
+    <option value="{{ . }}">{{ upper . }}</option>
+    {{ end }}
+  </select>
+</div>
+
+<button class="convert-button" type="submit">Konvertieren</button>
+
+{{ end }}

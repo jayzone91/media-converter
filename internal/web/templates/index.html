@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Media Converter</title>
+
+    <link rel="stylesheet" href="/static/app.css" />
+
+    <script src="/static/htmx.min.js" defer></script>
+
+    <script src="/static/app.js" defer></script>
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="converter">
+        <header class="converter-header">
+          <span class="eyebrow"> Media Converter </span>
+
+          <h1>Dateien konvertieren.</h1>
+
+          <p>
+            Bilder, Audio, Video, Dokumente und PDF direkt im Browser
+            konvertieren.
+          </p>
+        </header>
+
+        <form
+          id="conversion-form"
+          class="conversion-form"
+          action="/convert"
+          method="post"
+          enctype="multipart/form-data"
+        >
+          <label class="drop-zone" for="file">
+            <span class="drop-icon"> ↑ </span>
+
+            <span class="drop-title"> Datei auswählen </span>
+
+            <span class="drop-description"> oder hier ablegen </span>
+
+            <span class="drop-limit"> Maximal 512 MiB </span>
+
+            <input
+              id="file"
+              class="file-input"
+              type="file"
+              name="file"
+              required
+              hx-post="/detect"
+              hx-trigger="change"
+              hx-target="#conversion-options"
+              hx-swap="innerHTML"
+              hx-encoding="multipart/form-data"
+              hx-include="closest form"
+              hx-indicator="#detect-indicator"
+            />
+          </label>
+
+          <div id="detect-indicator" class="indicator htmx-indicator">
+            <span class="small-spinner"></span>
+            Datei wird analysiert …
+          </div>
+
+          <section
+            id="conversion-options"
+            class="conversion-options"
+            aria-live="polite"
+          >
+            <div class="empty-state">
+              Wähle eine Datei aus, um die verfügbaren Zielformate anzuzeigen.
+            </div>
+          </section>
+
+          <div id="conversion-error" class="conversion-error" hidden></div>
+        </form>
+      </section>
+
+      <footer class="footer">
+        Dateien werden nur temporär verarbeitet und nach Abschluss der Anfrage
+        gelöscht.
+      </footer>
+    </main>
+
+    <div id="conversion-overlay" class="conversion-overlay" hidden>
+      <div class="conversion-progress">
+        <div class="spinner"></div>
+
+        <strong> Datei wird konvertiert </strong>
+
+        <span> Die Verarbeitung kann je nach Dateigröße etwas dauern. </span>
+      </div>
+    </div>
+  </body>
+</html>

@@ -13,93 +13,164 @@ import (
 	"github.com/jayzone91/media-converter/internal/media"
 )
 
-func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
-	if !parseMultipartForm(w, r) {
-		return
+func (s *Server) handleConvert(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	var (
+		inputPath string
+		baseName  string
+		tempDir   string
+		format    media.Format
+		err       error
+	)
+
+	contentType := r.Header.Get(
+		"Content-Type",
+	)
+
+	if strings.HasPrefix(
+		contentType,
+		"application/x-www-form-urlencoded",
+	) {
+		if err := r.ParseForm(); err != nil {
+			http.Error(
+				w,
+				"invalid form",
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		uploadID := r.FormValue(
+			"upload_id",
+		)
+
+		if uploadID == "" {
+			http.Error(
+				w,
+				"missing upload id",
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		upload, ok := s.uploads.Take(
+			uploadID,
+		)
+		if !ok {
+			http.Error(
+				w,
+				"upload expired or not found",
+				http.StatusGone,
+			)
+			return
+		}
+
+		tempDir = upload.Directory
+		inputPath = upload.Path
+		format = upload.Format
+
+		baseName = strings.TrimSuffix(
+			filepath.Base(upload.Filename),
+			filepath.Ext(upload.Filename),
+		)
+
+		defer os.RemoveAll(tempDir)
+	} else {
+		if !parseMultipartForm(w, r) {
+			return
+		}
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(
+				w,
+				"missing file",
+				http.StatusBadRequest,
+			)
+			return
+		}
+		defer file.Close()
+
+		if !validateFileSize(header) {
+			http.Error(
+				w,
+				"upload too large",
+				http.StatusRequestEntityTooLarge,
+			)
+			return
+		}
+
+		tempDir, err = os.MkdirTemp(
+			"",
+			"media-converter-*",
+		)
+		if err != nil {
+			http.Error(
+				w,
+				"failed to create temp dir",
+				http.StatusInternalServerError,
+			)
+			return
+		}
+		defer os.RemoveAll(tempDir)
+
+		inputPath, err = saveUpload(
+			file,
+			header.Filename,
+			tempDir,
+		)
+		if err != nil {
+			http.Error(
+				w,
+				"failed to save upload",
+				http.StatusInternalServerError,
+			)
+			return
+		}
+
+		format, err = detectFormat(
+			r.Context(),
+			inputPath,
+			s.ffprobe,
+		)
+		if err != nil {
+			if errors.Is(
+				err,
+				context.DeadlineExceeded,
+			) {
+				http.Error(
+					w,
+					"media detection timed out",
+					http.StatusGatewayTimeout,
+				)
+				return
+			}
+
+			http.Error(
+				w,
+				"unsupported media type",
+				http.StatusUnsupportedMediaType,
+			)
+			return
+		}
+
+		baseName = strings.TrimSuffix(
+			filepath.Base(header.Filename),
+			filepath.Ext(header.Filename),
+		)
 	}
 
 	target := strings.ToLower(
 		r.FormValue("target"),
 	)
+
 	if target == "" {
 		http.Error(
 			w,
 			"missing target format",
 			http.StatusBadRequest,
-		)
-		return
-	}
-
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		http.Error(
-			w,
-			"missing file",
-			http.StatusBadRequest,
-		)
-		return
-	}
-	defer file.Close()
-
-	if !validateFileSize(header) {
-		http.Error(
-			w,
-			"upload too large",
-			http.StatusRequestEntityTooLarge,
-		)
-		return
-	}
-
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-*",
-	)
-	if err != nil {
-		http.Error(
-			w,
-			"failed to create temp dir",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer os.RemoveAll(tempDir)
-
-	inputPath, err := saveUpload(
-		file,
-		header.Filename,
-		tempDir,
-	)
-	if err != nil {
-		http.Error(
-			w,
-			"failed to save upload",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	format, err := detectFormat(
-		r.Context(),
-		inputPath,
-		s.ffprobe,
-	)
-	if err != nil {
-		if errors.Is(
-			err,
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"media detection timed out",
-				http.StatusGatewayTimeout,
-			)
-			return
-		}
-
-		http.Error(
-			w,
-			"unsupported media type",
-			http.StatusUnsupportedMediaType,
 		)
 		return
 	}
@@ -133,11 +204,6 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.releaseConversionSlot()
-
-	baseName := strings.TrimSuffix(
-		filepath.Base(header.Filename),
-		filepath.Ext(header.Filename),
-	)
 
 	outputPath := filepath.Join(
 		tempDir,
