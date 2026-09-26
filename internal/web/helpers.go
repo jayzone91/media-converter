@@ -11,8 +11,11 @@ import (
 
 const MAX_FILE_SIZE = 512 << 20
 
-func saveUpload(file multipart.File, filename string, tempDir string) (string, error) {
-	path := filepath.Join(tempDir, filepath.Base(filename))
+func saveUpload(file multipart.File, filename, tempDir string) (string, error) {
+	path := filepath.Join(
+		tempDir,
+		filepath.Base(filename),
+	)
 
 	dst, err := os.Create(path)
 	if err != nil {
@@ -40,6 +43,10 @@ func detectFormat(path string, ffprobe *media.FFProbe) (media.Format, error) {
 	}
 
 	if format, err := media.DetectDocument(path); err == nil {
+		return format, nil
+	}
+
+	if format, ok := media.FindImageByExtension(path); ok {
 		return format, nil
 	}
 

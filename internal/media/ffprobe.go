@@ -16,8 +16,10 @@ type probeResult struct {
 	Format struct {
 		FormatName string `json:"format_name"`
 	} `json:"format"`
+
 	Streams []struct {
 		CodecType string `json:"codec_type"`
+		CodecName string `json:"codec_name"`
 	} `json:"streams"`
 }
 
@@ -52,11 +54,15 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 	var result probeResult
 
 	if err := json.Unmarshal(output, &result); err != nil {
-		return Format{}, fmt.Errorf("failed to decode ffprobe output: %w", err)
+		return Format{}, fmt.Errorf(
+			"failed to decode ffprobe output: %w",
+			err,
+		)
 	}
 
 	hasVideo := false
 	hasAudio := false
+	audioCodec := ""
 
 	for _, stream := range result.Streams {
 		switch stream.CodecType {
@@ -65,66 +71,127 @@ func (p *FFProbe) Detect(path string) (Format, error) {
 
 		case "audio":
 			hasAudio = true
+
+			if audioCodec == "" {
+				audioCodec = stream.CodecName
+			}
 		}
 	}
 
-	names := strings.Split(result.Format.FormatName, ",")
+	extension := strings.ToLower(filepath.Ext(path))
 
 	if hasVideo {
-		switch strings.ToLower(filepath.Ext(path)) {
-		case ".mov":
-			return Formats["mov"], nil
+		switch extension {
 		case ".mp4", ".m4v":
 			return Formats["mp4"], nil
+
+		case ".mov":
+			return Formats["mov"], nil
+
+		case ".mkv":
+			return Formats["mkv"], nil
+
+		case ".webm":
+			return Formats["webm"], nil
+
+		case ".avi":
+			return Formats["avi"], nil
+
+		case ".mpeg", ".mpg":
+			return Formats["mpeg"], nil
+
+		case ".wmv":
+			return Formats["wmv"], nil
+
+		case ".flv":
+			return Formats["flv"], nil
 		}
 
-		for _, name := range names {
-			switch name {
-			case "matroska":
-				return Formats["mkv"], nil
-			case "webm":
-				return Formats["webm"], nil
-			case "avi":
-				return Formats["avi"], nil
-			case "mpeg":
-				return Formats["mpeg"], nil
-			}
+		switch {
+		case hasProbeName(result.Format.FormatName, "matroska"):
+			return Formats["mkv"], nil
+
+		case hasProbeName(result.Format.FormatName, "webm"):
+			return Formats["webm"], nil
+
+		case hasProbeName(result.Format.FormatName, "avi"):
+			return Formats["avi"], nil
+
+		case hasProbeName(result.Format.FormatName, "mpeg"):
+			return Formats["mpeg"], nil
+
+		case hasProbeName(result.Format.FormatName, "asf"):
+			return Formats["wmv"], nil
+
+		case hasProbeName(result.Format.FormatName, "flv"):
+			return Formats["flv"], nil
 		}
 	}
 
 	if hasAudio && !hasVideo {
-		switch strings.ToLower(filepath.Ext(path)) {
+		switch extension {
 		case ".m4a":
 			return Formats["m4a"], nil
+
 		case ".aac":
 			return Formats["aac"], nil
+
 		case ".mp3":
 			return Formats["mp3"], nil
+
 		case ".wav":
 			return Formats["wav"], nil
+
 		case ".flac":
 			return Formats["flac"], nil
+
 		case ".ogg":
 			return Formats["ogg"], nil
+
 		case ".opus":
 			return Formats["opus"], nil
+
+		case ".wma":
+			return Formats["wma"], nil
 		}
 
-		for _, name := range names {
-			switch name {
-			case "mp3":
-				return Formats["mp3"], nil
-			case "wav":
-				return Formats["wav"], nil
-			case "flac":
-				return Formats["flac"], nil
-			case "aac":
-				return Formats["aac"], nil
-			case "ogg":
-				return Formats["ogg"], nil
-			}
+		switch {
+		case audioCodec == "opus" &&
+			hasProbeName(result.Format.FormatName, "ogg"):
+			return Formats["opus"], nil
+
+		case hasProbeName(result.Format.FormatName, "mp3"):
+			return Formats["mp3"], nil
+
+		case hasProbeName(result.Format.FormatName, "wav"):
+			return Formats["wav"], nil
+
+		case hasProbeName(result.Format.FormatName, "flac"):
+			return Formats["flac"], nil
+
+		case hasProbeName(result.Format.FormatName, "aac"):
+			return Formats["aac"], nil
+
+		case hasProbeName(result.Format.FormatName, "ogg"):
+			return Formats["ogg"], nil
+
+		case hasProbeName(result.Format.FormatName, "asf"):
+			return Formats["wma"], nil
 		}
 	}
 
-	return Format{}, fmt.Errorf("unsupported ffprobe format: %s", result.Format.FormatName)
+	return Format{}, fmt.Errorf(
+		"unsupported ffprobe format: %s",
+		result.Format.FormatName,
+	)
+}
+
+func hasProbeName(formatNames string, name string) bool {
+	for _, candidate := range strings.Split(formatNames, ",") {
+		if candidate == name {
+			return true
+		}
+	}
+
+	return false
 }

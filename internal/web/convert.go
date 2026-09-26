@@ -61,26 +61,49 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 
 	outputPath := filepath.Join(
 		tempDir,
-		strings.TrimSuffix(
-			filepath.Base(header.Filename),
-			filepath.Ext(header.Filename),
-		)+"."+target,
+		baseName+"."+target,
 	)
 
 	switch format.Category {
 	case media.CategoryImage:
-		err = s.imageMagick.Convert(r.Context(), inputPath, outputPath)
+		switch {
+		case format.ID == "gif" && (target == "mp4" || target == "webm"):
+			err = s.ffmpeg.Convert(
+				r.Context(),
+				inputPath,
+				outputPath,
+			)
+
+		default:
+			err = s.imageMagick.Convert(
+				r.Context(),
+				inputPath,
+				outputPath,
+			)
+		}
 
 	case media.CategoryAudio, media.CategoryVideo:
-		err = s.ffmpeg.Convert(r.Context(), inputPath, outputPath)
+		err = s.ffmpeg.Convert(
+			r.Context(),
+			inputPath,
+			outputPath,
+		)
 
 	case media.CategoryDocument:
-		err = s.libreOffice.Convert(r.Context(), inputPath, outputPath)
+		err = s.libreOffice.Convert(
+			r.Context(),
+			inputPath,
+			outputPath,
+		)
 
 	case media.CategoryPDF:
 		switch target {
 		case "docx":
-			err = s.pdf.ConvertToDOCX(r.Context(), inputPath, outputPath)
+			err = s.pdf.ConvertToDOCX(
+				r.Context(),
+				inputPath,
+				outputPath,
+			)
 
 		case "png", "jpeg":
 			outputPath = filepath.Join(
@@ -88,15 +111,28 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 				baseName+"-"+target+".zip",
 			)
 
-			err = s.pdf.ConvertToImages(r.Context(), inputPath, outputPath, target)
+			err = s.pdf.ConvertToImages(
+				r.Context(),
+				inputPath,
+				outputPath,
+				target,
+			)
 
 		default:
-			http.Error(w, "unsupported PDF conversion", http.StatusBadRequest)
+			http.Error(
+				w,
+				"unsupported PDF conversion",
+				http.StatusBadRequest,
+			)
 			return
 		}
 
 	default:
-		http.Error(w, "converter not implemented for this media type", http.StatusNotImplemented)
+		http.Error(
+			w,
+			"converter not implemented for this media type",
+			http.StatusNotImplemented,
+		)
 		return
 	}
 
@@ -107,20 +143,31 @@ func (s *Server) handleConvert(w http.ResponseWriter, r *http.Request) {
 
 	outputFile, err := os.Open(outputPath)
 	if err != nil {
-		http.Error(w, "failed to open converted file", http.StatusInternalServerError)
+		http.Error(
+			w,
+			"failed to open converted file",
+			http.StatusInternalServerError,
+		)
 		return
 	}
 	defer outputFile.Close()
 
 	stat, err := outputFile.Stat()
 	if err != nil {
-		http.Error(w, "failed to read converted file", http.StatusInternalServerError)
+		http.Error(
+			w,
+			"failed to read converted file",
+			http.StatusInternalServerError,
+		)
 		return
 	}
 
 	w.Header().Set(
 		"Content-Disposition",
-		fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(outputPath)),
+		fmt.Sprintf(
+			`attachment; filename="%s"`,
+			filepath.Base(outputPath),
+		),
 	)
 
 	http.ServeContent(
