@@ -52,6 +52,7 @@ type Style struct {
 	CornerInner CornerInnerStyle
 
 	HasLogo bool
+	Logo    string
 }
 
 func DefaultStyle() Style {

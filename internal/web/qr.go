@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 
 	qrservice "github.com/jayzone91/media-converter/internal/qr"
 )
+
+const maxQRLogoSize = 2 * 1024 * 1024
 
 type qrGenerateRequest struct {
 	Type string `json:"type"`
@@ -78,7 +81,8 @@ type qrStyleRequest struct {
 	CornerOuter string `json:"corner_outer"`
 	CornerInner string `json:"corner_inner"`
 
-	HasLogo bool `json:"has_logo"`
+	HasLogo bool   `json:"has_logo"`
+	Logo    string `json:"logo"`
 }
 
 type qrGenerateResponse struct {
@@ -95,11 +99,16 @@ func (s *Server) handleQRGenerate(
 ) {
 	var request qrGenerateRequest
 
-	decoder := json.NewDecoder(r.Body)
+	decoder :=
+		json.NewDecoder(
+			r.Body,
+		)
 
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(
+		&request,
+	); err != nil {
 		http.Error(
 			w,
 			"Ungültige QR-Code-Anfrage.",
@@ -109,9 +118,10 @@ func (s *Server) handleQRGenerate(
 		return
 	}
 
-	payload, err := buildQRPayload(
-		request,
-	)
+	payload, err :=
+		buildQRPayload(
+			request,
+		)
 	if err != nil {
 		http.Error(
 			w,
@@ -122,9 +132,10 @@ func (s *Server) handleQRGenerate(
 		return
 	}
 
-	style, err := buildQRStyle(
-		request.Style,
-	)
+	style, err :=
+		buildQRStyle(
+			request.Style,
+		)
 	if err != nil {
 		http.Error(
 			w,
@@ -135,10 +146,11 @@ func (s *Server) handleQRGenerate(
 		return
 	}
 
-	matrix, err := qrservice.Generate(
-		payload,
-		style,
-	)
+	matrix, err :=
+		qrservice.Generate(
+			payload,
+			style,
+		)
 	if err != nil {
 		http.Error(
 			w,
@@ -149,10 +161,11 @@ func (s *Server) handleQRGenerate(
 		return
 	}
 
-	svg, err := qrservice.RenderSVG(
-		matrix,
-		style,
-	)
+	svg, err :=
+		qrservice.RenderSVG(
+			matrix,
+			style,
+		)
 	if err != nil {
 		http.Error(
 			w,
@@ -163,31 +176,36 @@ func (s *Server) handleQRGenerate(
 		return
 	}
 
-	response := qrGenerateResponse{
-		SVG: string(svg),
+	response :=
+		qrGenerateResponse{
+			SVG: string(svg),
 
-		Version: matrix.Version,
+			Version: matrix.Version,
 
-		ErrorCorrection: string(matrix.ErrorCorrection),
-	}
+			ErrorCorrection: string(
+				matrix.ErrorCorrection,
+			),
+		}
 
 	w.Header().Set(
 		"Content-Type",
 		"application/json; charset=utf-8",
 	)
 
-	if err := json.NewEncoder(w).Encode(
+	_ = json.NewEncoder(
+		w,
+	).Encode(
 		response,
-	); err != nil {
-		return
-	}
+	)
 }
 
 func buildQRPayload(
 	request qrGenerateRequest,
 ) (string, error) {
 	switch strings.ToLower(
-		strings.TrimSpace(request.Type),
+		strings.TrimSpace(
+			request.Type,
+		),
 	) {
 	case "url":
 		return qrservice.URL(
@@ -255,21 +273,23 @@ func buildQRPayload(
 		)
 
 	case "event":
-		start, err := parseQRDateTime(
-			request.Event.Start,
-		)
+		start, err :=
+			parseQRDateTime(
+				request.Event.Start,
+			)
 		if err != nil {
 			return "", fmt.Errorf(
-				"Ungültiger Beginn.",
+				"Ungültiger Beginn",
 			)
 		}
 
-		end, err := parseQRDateTime(
-			request.Event.End,
-		)
+		end, err :=
+			parseQRDateTime(
+				request.Event.End,
+			)
 		if err != nil {
 			return "", fmt.Errorf(
-				"Ungültiges Ende.",
+				"Ungültiges Ende",
 			)
 		}
 
@@ -289,7 +309,7 @@ func buildQRPayload(
 
 	default:
 		return "", fmt.Errorf(
-			"Unbekannter QR-Code-Typ.",
+			"Unbekannter QR-Code-Typ",
 		)
 	}
 }
@@ -297,7 +317,8 @@ func buildQRPayload(
 func buildQRStyle(
 	request qrStyleRequest,
 ) (qrservice.Style, error) {
-	style := qrservice.DefaultStyle()
+	style :=
+		qrservice.DefaultStyle()
 
 	if request.Foreground != "" {
 		style.Foreground =
@@ -309,16 +330,14 @@ func buildQRStyle(
 			request.Background
 	}
 
-	style.Gradient = qrservice.Gradient{
-		Enabled: request.GradientEnabled,
+	style.Gradient =
+		qrservice.Gradient{
+			Enabled: request.GradientEnabled,
 
-		Start: request.GradientStart,
+			Start: request.GradientStart,
 
-		End: request.GradientEnd,
-	}
-
-	style.HasLogo =
-		request.HasLogo
+			End: request.GradientEnd,
+		}
 
 	switch request.Module {
 	case "", "square":
@@ -343,7 +362,7 @@ func buildQRStyle(
 
 	default:
 		return style, fmt.Errorf(
-			"Ungültiger QR-Code-Stil.",
+			"Ungültiger QR-Code-Stil",
 		)
 	}
 
@@ -362,7 +381,7 @@ func buildQRStyle(
 
 	default:
 		return style, fmt.Errorf(
-			"Ungültiger äußerer Eckenstil.",
+			"Ungültiger äußerer Eckenstil",
 		)
 	}
 
@@ -381,7 +400,7 @@ func buildQRStyle(
 
 	default:
 		return style, fmt.Errorf(
-			"Ungültiger innerer Eckenstil.",
+			"Ungültiger innerer Eckenstil",
 		)
 	}
 
@@ -397,18 +416,114 @@ func buildQRStyle(
 		}
 	}
 
+	if request.HasLogo {
+		logo, err :=
+			validateQRLogo(
+				request.Logo,
+			)
+		if err != nil {
+			return style, err
+		}
+
+		style.HasLogo =
+			true
+
+		style.Logo =
+			logo
+	}
+
 	return style, nil
+}
+
+func validateQRLogo(
+	value string,
+) (string, error) {
+	value =
+		strings.TrimSpace(
+			value,
+		)
+
+	if value == "" {
+		return "", fmt.Errorf(
+			"Logo fehlt",
+		)
+	}
+
+	var prefix string
+
+	switch {
+	case strings.HasPrefix(
+		value,
+		"data:image/png;base64,",
+	):
+		prefix =
+			"data:image/png;base64,"
+
+	case strings.HasPrefix(
+		value,
+		"data:image/jpeg;base64,",
+	):
+		prefix =
+			"data:image/jpeg;base64,"
+
+	case strings.HasPrefix(
+		value,
+		"data:image/webp;base64,",
+	):
+		prefix =
+			"data:image/webp;base64,"
+
+	default:
+		return "", fmt.Errorf(
+			"Logo muss PNG, JPEG oder WEBP sein",
+		)
+	}
+
+	encoded :=
+		strings.TrimPrefix(
+			value,
+			prefix,
+		)
+
+	data, err :=
+		base64.StdEncoding.DecodeString(
+			encoded,
+		)
+	if err != nil {
+		return "", fmt.Errorf(
+			"Logo ist ungültig",
+		)
+	}
+
+	if len(data) == 0 {
+		return "", fmt.Errorf(
+			"Logo ist leer",
+		)
+	}
+
+	if len(data) >
+		maxQRLogoSize {
+		return "", fmt.Errorf(
+			"Logo darf maximal 2 MiB groß sein",
+		)
+	}
+
+	return value, nil
 }
 
 func parseQRDateTime(
 	value string,
 ) (time.Time, error) {
-	value = strings.TrimSpace(value)
+	value =
+		strings.TrimSpace(
+			value,
+		)
 
 	if value == "" {
-		return time.Time{}, fmt.Errorf(
-			"date is empty",
-		)
+		return time.Time{},
+			fmt.Errorf(
+				"date is empty",
+			)
 	}
 
 	return time.ParseInLocation(

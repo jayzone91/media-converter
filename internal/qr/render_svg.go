@@ -23,13 +23,15 @@ func RenderSVG(
 		)
 	}
 
-	if err := validateStyleColors(style); err != nil {
+	if err := validateStyleColors(
+		style,
+	); err != nil {
 		return nil, err
 	}
 
 	totalSize :=
 		matrix.Size +
-			(quietZoneModules * 2)
+			quietZoneModules*2
 
 	var svg strings.Builder
 
@@ -70,9 +72,19 @@ func RenderSVG(
 		style,
 	)
 
-	svg.WriteString(`</svg>`)
+	renderSVGLogo(
+		&svg,
+		matrix.Size,
+		style,
+	)
 
-	return []byte(svg.String()), nil
+	svg.WriteString(
+		`</svg>`,
+	)
+
+	return []byte(
+		svg.String(),
+	), nil
 }
 
 func renderSVGDefinitions(
@@ -99,10 +111,12 @@ func renderSVGModules(
 	matrix Matrix,
 	style Style,
 ) {
-	fill := svgForeground(style)
+	fill :=
+		svgForeground(style)
 
 	for y, row := range matrix.Bitmap {
-		if len(row) != matrix.Size {
+		if len(row) !=
+			matrix.Size {
 			continue
 		}
 
@@ -225,22 +239,23 @@ func renderSVGFinderPatterns(
 	size int,
 	style Style,
 ) {
-	positions := [][2]int{
-		{
-			quietZoneModules,
-			quietZoneModules,
-		},
-		{
-			quietZoneModules +
-				size - 7,
-			quietZoneModules,
-		},
-		{
-			quietZoneModules,
-			quietZoneModules +
-				size - 7,
-		},
-	}
+	positions :=
+		[][2]int{
+			{
+				quietZoneModules,
+				quietZoneModules,
+			},
+			{
+				quietZoneModules +
+					size - 7,
+				quietZoneModules,
+			},
+			{
+				quietZoneModules,
+				quietZoneModules +
+					size - 7,
+			},
+		}
 
 	for _, position := range positions {
 		renderSVGFinder(
@@ -258,7 +273,8 @@ func renderSVGFinder(
 	y int,
 	style Style,
 ) {
-	fill := svgForeground(style)
+	fill :=
+		svgForeground(style)
 
 	renderSVGFinderOuter(
 		svg,
@@ -294,9 +310,6 @@ func renderSVGFinderOuter(
 
 	case CornerOuterExtraRounded:
 		radius = 1.8
-
-	default:
-		radius = 0
 	}
 
 	fmt.Fprintf(
@@ -308,7 +321,8 @@ func renderSVGFinderOuter(
 		fill,
 	)
 
-	innerRadius := radius * 0.55
+	innerRadius :=
+		radius * 0.55
 
 	fmt.Fprintf(
 		svg,
@@ -355,6 +369,81 @@ func renderSVGFinderInner(
 			fill,
 		)
 	}
+}
+
+func renderSVGLogo(
+	svg *strings.Builder,
+	matrixSize int,
+	style Style,
+) {
+	if !style.HasLogo ||
+		style.Logo == "" {
+		return
+	}
+
+	totalSize :=
+		matrixSize +
+			quietZoneModules*2
+
+	/*
+		20 % ist bewusst konservativ.
+
+		Bei Logo wird ECC H verwendet.
+		Der Hintergrund unter dem Logo
+		entfernt störende QR-Module rund
+		um das Bild.
+	*/
+	logoSize :=
+		float64(totalSize) *
+			0.20
+
+	padding :=
+		logoSize * 0.12
+
+	backgroundSize :=
+		logoSize +
+			padding*2
+
+	center :=
+		float64(totalSize) /
+			2
+
+	backgroundX :=
+		center -
+			backgroundSize/2
+
+	backgroundY :=
+		center -
+			backgroundSize/2
+
+	logoX :=
+		center -
+			logoSize/2
+
+	logoY :=
+		center -
+			logoSize/2
+
+	fmt.Fprintf(
+		svg,
+		`<rect x="%.3f" y="%.3f" width="%.3f" height="%.3f" rx="%.3f" fill="%s"/>`,
+		backgroundX,
+		backgroundY,
+		backgroundSize,
+		backgroundSize,
+		backgroundSize*0.12,
+		style.Background,
+	)
+
+	fmt.Fprintf(
+		svg,
+		`<image href="%s" x="%.3f" y="%.3f" width="%.3f" height="%.3f" preserveAspectRatio="xMidYMid meet"/>`,
+		style.Logo,
+		logoX,
+		logoY,
+		logoSize,
+		logoSize,
+	)
 }
 
 func isFinderModule(
