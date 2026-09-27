@@ -1,13 +1,21 @@
 document.addEventListener("DOMContentLoaded", () => {
+  setupTabs();
+  setupToolSelections();
+  setupQRUI();
+  setupConverter();
+});
+
+function setupConverter() {
   const form = document.getElementById("conversion-form");
   const fileInput = document.getElementById("file");
   const dropZone = document.querySelector(".drop-zone");
   const options = document.getElementById("conversion-options");
   const overlay = document.getElementById("conversion-overlay");
   const errorBox = document.getElementById("conversion-error");
-  setupTabs();
-  setupToolSelections();
-  setupQRUI();
+
+  if (!form || !fileInput || !dropZone || !options || !overlay || !errorBox) {
+    return;
+  }
 
   setupDragAndDrop(dropZone, fileInput, errorBox);
 
@@ -46,9 +54,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch(form.action, {
         method: "POST",
+
         headers: {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         },
+
         body,
       });
 
@@ -84,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
-});
+}
 
 function setupDragAndDrop(dropZone, fileInput, errorBox) {
   const preventDefaults = (event) => {
@@ -123,14 +133,12 @@ function setupDragAndDrop(dropZone, fileInput, errorBox) {
       return;
     }
 
-    const file = files[0];
-
     errorBox.hidden = true;
     errorBox.textContent = "";
 
     const transfer = new DataTransfer();
 
-    transfer.items.add(file);
+    transfer.items.add(files[0]);
 
     fileInput.files = transfer.files;
 
@@ -203,6 +211,7 @@ function resetForm(form, fileInput, options) {
 
 function setupTabs() {
   const buttons = document.querySelectorAll(".tab-button");
+
   const panels = document.querySelectorAll(".tab-panel");
 
   buttons.forEach((button) => {
@@ -236,63 +245,19 @@ function setupToolSelections() {
   });
 }
 
-function setupQRColorMode() {
-  const colorModes = document.querySelectorAll('input[name="qr_color_mode"]');
-
-  const gradientSettings = document.getElementById("qr-gradient-settings");
-
-  colorModes.forEach((mode) => {
-    mode.addEventListener("change", () => {
-      gradientSettings.hidden = mode.value !== "gradient" || !mode.checked;
-
-      scheduleQRPreview();
-    });
-  });
-}
+/*
+ * QR CODE
+ */
 
 let qrPreviewTimeout = null;
-let qrPreviewRequest = null;
+let qrPreviewController = null;
 
-function setupQRLivePreview() {
-  const panel = document.querySelector('[data-panel="qr"]');
-
-  if (!panel) {
-    return;
-  }
-
-  panel.addEventListener("input", () => {
-    scheduleQRPreview();
-  });
-
-  panel.addEventListener("change", () => {
-    scheduleQRPreview();
-  });
-
-  document.querySelectorAll(".qr-type").forEach((button) => {
-    button.addEventListener("click", () => {
-      scheduleQRPreview();
-    });
-  });
-
-  document.querySelectorAll(".style-option").forEach((button) => {
-    button.addEventListener("click", () => {
-      scheduleQRPreview();
-    });
-  });
-
-  const generateButton = document.getElementById("qr-generate");
-
-  generateButton?.addEventListener("click", () => {
-    generateQRPreview();
-  });
-}
-
-function scheduleQRPreview() {
-  clearTimeout(qrPreviewTimeout);
-
-  qrPreviewTimeout = setTimeout(() => {
-    generateQRPreview();
-  }, 250);
+function setupQRUI() {
+  setupQRTypes();
+  setupQRStyles();
+  setupQRColorMode();
+  setupQRLivePreview();
+  setupQRColorLabels();
 }
 
 function setupQRTypes() {
@@ -305,6 +270,8 @@ function setupQRTypes() {
       });
 
       renderQRFields(button.dataset.qrType);
+
+      scheduleQRPreview();
     });
   });
 }
@@ -318,13 +285,404 @@ function setupQRStyles() {
         options.forEach((candidate) => {
           candidate.classList.toggle("active", candidate === option);
         });
+
+        scheduleQRPreview();
       });
     });
   });
 }
 
+function setupQRColorMode() {
+  const colorModes = document.querySelectorAll('input[name="qr_color_mode"]');
+
+  const gradientSettings = document.getElementById("qr-gradient-settings");
+
+  if (!gradientSettings) {
+    return;
+  }
+
+  colorModes.forEach((mode) => {
+    mode.addEventListener("change", () => {
+      const selected = document.querySelector(
+        'input[name="qr_color_mode"]:checked',
+      );
+
+      gradientSettings.hidden = selected?.value !== "gradient";
+
+      scheduleQRPreview();
+    });
+  });
+}
+
+function setupQRLivePreview() {
+  const panel = document.querySelector('[data-panel="qr"]');
+
+  if (!panel) {
+    return;
+  }
+
+  panel.addEventListener("input", (event) => {
+    if (event.target.matches("input, textarea, select")) {
+      scheduleQRPreview();
+    }
+  });
+
+  panel.addEventListener("change", (event) => {
+    if (event.target.matches("input, textarea, select")) {
+      scheduleQRPreview();
+    }
+  });
+
+  const generateButton = document.getElementById("qr-generate");
+
+  generateButton?.addEventListener("click", () => {
+    generateQRPreview();
+  });
+}
+
+function setupQRColorLabels() {
+  const ids = [
+    "qr-foreground",
+    "qr-background",
+    "qr-gradient-start",
+    "qr-gradient-end",
+  ];
+
+  ids.forEach((id) => {
+    const input = document.getElementById(id);
+
+    if (!input) {
+      return;
+    }
+
+    updateQRColorLabel(input);
+
+    input.addEventListener("input", () => {
+      updateQRColorLabel(input);
+    });
+  });
+}
+
+function updateQRColorLabel(input) {
+  const code = input.parentElement?.querySelector("code");
+
+  if (code) {
+    code.textContent = input.value.toUpperCase();
+  }
+}
+
+function scheduleQRPreview() {
+  clearTimeout(qrPreviewTimeout);
+
+  qrPreviewTimeout = setTimeout(() => {
+    generateQRPreview();
+  }, 250);
+}
+
+function getActiveQRType() {
+  return document.querySelector(".qr-type.active")?.dataset.qrType ?? "url";
+}
+
+function getActiveQRStyle(group) {
+  return (
+    document.querySelector(`[data-style-group="${group}"] .style-option.active`)
+      ?.dataset.style ?? "square"
+  );
+}
+
+function getQRField(name) {
+  return document.querySelector(`[name="${name}"]`)?.value ?? "";
+}
+
+function getQRCheckbox(name) {
+  return document.querySelector(`[name="${name}"]`)?.checked ?? false;
+}
+
+function buildQRRequest() {
+  const colorMode =
+    document.querySelector('input[name="qr_color_mode"]:checked')?.value ??
+    "solid";
+
+  return {
+    type: getActiveQRType(),
+
+    url: getQRField("qr_url"),
+
+    text: getQRField("qr_text"),
+
+    phone: getQRField("qr_phone"),
+
+    wifi: {
+      ssid: getQRField("wifi_ssid"),
+
+      password: getQRField("wifi_password"),
+
+      encryption: getQRField("wifi_encryption"),
+
+      hidden: getQRCheckbox("wifi_hidden"),
+    },
+
+    vcard: {
+      first_name: getQRField("vcard_firstname"),
+
+      last_name: getQRField("vcard_lastname"),
+
+      company: getQRField("vcard_company"),
+
+      position: getQRField("vcard_position"),
+
+      phone_work: getQRField("vcard_phone_work"),
+
+      phone_home: getQRField("vcard_phone_home"),
+
+      mobile_work: getQRField("vcard_mobile_work"),
+
+      mobile_home: getQRField("vcard_mobile_home"),
+
+      fax_work: getQRField("vcard_fax_work"),
+
+      email: getQRField("vcard_email"),
+
+      website: getQRField("vcard_website"),
+
+      street: getQRField("vcard_street"),
+
+      postal_code: getQRField("vcard_postal_code"),
+
+      city: getQRField("vcard_city"),
+
+      region: getQRField("vcard_region"),
+
+      country: getQRField("vcard_country"),
+    },
+
+    event: {
+      title: getQRField("event_title"),
+
+      start: getQRField("event_start"),
+
+      end: getQRField("event_end"),
+
+      location: getQRField("event_location"),
+
+      description: getQRField("event_description"),
+    },
+
+    style: {
+      foreground: document.getElementById("qr-foreground")?.value ?? "#000000",
+
+      background: document.getElementById("qr-background")?.value ?? "#ffffff",
+
+      gradient_enabled: colorMode === "gradient",
+
+      gradient_start:
+        document.getElementById("qr-gradient-start")?.value ?? "#000000",
+
+      gradient_end:
+        document.getElementById("qr-gradient-end")?.value ?? "#3b82f6",
+
+      module: getActiveQRStyle("dots"),
+
+      corner_outer: getActiveQRStyle("corners-square"),
+
+      corner_inner: getActiveQRStyle("corners-dot"),
+
+      has_logo: false,
+    },
+  };
+}
+
+function hasQRPayload(request) {
+  switch (request.type) {
+    case "url":
+      return request.url.trim() !== "";
+
+    case "text":
+      return request.text.trim() !== "";
+
+    case "phone":
+      return request.phone.trim() !== "";
+
+    case "wifi":
+      return request.wifi.ssid.trim() !== "";
+
+    case "vcard":
+      return (
+        request.vcard.first_name.trim() !== "" ||
+        request.vcard.last_name.trim() !== ""
+      );
+
+    case "event":
+      return (
+        request.event.title.trim() !== "" &&
+        request.event.start !== "" &&
+        request.event.end !== ""
+      );
+
+    default:
+      return false;
+  }
+}
+
+async function generateQRPreview() {
+  const preview = document.getElementById("qr-preview");
+
+  if (!preview) {
+    return;
+  }
+
+  const errorLevel = document.getElementById("qr-error-level");
+
+  const version = document.getElementById("qr-version");
+
+  const status = document.querySelector(".qr-status");
+
+  const request = buildQRRequest();
+
+  if (!hasQRPayload(request)) {
+    showEmptyQRPreview(preview);
+
+    if (errorLevel) {
+      errorLevel.textContent = "L";
+    }
+
+    if (version) {
+      version.textContent = "Auto";
+    }
+
+    if (status) {
+      status.textContent = "Bereit";
+    }
+
+    return;
+  }
+
+  if (qrPreviewController) {
+    qrPreviewController.abort();
+  }
+
+  const controller = new AbortController();
+
+  qrPreviewController = controller;
+
+  if (status) {
+    status.textContent = "Erzeuge …";
+  }
+
+  try {
+    const response = await fetch("/qr/generate", {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(request),
+
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+
+      throw new Error(message.trim() || "QR Code konnte nicht erzeugt werden.");
+    }
+
+    const result = await response.json();
+
+    preview.innerHTML = result.svg;
+
+    const svg = preview.querySelector("svg");
+
+    if (svg) {
+      svg.style.width = "100%";
+
+      svg.style.height = "100%";
+
+      svg.style.display = "block";
+    }
+
+    if (errorLevel) {
+      errorLevel.textContent = result.error_correction;
+    }
+
+    if (version) {
+      version.textContent = String(result.version);
+    }
+
+    if (status) {
+      status.textContent = "Aktuell";
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return;
+    }
+
+    console.error("QR preview failed:", error);
+
+    if (status) {
+      status.textContent = "Fehler";
+    }
+
+    showQRPreviewError(
+      preview,
+      error instanceof Error
+        ? error.message
+        : "QR Code konnte nicht erzeugt werden.",
+    );
+  } finally {
+    if (qrPreviewController === controller) {
+      qrPreviewController = null;
+    }
+  }
+}
+
+function showEmptyQRPreview(preview) {
+  preview.innerHTML = `
+    <div class="qr-preview-placeholder">
+      <div class="preview-icon">
+        ▦
+      </div>
+
+      <strong>
+        QR Code Vorschau
+      </strong>
+
+      <span>
+        Gib links einen Inhalt ein.
+      </span>
+    </div>
+  `;
+}
+
+function showQRPreviewError(preview, message) {
+  preview.innerHTML = `
+    <div class="qr-preview-placeholder">
+      <strong>
+        Keine Vorschau
+      </strong>
+
+      <span>
+        ${escapeHTML(message)}
+      </span>
+    </div>
+  `;
+}
+
+function escapeHTML(value) {
+  const element = document.createElement("div");
+
+  element.textContent = value;
+
+  return element.innerHTML;
+}
+
 function renderQRFields(type) {
   const container = document.getElementById("qr-fields");
+
+  if (!container) {
+    return;
+  }
 
   switch (type) {
     case "url":
@@ -392,7 +750,9 @@ function renderQRFields(type) {
         <label class="field">
           <span>Verschlüsselung</span>
 
-          <select name="wifi_encryption">
+          <select
+            name="wifi_encryption"
+          >
             <option value="WPA">
               WPA / WPA2 / WPA3
             </option>
@@ -422,178 +782,182 @@ function renderQRFields(type) {
 
     case "vcard":
       container.innerHTML = `
-    <div class="field-grid">
-      <label class="field">
-        <span>Vorname</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>Vorname</span>
 
-        <input
-          name="vcard_firstname"
-          autocomplete="given-name"
-        />
-      </label>
+            <input
+              name="vcard_firstname"
+              autocomplete="given-name"
+            />
+          </label>
 
-      <label class="field">
-        <span>Nachname</span>
+          <label class="field">
+            <span>Nachname</span>
 
-        <input
-          name="vcard_lastname"
-          autocomplete="family-name"
-        />
-      </label>
-    </div>
+            <input
+              name="vcard_lastname"
+              autocomplete="family-name"
+            />
+          </label>
+        </div>
 
-    <div class="field-grid">
-      <label class="field">
-        <span>Firma</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>Firma</span>
 
-        <input
-          name="vcard_company"
-          autocomplete="organization"
-        />
-      </label>
+            <input
+              name="vcard_company"
+              autocomplete="organization"
+            />
+          </label>
 
-      <label class="field">
-        <span>Position</span>
+          <label class="field">
+            <span>Position</span>
 
-        <input
-          name="vcard_position"
-          autocomplete="organization-title"
-        />
-      </label>
-    </div>
+            <input
+              name="vcard_position"
+              autocomplete="organization-title"
+            />
+          </label>
+        </div>
 
-    <div class="field-grid">
-      <label class="field">
-        <span>Telefon (Arbeit)</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>Telefon (Arbeit)</span>
 
-        <input
-          type="tel"
-          name="vcard_phone_work"
-        />
-      </label>
+            <input
+              type="tel"
+              name="vcard_phone_work"
+            />
+          </label>
 
-      <label class="field">
-        <span>Telefon (Privat)</span>
+          <label class="field">
+            <span>Telefon (Privat)</span>
 
-        <input
-          type="tel"
-          name="vcard_phone_home"
-        />
-      </label>
-    </div>
+            <input
+              type="tel"
+              name="vcard_phone_home"
+            />
+          </label>
+        </div>
 
-    <div class="field-grid">
-      <label class="field">
-        <span>Mobil (Arbeit)</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>Mobil (Arbeit)</span>
 
-        <input
-          type="tel"
-          name="vcard_mobile_work"
-        />
-      </label>
+            <input
+              type="tel"
+              name="vcard_mobile_work"
+            />
+          </label>
 
-      <label class="field">
-        <span>Mobil (Privat)</span>
+          <label class="field">
+            <span>Mobil (Privat)</span>
 
-        <input
-          type="tel"
-          name="vcard_mobile_home"
-        />
-      </label>
-    </div>
+            <input
+              type="tel"
+              name="vcard_mobile_home"
+            />
+          </label>
+        </div>
 
-    <div class="field-grid">
-      <label class="field">
-        <span>Fax (Arbeit)</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>Fax (Arbeit)</span>
 
-        <input
-          type="tel"
-          name="vcard_fax_work"
-        />
-      </label>
+            <input
+              type="tel"
+              name="vcard_fax_work"
+            />
+          </label>
 
-      <label class="field">
-        <span>E-Mail</span>
+          <label class="field">
+            <span>E-Mail</span>
 
-        <input
-          type="email"
-          name="vcard_email"
-          autocomplete="email"
-        />
-      </label>
-    </div>
+            <input
+              type="email"
+              name="vcard_email"
+              autocomplete="email"
+            />
+          </label>
+        </div>
 
-    <label class="field">
-      <span>Webseite</span>
+        <label class="field">
+          <span>Webseite</span>
 
-      <input
-        type="url"
-        name="vcard_website"
-        placeholder="https://example.com"
-      />
-    </label>
+          <input
+            type="url"
+            name="vcard_website"
+            placeholder="https://example.com"
+          />
+        </label>
 
-    <label class="field">
-      <span>Straße</span>
+        <label class="field">
+          <span>Straße</span>
 
-      <input
-        name="vcard_street"
-        autocomplete="street-address"
-      />
-    </label>
+          <input
+            name="vcard_street"
+            autocomplete="street-address"
+          />
+        </label>
 
-    <div class="field-grid">
-      <label class="field">
-        <span>PLZ</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>PLZ</span>
 
-        <input
-          name="vcard_postal_code"
-          autocomplete="postal-code"
-        />
-      </label>
+            <input
+              name="vcard_postal_code"
+              autocomplete="postal-code"
+            />
+          </label>
 
-      <label class="field">
-        <span>Stadt</span>
+          <label class="field">
+            <span>Stadt</span>
 
-        <input
-          name="vcard_city"
-          autocomplete="address-level2"
-        />
-      </label>
-    </div>
+            <input
+              name="vcard_city"
+              autocomplete="address-level2"
+            />
+          </label>
+        </div>
 
-    <div class="field-grid">
-      <label class="field">
-        <span>Bundesland / Region</span>
+        <div class="field-grid">
+          <label class="field">
+            <span>Bundesland / Region</span>
 
-        <input
-          name="vcard_region"
-          autocomplete="address-level1"
-        />
-      </label>
+            <input
+              name="vcard_region"
+              autocomplete="address-level1"
+            />
+          </label>
 
-      <label class="field">
-        <span>Land</span>
+          <label class="field">
+            <span>Land</span>
 
-        <input
-          name="vcard_country"
-          autocomplete="country-name"
-        />
-      </label>
-    </div>
-  `;
+            <input
+              name="vcard_country"
+              autocomplete="country-name"
+            />
+          </label>
+        </div>
+      `;
       break;
 
     case "event":
       container.innerHTML = `
         <label class="field">
           <span>Titel</span>
-          <input name="event_title" />
+
+          <input
+            name="event_title"
+          />
         </label>
 
         <div class="field-grid">
           <label class="field">
             <span>Beginn</span>
+
             <input
               type="datetime-local"
               name="event_start"
@@ -602,6 +966,7 @@ function renderQRFields(type) {
 
           <label class="field">
             <span>Ende</span>
+
             <input
               type="datetime-local"
               name="event_end"
@@ -611,7 +976,10 @@ function renderQRFields(type) {
 
         <label class="field">
           <span>Ort</span>
-          <input name="event_location" />
+
+          <input
+            name="event_location"
+          />
         </label>
 
         <label class="field">
@@ -625,271 +993,4 @@ function renderQRFields(type) {
       `;
       break;
   }
-}
-
-function getActiveQRType() {
-  return document.querySelector(".qr-type.active")?.dataset.qrType ?? "url";
-}
-
-function getActiveQRStyle(group) {
-  return (
-    document.querySelector(`[data-style-group="${group}"] .style-option.active`)
-      ?.dataset.style ?? "square"
-  );
-}
-
-function getQRField(name) {
-  return document.querySelector(`[name="${name}"]`)?.value ?? "";
-}
-
-function getQRCheckbox(name) {
-  return document.querySelector(`[name="${name}"]`)?.checked ?? false;
-}
-
-function buildQRRequest() {
-  const type = getActiveQRType();
-
-  const gradient =
-    document.querySelector('input[name="qr_color_mode"]:checked')?.value ===
-    "gradient";
-
-  return {
-    type,
-
-    url: getQRField("qr_url"),
-    text: getQRField("qr_text"),
-    phone: getQRField("qr_phone"),
-
-    wifi: {
-      ssid: getQRField("wifi_ssid"),
-
-      password: getQRField("wifi_password"),
-
-      encryption: getQRField("wifi_encryption"),
-
-      hidden: getQRCheckbox("wifi_hidden"),
-    },
-
-    vcard: {
-      first_name: getQRField("vcard_firstname"),
-
-      last_name: getQRField("vcard_lastname"),
-
-      company: getQRField("vcard_company"),
-
-      position: getQRField("vcard_position"),
-
-      phone_work: getQRField("vcard_phone_work"),
-
-      phone_home: getQRField("vcard_phone_home"),
-
-      mobile_work: getQRField("vcard_mobile_work"),
-
-      mobile_home: getQRField("vcard_mobile_home"),
-
-      fax_work: getQRField("vcard_fax_work"),
-
-      email: getQRField("vcard_email"),
-
-      website: getQRField("vcard_website"),
-
-      street: getQRField("vcard_street"),
-
-      postal_code: getQRField("vcard_postal_code"),
-
-      city: getQRField("vcard_city"),
-
-      region: getQRField("vcard_region"),
-
-      country: getQRField("vcard_country"),
-    },
-
-    event: {
-      title: getQRField("event_title"),
-
-      start: getQRField("event_start"),
-
-      end: getQRField("event_end"),
-
-      location: getQRField("event_location"),
-
-      description: getQRField("event_description"),
-    },
-
-    style: {
-      foreground: document.getElementById("qr-foreground")?.value ?? "#000000",
-
-      background: document.getElementById("qr-background")?.value ?? "#ffffff",
-
-      gradient_enabled: gradient,
-
-      gradient_start:
-        document.getElementById("qr-gradient-start")?.value ?? "#000000",
-
-      gradient_end:
-        document.getElementById("qr-gradient-end")?.value ?? "#3b82f6",
-
-      module: getActiveQRStyle("dots"),
-
-      corner_outer: getActiveQRStyle("corners-square"),
-
-      corner_inner: getActiveQRStyle("corners-dot"),
-
-      has_logo: false,
-    },
-  };
-}
-
-async function generateQRPreview() {
-  const preview = document.getElementById("qr-preview");
-
-  const errorLevel = document.getElementById("qr-error-level");
-
-  const version = document.getElementById("qr-version");
-
-  const status = document.querySelector(".qr-status");
-
-  if (!preview) {
-    return;
-  }
-
-  const request = buildQRRequest();
-
-  if (!hasQRPayload(request)) {
-    showEmptyQRPreview(preview);
-
-    if (errorLevel) {
-      errorLevel.textContent = "L";
-    }
-
-    if (version) {
-      version.textContent = "Auto";
-    }
-
-    if (status) {
-      status.textContent = "Bereit";
-    }
-
-    return;
-  }
-
-  if (qrPreviewRequest) {
-    qrPreviewRequest.abort();
-  }
-
-  qrPreviewRequest = new AbortController();
-
-  if (status) {
-    status.textContent = "Aktualisiert …";
-  }
-
-  try {
-    const response = await fetch("/qr/generate", {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json",
-      },
-
-      body: JSON.stringify(request),
-
-      signal: qrPreviewRequest.signal,
-    });
-
-    if (!response.ok) {
-      const message = await response.text();
-
-      throw new Error(message.trim() || "QR Code konnte nicht erzeugt werden.");
-    }
-
-    const result = await response.json();
-
-    preview.innerHTML = result.svg;
-
-    const svg = preview.querySelector("svg");
-
-    if (svg) {
-      svg.removeAttribute("width");
-
-      svg.removeAttribute("height");
-
-      svg.style.width = "100%";
-
-      svg.style.height = "100%";
-
-      svg.style.display = "block";
-    }
-
-    if (errorLevel) {
-      errorLevel.textContent = result.error_correction;
-    }
-
-    if (version) {
-      version.textContent = String(result.version);
-    }
-
-    if (status) {
-      status.textContent = "Aktuell";
-    }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      return;
-    }
-
-    if (status) {
-      status.textContent = "Ungültig";
-    }
-  } finally {
-    qrPreviewRequest = null;
-  }
-}
-
-function hasQRPayload(request) {
-  switch (request.type) {
-    case "url":
-      return request.url.trim() !== "";
-
-    case "text":
-      return request.text.trim() !== "";
-
-    case "phone":
-      return request.phone.trim() !== "";
-
-    case "wifi":
-      return request.wifi.ssid.trim() !== "";
-
-    case "vcard":
-      return (
-        request.vcard.first_name.trim() !== "" ||
-        request.vcard.last_name.trim() !== ""
-      );
-
-    case "event":
-      return (
-        request.event.title.trim() !== "" &&
-        request.event.start !== "" &&
-        request.event.end !== ""
-      );
-
-    default:
-      return false;
-  }
-}
-
-function showEmptyQRPreview(preview) {
-  preview.innerHTML = `
-    <div class="qr-preview-placeholder">
-      <div class="preview-icon">
-        ▦
-      </div>
-
-      <strong>
-        QR Code Vorschau
-      </strong>
-
-      <span>
-        Gib links einen Inhalt ein.
-      </span>
-    </div>
-  `;
 }
