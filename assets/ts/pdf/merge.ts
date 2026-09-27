@@ -1,6 +1,20 @@
-let mergeFiles = [];
+import { downloadBlob, getDownloadFilename } from "../shared/download.ts";
 
-export function renderPDFMerge(workspace, onBack) {
+interface MergeFile {
+  id: string;
+  file: File;
+}
+
+const MAX_FILES = 50;
+const MAX_FILE_SIZE = 512 * 1024 * 1024;
+const MAX_TOTAL_SIZE = 1024 * 1024 * 1024;
+
+let mergeFiles: MergeFile[] = [];
+
+export function renderPDFMerge(
+  workspace: HTMLElement,
+  onBack: () => void,
+): void {
   mergeFiles = [];
 
   workspace.innerHTML = `
@@ -146,33 +160,28 @@ export function renderPDFMerge(workspace, onBack) {
     </div>
   `;
 
-  setupBackButton(onBack);
+  const backButton =
+    document.querySelector<HTMLButtonElement>("#pdf-tool-back");
+
+  backButton?.addEventListener("click", onBack);
 
   setupMergeWorkspace();
 }
 
-export function resetPDFMerge() {
+export function resetPDFMerge(): void {
   mergeFiles = [];
 }
 
-function setupBackButton(onBack) {
-  const button = document.getElementById("pdf-tool-back");
+function setupMergeWorkspace(): void {
+  const input = document.querySelector<HTMLInputElement>("#pdf-merge-files");
 
-  if (!button || typeof onBack !== "function") {
-    return;
-  }
+  const dropZone = document.querySelector<HTMLElement>("#pdf-merge-drop-zone");
 
-  button.addEventListener("click", onBack);
-}
+  const clearButton =
+    document.querySelector<HTMLButtonElement>("#pdf-merge-clear");
 
-function setupMergeWorkspace() {
-  const input = document.getElementById("pdf-merge-files");
-
-  const dropZone = document.getElementById("pdf-merge-drop-zone");
-
-  const clearButton = document.getElementById("pdf-merge-clear");
-
-  const submitButton = document.getElementById("pdf-merge-submit");
+  const submitButton =
+    document.querySelector<HTMLButtonElement>("#pdf-merge-submit");
 
   if (!input || !dropZone || !clearButton || !submitButton) {
     return;
@@ -195,31 +204,33 @@ function setupMergeWorkspace() {
   });
 
   submitButton.addEventListener("click", () => {
-    mergePDFs();
+    void mergePDFs();
   });
 }
 
-function setupMergeDropZone(dropZone) {
-  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+function setupMergeDropZone(dropZone: HTMLElement): void {
+  const dragEvents = ["dragenter", "dragover", "dragleave", "drop"] as const;
+
+  for (const eventName of dragEvents) {
     dropZone.addEventListener(eventName, (event) => {
       event.preventDefault();
       event.stopPropagation();
     });
-  });
+  }
 
-  ["dragenter", "dragover"].forEach((eventName) => {
+  for (const eventName of ["dragenter", "dragover"] as const) {
     dropZone.addEventListener(eventName, () => {
       dropZone.classList.add("drag-over");
     });
-  });
+  }
 
-  ["dragleave", "drop"].forEach((eventName) => {
+  for (const eventName of ["dragleave", "drop"] as const) {
     dropZone.addEventListener(eventName, () => {
       dropZone.classList.remove("drag-over");
     });
-  });
+  }
 
-  dropZone.addEventListener("drop", (event) => {
+  dropZone.addEventListener("drop", (event: DragEvent) => {
     const files = event.dataTransfer?.files;
 
     if (!files?.length) {
@@ -230,7 +241,7 @@ function setupMergeDropZone(dropZone) {
   });
 }
 
-function addMergeFiles(files) {
+function addMergeFiles(files: File[]): void {
   clearMergeError();
 
   const PDFs = files.filter(
@@ -244,13 +255,13 @@ function addMergeFiles(files) {
   }
 
   for (const file of PDFs) {
-    if (file.size > 512 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE) {
       showMergeError(`${file.name} ist größer als 512 MiB.`);
 
       continue;
     }
 
-    if (mergeFiles.length >= 50) {
+    if (mergeFiles.length >= MAX_FILES) {
       showMergeError(
         "Es können maximal 50 PDFs gleichzeitig zusammengefügt werden.",
       );
@@ -258,11 +269,14 @@ function addMergeFiles(files) {
       break;
     }
 
-    mergeFiles.push(createMergeFileEntry(file));
+    mergeFiles.push({
+      id: createID(),
+      file,
+    });
   }
 
-  if (getMergeTotalSize() > 1024 * 1024 * 1024) {
-    while (mergeFiles.length > 0 && getMergeTotalSize() > 1024 * 1024 * 1024) {
+  if (getMergeTotalSize() > MAX_TOTAL_SIZE) {
+    while (mergeFiles.length > 0 && getMergeTotalSize() > MAX_TOTAL_SIZE) {
       mergeFiles.pop();
     }
 
@@ -272,14 +286,7 @@ function addMergeFiles(files) {
   renderMergeFileList();
 }
 
-function createMergeFileEntry(file) {
-  return {
-    id: createID(),
-    file,
-  };
-}
-
-function createID() {
+function createID(): string {
   if (
     typeof crypto !== "undefined" &&
     typeof crypto.randomUUID === "function"
@@ -290,18 +297,18 @@ function createID() {
   return [Date.now(), Math.random().toString(16).slice(2)].join("-");
 }
 
-function getMergeTotalSize() {
+function getMergeTotalSize(): number {
   return mergeFiles.reduce((total, entry) => total + entry.file.size, 0);
 }
 
-function renderMergeFileList() {
-  const selection = document.getElementById("pdf-merge-selection");
+function renderMergeFileList(): void {
+  const selection = document.querySelector<HTMLElement>("#pdf-merge-selection");
 
-  const list = document.getElementById("pdf-merge-list");
+  const list = document.querySelector<HTMLElement>("#pdf-merge-list");
 
-  const count = document.getElementById("pdf-merge-count");
+  const count = document.querySelector<HTMLElement>("#pdf-merge-count");
 
-  const submit = document.getElementById("pdf-merge-submit");
+  const submit = document.querySelector<HTMLButtonElement>("#pdf-merge-submit");
 
   if (!selection || !list || !count || !submit) {
     return;
@@ -381,33 +388,51 @@ function renderMergeFileList() {
   setupMergeSorting();
 }
 
-function setupMergeListActions() {
-  document.querySelectorAll("[data-remove]").forEach((button) => {
-    button.addEventListener("click", () => {
-      removeMergeFile(button.dataset.remove);
-    });
-  });
+function setupMergeListActions(): void {
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-remove]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const id = button.dataset.remove;
 
-  document.querySelectorAll("[data-move-up]").forEach((button) => {
-    button.addEventListener("click", () => {
-      moveMergeFile(button.dataset.moveUp, -1);
+        if (id) {
+          removeMergeFile(id);
+        }
+      });
     });
-  });
 
-  document.querySelectorAll("[data-move-down]").forEach((button) => {
-    button.addEventListener("click", () => {
-      moveMergeFile(button.dataset.moveDown, 1);
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-move-up]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const id = button.dataset.moveUp;
+
+        if (id) {
+          moveMergeFile(id, -1);
+        }
+      });
     });
-  });
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-move-down]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const id = button.dataset.moveDown;
+
+        if (id) {
+          moveMergeFile(id, 1);
+        }
+      });
+    });
 }
 
-function removeMergeFile(id) {
+function removeMergeFile(id: string): void {
   mergeFiles = mergeFiles.filter((entry) => entry.id !== id);
 
   renderMergeFileList();
 }
 
-function moveMergeFile(id, offset) {
+function moveMergeFile(id: string, offset: number): void {
   const index = mergeFiles.findIndex((entry) => entry.id === id);
 
   if (index < 0) {
@@ -420,25 +445,31 @@ function moveMergeFile(id, offset) {
     return;
   }
 
-  const [entry] = mergeFiles.splice(index, 1);
+  const entry = mergeFiles[index];
+
+  if (!entry) {
+    return;
+  }
+
+  mergeFiles.splice(index, 1);
 
   mergeFiles.splice(destination, 0, entry);
 
   renderMergeFileList();
 }
 
-function setupMergeSorting() {
-  const list = document.getElementById("pdf-merge-list");
+function setupMergeSorting(): void {
+  const list = document.querySelector<HTMLElement>("#pdf-merge-list");
 
   if (!list) {
     return;
   }
 
-  let draggedID = null;
+  let draggedID: string | null = null;
 
-  list.querySelectorAll(".pdf-file-item").forEach((item) => {
+  list.querySelectorAll<HTMLElement>(".pdf-file-item").forEach((item) => {
     item.addEventListener("dragstart", () => {
-      draggedID = item.dataset.fileId;
+      draggedID = item.dataset.fileId ?? null;
 
       item.classList.add("dragging");
     });
@@ -472,22 +503,24 @@ function setupMergeSorting() {
 
       item.classList.remove("drag-target");
 
-      if (!draggedID || draggedID === item.dataset.fileId) {
+      const targetID = item.dataset.fileId;
+
+      if (!draggedID || !targetID || draggedID === targetID) {
         return;
       }
 
-      reorderMergeFiles(draggedID, item.dataset.fileId);
+      reorderMergeFiles(draggedID, targetID);
     });
   });
 }
 
-function clearDragTargets(list) {
-  list.querySelectorAll(".pdf-file-item").forEach((item) => {
+function clearDragTargets(list: HTMLElement): void {
+  list.querySelectorAll<HTMLElement>(".pdf-file-item").forEach((item) => {
     item.classList.remove("drag-target");
   });
 }
 
-function reorderMergeFiles(sourceID, targetID) {
+function reorderMergeFiles(sourceID: string, targetID: string): void {
   const sourceIndex = mergeFiles.findIndex((entry) => entry.id === sourceID);
 
   const targetIndex = mergeFiles.findIndex((entry) => entry.id === targetID);
@@ -496,14 +529,20 @@ function reorderMergeFiles(sourceID, targetID) {
     return;
   }
 
-  const [source] = mergeFiles.splice(sourceIndex, 1);
+  const source = mergeFiles[sourceIndex];
+
+  if (!source) {
+    return;
+  }
+
+  mergeFiles.splice(sourceIndex, 1);
 
   mergeFiles.splice(targetIndex, 0, source);
 
   renderMergeFileList();
 }
 
-async function mergePDFs() {
+async function mergePDFs(): Promise<void> {
   if (mergeFiles.length < 2) {
     showMergeError("Bitte mindestens zwei PDFs auswählen.");
 
@@ -512,9 +551,9 @@ async function mergePDFs() {
 
   clearMergeError();
 
-  const submit = document.getElementById("pdf-merge-submit");
+  const submit = document.querySelector<HTMLButtonElement>("#pdf-merge-submit");
 
-  const progress = document.getElementById("pdf-merge-progress");
+  const progress = document.querySelector<HTMLElement>("#pdf-merge-progress");
 
   if (submit) {
     submit.disabled = true;
@@ -526,9 +565,9 @@ async function mergePDFs() {
 
   const body = new FormData();
 
-  mergeFiles.forEach((entry) => {
+  for (const entry of mergeFiles) {
     body.append("files", entry.file, entry.file.name);
-  });
+  }
 
   try {
     const response = await fetch("/pdf/merge", {
@@ -548,9 +587,12 @@ async function mergePDFs() {
 
     downloadBlob(
       blob,
-      getDownloadFilename(response.headers.get("Content-Disposition")),
+      getDownloadFilename(
+        response.headers.get("Content-Disposition"),
+        "zusammengefuegt.pdf",
+      ),
     );
-  } catch (error) {
+  } catch (error: unknown) {
     showMergeError(
       error instanceof Error
         ? error.message
@@ -567,8 +609,8 @@ async function mergePDFs() {
   }
 }
 
-function showMergeError(message) {
-  const error = document.getElementById("pdf-merge-error");
+function showMergeError(message: string): void {
+  const error = document.querySelector<HTMLElement>("#pdf-merge-error");
 
   if (!error) {
     return;
@@ -578,8 +620,8 @@ function showMergeError(message) {
   error.hidden = false;
 }
 
-function clearMergeError() {
-  const error = document.getElementById("pdf-merge-error");
+function clearMergeError(): void {
+  const error = document.querySelector<HTMLElement>("#pdf-merge-error");
 
   if (!error) {
     return;
@@ -589,62 +631,26 @@ function clearMergeError() {
   error.hidden = true;
 }
 
-function getDownloadFilename(contentDisposition) {
-  if (!contentDisposition) {
-    return "zusammengefuegt.pdf";
-  }
-
-  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-
-  if (utf8Match) {
-    return decodeURIComponent(utf8Match[1]);
-  }
-
-  const filenameMatch = contentDisposition.match(/filename="([^"]+)"/i);
-
-  if (filenameMatch) {
-    return filenameMatch[1];
-  }
-
-  return "zusammengefuegt.pdf";
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = filename;
-
-  document.body.appendChild(link);
-
-  link.click();
-  link.remove();
-
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1000);
-}
-
-function formatBytes(bytes) {
+function formatBytes(bytes: number): string {
   if (bytes === 0) {
     return "0 B";
   }
 
-  const units = ["B", "KiB", "MiB", "GiB"];
+  const units = ["B", "KiB", "MiB", "GiB"] as const;
 
   const index = Math.min(
     Math.floor(Math.log(bytes) / Math.log(1024)),
     units.length - 1,
   );
 
+  const unit = units[index] ?? "B";
+
   const value = bytes / 1024 ** index;
 
-  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${unit}`;
 }
 
-function escapeHTML(value) {
+function escapeHTML(value: string): string {
   const element = document.createElement("div");
 
   element.textContent = value;

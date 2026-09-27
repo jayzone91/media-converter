@@ -1,0 +1,152 @@
+package view
+
+templ QRStyleSection() {
+	<section class="qr-section">
+		<header class="qr-section-header">
+			<div>
+				<span class="section-number">
+					04
+				</span>
+				<h3>
+					Stil
+				</h3>
+			</div>
+			<p>
+				Module und Eckelemente individuell gestalten.
+			</p>
+		</header>
+		<div class="style-group">
+			<div class="style-group-header">
+				<strong>
+					QR Code Module
+				</strong>
+				<span>
+					Form der Datenpunkte
+				</span>
+			</div>
+			<div
+				class="style-options"
+				data-style-group="dots"
+			>
+				@QRStyleOption(
+					"square",
+					"Quadratisch",
+					"module-preview module-square",
+					true,
+				)
+				@QRStyleOption(
+					"rounded",
+					"Abgerundet",
+					"module-preview module-rounded",
+					false,
+				)
+				@QRStyleOption(
+					"dots",
+					"Punkte",
+					"module-preview module-dots",
+					false,
+				)
+				@QRStyleOption(
+					"diamond",
+					"Diamant",
+					"module-preview module-diamond",
+					false,
+				)
+				@QRStyleOption(
+					"classy",
+					"Classy",
+					"module-preview module-classy",
+					false,
+				)
+			</div>
+		</div>
+		<div class="style-group">
+			<div class="style-group-header">
+				<strong>
+					Eckelemente außen
+				</strong>
+				<span>
+					Rahmen der drei Positionsmarker
+				</span>
+			</div>
+			<div
+				class="style-options"
+				data-style-group="corners-square"
+			>
+				@QRStyleOption(
+					"square",
+					"Quadratisch",
+					"corner-preview corner-square",
+					true,
+				)
+				@QRStyleOption(
+					"rounded",
+					"Abgerundet",
+					"corner-preview corner-rounded",
+					false,
+				)
+				@QRStyleOption(
+					"extra-rounded",
+					"Stark abgerundet",
+					"corner-preview corner-extra-rounded",
+					false,
+				)
+			</div>
+		</div>
+		<div class="style-group">
+			<div class="style-group-header">
+				<strong>
+					Eckelemente innen
+				</strong>
+				<span>
+					Innerer Punkt der Positionsmarker
+				</span>
+			</div>
+			<div
+				class="style-options"
+				data-style-group="corners-dot"
+			>
+				@QRStyleOption(
+					"square",
+					"Quadratisch",
+					"corner-dot-preview corner-dot-square",
+					true,
+				)
+				@QRStyleOption(
+					"dot",
+					"Rund",
+					"corner-dot-preview corner-dot-round",
+					false,
+				)
+				@QRStyleOption(
+					"rounded",
+					"Abgerundet",
+					"corner-dot-preview corner-dot-rounded",
+					false,
+				)
+			</div>
+		</div>
+	</section>
+}
+
+templ QRStyleOption(
+	style string,
+	title string,
+	previewClass string,
+	active bool,
+) {
+	<button
+		class={
+			"style-option",
+			templ.KV(
+				"active",
+				active,
+			),
+		}
+		type="button"
+		data-style={ style }
+		title={ title }
+	>
+		<span class={ previewClass }></span>
+	</button>
+}

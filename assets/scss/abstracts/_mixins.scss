@@ -1,0 +1,61 @@
+@use "tokens" as *;
+
+@mixin surface(
+  $background: $color-surface,
+  $border: $color-border,
+  $radius: $radius-lg
+) {
+  border: 1px solid $border;
+  border-radius: $radius;
+
+  background: $background;
+}
+
+@mixin interactive {
+  transition:
+    background-color $duration-normal $ease-standard,
+    border-color $duration-normal $ease-standard,
+    color $duration-normal $ease-standard,
+    opacity $duration-normal $ease-standard,
+    transform $duration-normal $ease-standard;
+}
+
+@mixin button-reset {
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+
+  background: none;
+  color: inherit;
+
+  font: inherit;
+
+  cursor: pointer;
+}
+
+@mixin truncate {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin flex-center {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin mobile {
+  @media (max-width: $mobile-breakpoint) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (max-width: $tablet-breakpoint) {
+    @content;
+  }
+}

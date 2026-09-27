@@ -1,0 +1,89 @@
+package view
+
+templ IndexPage() {
+	<!DOCTYPE html>
+	<html lang="de">
+		<head>
+			<meta charset="utf-8"/>
+			<meta
+				name="viewport"
+				content="width=device-width, initial-scale=1"
+			/>
+			<title>Media Tools</title>
+			<link
+				rel="stylesheet"
+				href="/static/app.css"
+			/>
+			<link
+				rel="stylesheet"
+				href="/static/pdf.css"
+			/>
+			<script src="/static/app.min.js" defer></script>
+		</head>
+		<body>
+			<main class="page">
+				<header class="app-header">
+					<span class="eyebrow">
+						Media Tools
+					</span>
+					<h1>
+						Dateien, PDFs und QR Codes.
+					</h1>
+					<p>
+						Medien konvertieren, PDFs bearbeiten und
+						QR Codes direkt im Browser erzeugen.
+					</p>
+				</header>
+				<nav
+					class="tabs"
+					aria-label="Werkzeuge"
+				>
+					<button
+						class="tab-button active"
+						type="button"
+						data-tab="converter"
+					>
+						Medien konvertieren
+					</button>
+					<button
+						class="tab-button"
+						type="button"
+						data-tab="pdf"
+					>
+						PDF bearbeiten
+					</button>
+					<button
+						class="tab-button"
+						type="button"
+						data-tab="qr"
+					>
+						QR Code generieren
+					</button>
+				</nav>
+				@ConverterPanel()
+				@PDFPanel()
+				@QRPanel()
+				<footer class="footer">
+					Dateien werden nur temporär verarbeitet
+					und nach Abschluss der Anfrage gelöscht.
+				</footer>
+			</main>
+			<div
+				id="conversion-overlay"
+				class="conversion-overlay"
+				hidden
+			>
+				<div class="conversion-progress">
+					<div class="spinner"></div>
+					<strong>
+						Datei wird verarbeitet
+					</strong>
+					<span>
+						Die Verarbeitung kann je nach
+						Dateigröße etwas dauern.
+					</span>
+				</div>
+			</div>
+		</body>
+	</html>
+}

@@ -2,48 +2,28 @@ package web
 
 import (
 	"embed"
-	"html/template"
 	"io/fs"
 	"net/http"
 	"os"
-	"strings"
 
-	"github.com/jayzone91/media-converter/internal/media"
+	"github.com/jayzone91/media-converter/internal/web/view"
 )
 
-//go:embed templates/*.html static/*
+//go:embed static/*
 var uiFiles embed.FS
-
-var uiTemplates = template.Must(
-	template.New("").
-		Funcs(template.FuncMap{
-			"upper": strings.ToUpper,
-		}).
-		ParseFS(
-			uiFiles,
-			"templates/*.html",
-		),
-)
-
-type detectTemplateData struct {
-	UploadID string
-	Filename string
-	Format   media.Format
-}
 
 func (s *Server) handleIndex(
 	w http.ResponseWriter,
-	_ *http.Request,
+	r *http.Request,
 ) {
 	w.Header().Set(
 		"Content-Type",
 		"text/html; charset=utf-8",
 	)
 
-	if err := uiTemplates.ExecuteTemplate(
+	if err := view.IndexPage().Render(
+		r.Context(),
 		w,
-		"index.html",
-		nil,
 	); err != nil {
 		http.Error(
 			w,
@@ -61,18 +41,24 @@ func (s *Server) handleDetect(
 		return
 	}
 
-	previousUploadID := r.FormValue(
-		"upload_id",
-	)
+	previousUploadID :=
+		r.FormValue(
+			"upload_id",
+		)
 
-	file, header, err := r.FormFile("file")
+	file, header, err :=
+		r.FormFile("file")
+
 	if err != nil {
 		renderDetectError(
 			w,
+			r,
 			"Keine Datei ausgewählt.",
 		)
+
 		return
 	}
+
 	defer file.Close()
 
 	if !validateFileSize(header) {
@@ -82,89 +68,113 @@ func (s *Server) handleDetect(
 
 		renderDetectError(
 			w,
+			r,
 			"Die Datei ist größer als 512 MiB.",
 		)
+
 		return
 	}
 
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-upload-*",
-	)
+	tempDir, err :=
+		os.MkdirTemp(
+			"",
+			"media-converter-upload-*",
+		)
+
 	if err != nil {
 		renderDetectError(
 			w,
+			r,
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
+
 		return
 	}
 
-	inputPath, err := saveUpload(
-		file,
-		header.Filename,
-		tempDir,
-	)
+	inputPath, err :=
+		saveUpload(
+			file,
+			header.Filename,
+			tempDir,
+		)
+
 	if err != nil {
-		_ = os.RemoveAll(tempDir)
+		_ = os.RemoveAll(
+			tempDir,
+		)
 
 		renderDetectError(
 			w,
+			r,
 			"Datei konnte nicht gespeichert werden.",
 		)
+
 		return
 	}
 
-	format, err := detectFormat(
-		r.Context(),
-		inputPath,
-		s.ffprobe,
-	)
+	format, err :=
+		detectFormat(
+			r.Context(),
+			inputPath,
+			s.ffprobe,
+		)
+
 	if err != nil {
-		_ = os.RemoveAll(tempDir)
+		_ = os.RemoveAll(
+			tempDir,
+		)
 
 		renderDetectError(
 			w,
+			r,
 			"Dieses Dateiformat wird nicht unterstützt.",
 		)
+
 		return
 	}
 
-	upload, err := s.uploads.Add(
-		tempDir,
-		inputPath,
-		header.Filename,
-		format,
-	)
+	upload, err :=
+		s.uploads.Add(
+			tempDir,
+			inputPath,
+			header.Filename,
+			format,
+		)
+
 	if err != nil {
-		_ = os.RemoveAll(tempDir)
+		_ = os.RemoveAll(
+			tempDir,
+		)
 
 		renderDetectError(
 			w,
+			r,
 			"Upload konnte nicht gespeichert werden.",
 		)
+
 		return
 	}
 
-	// Erst löschen, nachdem der neue Upload sicher gespeichert wurde.
-	s.uploads.Delete(previousUploadID)
-
-	data := detectTemplateData{
-		UploadID: upload.ID,
-		Filename: header.Filename,
-		Format:   format,
-	}
+	s.uploads.Delete(
+		previousUploadID,
+	)
 
 	w.Header().Set(
 		"Content-Type",
 		"text/html; charset=utf-8",
 	)
 
-	if err := uiTemplates.ExecuteTemplate(
+	if err := view.DetectResult(
+		upload.ID,
+		header.Filename,
+		format,
+	).Render(
+		r.Context(),
 		w,
-		"detect.html",
-		data,
 	); err != nil {
-		s.uploads.Delete(upload.ID)
+		s.uploads.Delete(
+			upload.ID,
+		)
 
 		http.Error(
 			w,
@@ -176,20 +186,29 @@ func (s *Server) handleDetect(
 
 func renderDetectError(
 	w http.ResponseWriter,
+	r *http.Request,
 	message string,
 ) {
-	_ = uiTemplates.ExecuteTemplate(
-		w,
-		"detect-error.html",
+	w.Header().Set(
+		"Content-Type",
+		"text/html; charset=utf-8",
+	)
+
+	_ = view.DetectError(
 		message,
+	).Render(
+		r.Context(),
+		w,
 	)
 }
 
 func staticHandler() http.Handler {
-	staticFS, err := fs.Sub(
-		uiFiles,
-		"static",
-	)
+	staticFS, err :=
+		fs.Sub(
+			uiFiles,
+			"static",
+		)
+
 	if err != nil {
 		panic(err)
 	}

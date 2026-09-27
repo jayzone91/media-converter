@@ -1,0 +1,10 @@
+/*
+ * Main stylesheet entry point.
+ *
+ * Die aktuelle app.css/pdf.css werden im nächsten
+ * Schritt vollständig nach SCSS migriert.
+ */
+
+@use "abstracts/tokens";
+@use "abstracts/functions";
+@use "abstracts/mixins";

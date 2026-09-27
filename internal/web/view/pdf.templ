@@ -1,0 +1,143 @@
+package view
+
+type PDFTool struct {
+	ID          string
+	Icon        string
+	Title       string
+	Description string
+}
+
+var pdfTools = []PDFTool{
+	{
+		ID:          "merge",
+		Icon:        "⇄",
+		Title:       "PDF zusammenfügen",
+		Description: "Mehrere PDFs zu einer Datei verbinden.",
+	},
+	{
+		ID:          "split",
+		Icon:        "✂",
+		Title:       "PDF trennen",
+		Description: "Ein Dokument in mehrere PDFs aufteilen.",
+	},
+	{
+		ID:          "compress",
+		Icon:        "↓",
+		Title:       "PDF komprimieren",
+		Description: "Dateigröße reduzieren.",
+	},
+	{
+		ID:          "edit",
+		Icon:        "✎",
+		Title:       "PDF bearbeiten",
+		Description: "Inhalte und Seiten bearbeiten.",
+	},
+	{
+		ID:          "encrypt",
+		Icon:        "⌑",
+		Title:       "PDF verschlüsseln",
+		Description: "Dokument mit Passwort schützen.",
+	},
+	{
+		ID:          "decrypt",
+		Icon:        "⌐",
+		Title:       "Passwort entfernen",
+		Description: "Schutz entfernen, wenn das Passwort bekannt ist.",
+	},
+	{
+		ID:          "rotate",
+		Icon:        "↻",
+		Title:       "Seiten drehen",
+		Description: "Einzelne Seiten ausrichten.",
+	},
+	{
+		ID:          "delete",
+		Icon:        "×",
+		Title:       "Seiten löschen",
+		Description: "Nicht benötigte Seiten entfernen.",
+	},
+	{
+		ID:          "extract",
+		Icon:        "↗",
+		Title:       "Seiten extrahieren",
+		Description: "Gewählte Seiten als neue PDF speichern.",
+	},
+	{
+		ID:          "sort",
+		Icon:        "≡",
+		Title:       "Seiten sortieren",
+		Description: "Reihenfolge per Drag & Drop ändern.",
+	},
+	{
+		ID:          "web",
+		Icon:        "⌘",
+		Title:       "Webseite in PDF",
+		Description: "URL als PDF rendern.",
+	},
+	{
+		ID:          "optimize",
+		Icon:        "◇",
+		Title:       "PDF optimieren",
+		Description: "Bilder, Metadaten und Struktur optimieren.",
+	},
+	{
+		ID:          "redact",
+		Icon:        "■",
+		Title:       "PDF schwärzen",
+		Description: "Bereiche dauerhaft unkenntlich machen.",
+	},
+	{
+		ID:          "create",
+		Icon:        "＋",
+		Title:       "PDF erstellen",
+		Description: "PDF aus Bildern und anderen Medien erzeugen.",
+	},
+}
+
+templ PDFPanel() {
+	<section
+		class="tab-panel"
+		data-panel="pdf"
+		hidden
+	>
+		<section class="tool-panel">
+			<header class="panel-header">
+				<h2>
+					PDF bearbeiten
+				</h2>
+				<p>
+					Dokumente zusammenfügen, aufteilen,
+					optimieren und bearbeiten.
+				</p>
+			</header>
+			<div class="tool-grid">
+				for _, tool := range pdfTools {
+					@PDFToolCard(tool)
+				}
+			</div>
+			<div
+				id="pdf-tool-workspace"
+				class="tool-workspace"
+				hidden
+			></div>
+		</section>
+	</section>
+}
+
+templ PDFToolCard(tool PDFTool) {
+	<button
+		class="tool-card"
+		type="button"
+		data-pdf-tool={ tool.ID }
+	>
+		<span class="tool-icon">
+			{ tool.Icon }
+		</span>
+		<strong>
+			{ tool.Title }
+		</strong>
+		<span>
+			{ tool.Description }
+		</span>
+	</button>
+}

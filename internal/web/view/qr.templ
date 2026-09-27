@@ -1,0 +1,363 @@
+package view
+
+templ QRPanel() {
+	<section
+		class="tab-panel"
+		data-panel="qr"
+		hidden
+	>
+		<section class="tool-panel qr-tool">
+			<header class="panel-header">
+				<h2>
+					QR Code generieren
+				</h2>
+				<p>
+					Inhalt festlegen und den QR Code anschließend
+					individuell gestalten.
+				</p>
+			</header>
+			<div class="qr-workspace">
+				@QRTypeNavigation()
+				<div class="qr-designer">
+					<div class="qr-config">
+						@QRContentSection()
+						@QRColorSection()
+						@QRLogoSection()
+						@QRStyleSection()
+					</div>
+					@QRPreview()
+				</div>
+			</div>
+		</section>
+	</section>
+}
+
+templ QRTypeNavigation() {
+	<nav
+		class="qr-type-grid"
+		aria-label="QR Code Typ"
+	>
+		@QRTypeButton(
+			"url",
+			"URL",
+			"Webseite öffnen",
+			true,
+		)
+		@QRTypeButton(
+			"text",
+			"Text",
+			"Freier Inhalt",
+			false,
+		)
+		@QRTypeButton(
+			"phone",
+			"Telefon",
+			"Nummer anrufen",
+			false,
+		)
+		@QRTypeButton(
+			"vcard",
+			"vCard",
+			"Kontakt speichern",
+			false,
+		)
+		@QRTypeButton(
+			"wifi",
+			"WLAN",
+			"Netzwerk verbinden",
+			false,
+		)
+		@QRTypeButton(
+			"event",
+			"Event",
+			"Termin hinzufügen",
+			false,
+		)
+	</nav>
+}
+
+templ QRTypeButton(
+	id string,
+	title string,
+	description string,
+	active bool,
+) {
+	<button
+		class={
+			"qr-type",
+			templ.KV(
+				"active",
+				active,
+			),
+		}
+		type="button"
+		data-qr-type={ id }
+	>
+		<strong>
+			{ title }
+		</strong>
+		<span>
+			{ description }
+		</span>
+	</button>
+}
+
+templ QRContentSection() {
+	<section class="qr-section">
+		<header class="qr-section-header">
+			<div>
+				<span class="section-number">
+					01
+				</span>
+				<h3>
+					Inhalt
+				</h3>
+			</div>
+			<p>
+				Welche Informationen soll der
+				QR Code enthalten?
+			</p>
+		</header>
+		<div
+			id="qr-fields"
+			class="qr-fields"
+		>
+			@QRURLFields()
+		</div>
+	</section>
+}
+
+templ QRURLFields() {
+	<label class="field">
+		<span>
+			URL
+		</span>
+		<input
+			type="url"
+			name="qr_url"
+			placeholder="https://example.com"
+		/>
+	</label>
+}
+
+templ QRColorSection() {
+	<section class="qr-section">
+		<header class="qr-section-header">
+			<div>
+				<span class="section-number">
+					02
+				</span>
+				<h3>
+					Farben
+				</h3>
+			</div>
+			<p>
+				Einfarbig oder mit individuellem Farbverlauf.
+			</p>
+		</header>
+		<div class="color-mode">
+			<label class="choice-card">
+				<input
+					type="radio"
+					name="qr_color_mode"
+					value="solid"
+					checked
+				/>
+				<span>
+					<strong>
+						Einfarbig
+					</strong>
+					<small>
+						Eine Farbe für alle Module
+					</small>
+				</span>
+			</label>
+			<label class="choice-card">
+				<input
+					type="radio"
+					name="qr_color_mode"
+					value="gradient"
+					id="qr-gradient-enabled"
+				/>
+				<span>
+					<strong>
+						Farbverlauf
+					</strong>
+					<small>
+						Zwei Farben kombinieren
+					</small>
+				</span>
+			</label>
+		</div>
+		<div class="color-row">
+			@QRColorInput(
+				"Vordergrund",
+				"qr-foreground",
+				"#000000",
+			)
+			@QRColorInput(
+				"Hintergrund",
+				"qr-background",
+				"#ffffff",
+			)
+		</div>
+		<div
+			id="qr-gradient-settings"
+			class="color-row"
+			hidden
+		>
+			@QRColorInput(
+				"Verlauf Start",
+				"qr-gradient-start",
+				"#000000",
+			)
+			@QRColorInput(
+				"Verlauf Ende",
+				"qr-gradient-end",
+				"#3b82f6",
+			)
+		</div>
+	</section>
+}
+
+templ QRColorInput(
+	label string,
+	id string,
+	value string,
+) {
+	<label class="color-field">
+		<span>
+			{ label }
+		</span>
+		<div class="color-control">
+			<input
+				type="color"
+				id={ id }
+				value={ value }
+			/>
+			<code>
+				{ value }
+			</code>
+		</div>
+	</label>
+}
+
+templ QRLogoSection() {
+	<section class="qr-section">
+		<header class="qr-section-header">
+			<div>
+				<span class="section-number">
+					03
+				</span>
+				<h3>
+					Logo
+				</h3>
+			</div>
+			<p>
+				Optional ein Logo direkt im QR Code platzieren.
+			</p>
+		</header>
+		<label class="logo-upload">
+			<span class="logo-upload-icon">
+				＋
+			</span>
+			<span>
+				<strong>
+					Logo auswählen
+				</strong>
+				<small>
+					PNG, JPEG oder WEBP · max. 2 MiB
+				</small>
+			</span>
+			<input
+				type="file"
+				id="qr-logo"
+				accept="image/png,image/jpeg,image/webp"
+			/>
+		</label>
+		<p class="qr-note">
+			Mit Logo wird automatisch eine höhere
+			Fehlerkorrektur verwendet, damit der QR Code
+			weiterhin zuverlässig scanbar bleibt.
+		</p>
+	</section>
+}
+
+templ QRPreview() {
+	<aside class="qr-preview-panel">
+		<div class="qr-preview-card">
+			<header>
+				<div>
+					<strong>
+						Vorschau
+					</strong>
+					<span>
+						Live-Vorschau
+					</span>
+				</div>
+				<span class="qr-status">
+					Bereit
+				</span>
+			</header>
+			<div
+				id="qr-preview"
+				class="qr-preview"
+			>
+				<div class="qr-preview-placeholder">
+					<div class="preview-icon">
+						▦
+					</div>
+					<strong>
+						QR Code Vorschau
+					</strong>
+					<span>
+						Gib links einen Inhalt ein.
+					</span>
+				</div>
+			</div>
+			<div class="qr-info">
+				<div>
+					<span>
+						Fehlerkorrektur
+					</span>
+					<strong id="qr-error-level">
+						L
+					</strong>
+				</div>
+				<div>
+					<span>
+						QR Version
+					</span>
+					<strong id="qr-version">
+						Auto
+					</strong>
+				</div>
+			</div>
+		</div>
+		<div class="qr-actions">
+			<button
+				id="qr-generate"
+				class="primary-button"
+				type="button"
+			>
+				QR Code erstellen
+			</button>
+			<div
+				class="qr-download-actions"
+				hidden
+			>
+				<button type="button">
+					PNG
+				</button>
+				<button type="button">
+					SVG
+				</button>
+			</div>
+		</div>
+		<p class="qr-preview-help">
+			Standardcodes ohne Logo oder Spezialdesign
+			verwenden automatisch Fehlerkorrektur L für
+			einen möglichst kompakten QR Code.
+		</p>
+	</aside>
+}

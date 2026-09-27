@@ -1,0 +1,26 @@
+# Bun
+node_modules/
+
+# Frontend build files
+internal/web/static/app.min.js
+internal/web/static/app.min.js.map
+internal/web/static/app.min.css
+internal/web/static/app.min.css.map
+internal/web/view/*_templ.go
+
+# Go build output
+build/
+media-converter
+media-converter.exe
+
+# Environment
+.env
+.env.local
+
+# Editors
+.idea/
+.vscode/
+
+# DS
+.DS_STORE
+Thumbs.db

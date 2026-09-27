@@ -1,0 +1,327 @@
+import type { QRType } from "./types.ts";
+
+export function renderQRFields(type: QRType): void {
+  const container = document.querySelector<HTMLElement>("#qr-fields");
+
+  if (!container) {
+    return;
+  }
+
+  switch (type) {
+    case "url":
+      container.innerHTML = `
+        <label class="field">
+          <span>URL</span>
+
+          <input
+            type="url"
+            name="qr_url"
+            placeholder="https://example.com"
+          />
+        </label>
+      `;
+
+      break;
+
+    case "text":
+      container.innerHTML = `
+        <label class="field">
+          <span>Text</span>
+
+          <textarea
+            name="qr_text"
+            rows="5"
+            placeholder="Text eingeben"
+          ></textarea>
+        </label>
+      `;
+
+      break;
+
+    case "phone":
+      container.innerHTML = `
+        <label class="field">
+          <span>Telefonnummer</span>
+
+          <input
+            type="tel"
+            name="qr_phone"
+            placeholder="+49 ..."
+          />
+        </label>
+      `;
+
+      break;
+
+    case "wifi":
+      container.innerHTML = `
+        <label class="field">
+          <span>SSID</span>
+
+          <input
+            type="text"
+            name="wifi_ssid"
+          />
+        </label>
+
+        <label class="field">
+          <span>Passwort</span>
+
+          <input
+            type="password"
+            name="wifi_password"
+          />
+        </label>
+
+        <label class="field">
+          <span>Verschlüsselung</span>
+
+          <select name="wifi_encryption">
+            <option value="WPA">
+              WPA / WPA2 / WPA3
+            </option>
+
+            <option value="WEP">
+              WEP
+            </option>
+
+            <option value="nopass">
+              Offen
+            </option>
+          </select>
+        </label>
+
+        <label class="toggle-row">
+          <input
+            type="checkbox"
+            name="wifi_hidden"
+          />
+
+          <span>
+            Verstecktes WLAN
+          </span>
+        </label>
+      `;
+
+      break;
+
+    case "vcard":
+      renderVCardFields(container);
+
+      break;
+
+    case "event":
+      container.innerHTML = `
+        <label class="field">
+          <span>Titel</span>
+
+          <input
+            name="event_title"
+          />
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Beginn</span>
+
+            <input
+              type="datetime-local"
+              name="event_start"
+            />
+          </label>
+
+          <label class="field">
+            <span>Ende</span>
+
+            <input
+              type="datetime-local"
+              name="event_end"
+            />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Ort</span>
+
+          <input
+            name="event_location"
+          />
+        </label>
+
+        <label class="field">
+          <span>Beschreibung</span>
+
+          <textarea
+            name="event_description"
+            rows="4"
+          ></textarea>
+        </label>
+      `;
+
+      break;
+  }
+}
+
+function renderVCardFields(container: HTMLElement): void {
+  container.innerHTML = `
+    <div class="field-grid">
+      <label class="field">
+        <span>Vorname</span>
+
+        <input
+          name="vcard_firstname"
+          autocomplete="given-name"
+        />
+      </label>
+
+      <label class="field">
+        <span>Nachname</span>
+
+        <input
+          name="vcard_lastname"
+          autocomplete="family-name"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Firma</span>
+
+        <input
+          name="vcard_company"
+          autocomplete="organization"
+        />
+      </label>
+
+      <label class="field">
+        <span>Position</span>
+
+        <input
+          name="vcard_position"
+          autocomplete="organization-title"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Telefon (Arbeit)</span>
+
+        <input
+          type="tel"
+          name="vcard_phone_work"
+        />
+      </label>
+
+      <label class="field">
+        <span>Telefon (Privat)</span>
+
+        <input
+          type="tel"
+          name="vcard_phone_home"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Mobil (Arbeit)</span>
+
+        <input
+          type="tel"
+          name="vcard_mobile_work"
+        />
+      </label>
+
+      <label class="field">
+        <span>Mobil (Privat)</span>
+
+        <input
+          type="tel"
+          name="vcard_mobile_home"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Fax (Arbeit)</span>
+
+        <input
+          type="tel"
+          name="vcard_fax_work"
+        />
+      </label>
+
+      <label class="field">
+        <span>E-Mail</span>
+
+        <input
+          type="email"
+          name="vcard_email"
+          autocomplete="email"
+        />
+      </label>
+    </div>
+
+    <label class="field">
+      <span>Webseite</span>
+
+      <input
+        type="url"
+        name="vcard_website"
+        placeholder="https://example.com"
+      />
+    </label>
+
+    <label class="field">
+      <span>Straße</span>
+
+      <input
+        name="vcard_street"
+        autocomplete="street-address"
+      />
+    </label>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>PLZ</span>
+
+        <input
+          name="vcard_postal_code"
+          autocomplete="postal-code"
+        />
+      </label>
+
+      <label class="field">
+        <span>Stadt</span>
+
+        <input
+          name="vcard_city"
+          autocomplete="address-level2"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Bundesland / Region</span>
+
+        <input
+          name="vcard_region"
+          autocomplete="address-level1"
+        />
+      </label>
+
+      <label class="field">
+        <span>Land</span>
+
+        <input
+          name="vcard_country"
+          autocomplete="country-name"
+        />
+      </label>
+    </div>
+  `;
+}
