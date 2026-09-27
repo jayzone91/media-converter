@@ -28,7 +28,7 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(
 				w,
 				r,
-				"merge",
+				tool,
 				err,
 			)
 		}
@@ -41,7 +41,20 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(
 				w,
 				r,
-				"split",
+				tool,
+				err,
+			)
+		}
+
+	case "compress":
+		if err := view.PDFCompressWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
+				w,
+				r,
+				tool,
 				err,
 			)
 		}
@@ -54,7 +67,7 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(
 				w,
 				r,
-				"sort",
+				tool,
 				err,
 			)
 		}
@@ -67,7 +80,7 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(
 				w,
 				r,
-				"delete",
+				tool,
 				err,
 			)
 		}
@@ -80,7 +93,7 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(
 				w,
 				r,
-				"extract",
+				tool,
 				err,
 			)
 		}
@@ -93,13 +106,12 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(
 				w,
 				r,
-				"rotate",
+				tool,
 				err,
 			)
 		}
 
 	case
-		"compress",
 		"edit",
 		"encrypt",
 		"decrypt",

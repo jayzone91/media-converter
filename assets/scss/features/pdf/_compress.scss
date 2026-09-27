@@ -1,0 +1,184 @@
+@use "../../abstracts/tokens" as *;
+@use "../../abstracts/mixins" as *;
+
+.pdf-compress-editor {
+  margin-top: $space-5;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pdf-compress-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: $space-4;
+
+  margin-bottom: $space-4;
+
+  > div {
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+
+    color: $color-text;
+
+    font-size: $font-size-lg;
+
+    @include truncate;
+  }
+
+  span {
+    display: block;
+
+    margin-top: $space-1;
+
+    color: $color-text-subtle;
+
+    font-size: $font-size-sm;
+  }
+
+  @include mobile {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+}
+
+.pdf-compress-options {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: $space-3;
+
+  @include tablet {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-compress-option {
+  display: flex;
+
+  min-width: 0;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  padding: $space-4;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-surface;
+
+  color: inherit;
+
+  font: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    border-color: $color-border-hover;
+
+    background: $color-surface-raised;
+
+    transform: translateY(-1px);
+  }
+
+  &.selected {
+    border-color: $color-border-active;
+
+    background: $color-surface-raised;
+
+    box-shadow: 0 0 0 1px $color-border-active;
+  }
+
+  &:disabled {
+    cursor: default;
+
+    opacity: 0.6;
+
+    transform: none;
+  }
+}
+
+.pdf-compress-option-title {
+  color: $color-text;
+
+  font-size: $font-size-lg;
+
+  font-weight: $font-weight-bold;
+}
+
+.pdf-compress-option-description {
+  flex: 1;
+
+  margin-top: $space-2;
+
+  color: $color-text-subtle;
+
+  font-size: $font-size-sm;
+
+  line-height: $line-height-normal;
+}
+
+.pdf-compress-option-meta {
+  margin-top: $space-3;
+
+  color: $color-text-secondary;
+
+  font-size: $font-size-xs;
+
+  font-weight: $font-weight-semibold;
+}
+
+.pdf-compress-notice {
+  display: flex;
+
+  align-items: baseline;
+
+  gap: $space-2;
+
+  margin-top: $space-3;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-bg-soft;
+
+  strong {
+    flex: none;
+
+    color: $color-text-secondary;
+
+    font-size: $font-size-sm;
+  }
+
+  span {
+    color: $color-text-subtle;
+
+    font-size: $font-size-sm;
+  }
+
+  @include mobile {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+}

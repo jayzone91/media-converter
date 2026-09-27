@@ -30,6 +30,7 @@ type Server struct {
 	libreOffice *converter.LibreOffice
 	pdf         *converter.PDF
 	qpdf        *converter.QPDF
+	ghostscript *converter.Ghostscript
 
 	uploads    *uploadStore
 	pdfUploads *pdfUploadStore
@@ -48,6 +49,7 @@ func NewServer(
 	libreOffice *converter.LibreOffice,
 	pdf *converter.PDF,
 	qpdf *converter.QPDF,
+	ghostscript *converter.Ghostscript,
 ) *Server {
 	if logger == nil {
 		logger = defaultLogger()
@@ -62,6 +64,7 @@ func NewServer(
 		libreOffice: libreOffice,
 		pdf:         pdf,
 		qpdf:        qpdf,
+		ghostscript: ghostscript,
 
 		uploads:    newUploadStore(),
 		pdfUploads: newPDFUploadStore(),
@@ -153,6 +156,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc(
 		"POST /pdf/split",
 		s.handlePDFSplit,
+	)
+
+	s.mux.HandleFunc(
+		"POST /pdf/compress",
+		s.handlePDFCompress,
 	)
 
 	s.mux.Handle(

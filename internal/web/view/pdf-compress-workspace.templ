@@ -1,0 +1,180 @@
+package view
+
+templ PDFCompressWorkspace() {
+	<div data-pdf-workspace="compress">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDF komprimieren
+				</h3>
+				<p>
+					Reduziere die Dateigröße einer PDF.
+					Wähle zwischen verlustfreier Optimierung und stärkerer Bildkompression.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-compress-drop-zone"
+			for="pdf-compress-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-compress-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-compress-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-compress-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-compress-editor"
+			class="pdf-compress-editor"
+			hidden
+		>
+			<header class="pdf-compress-header">
+				<div>
+					<strong id="pdf-compress-filename"></strong>
+					<span id="pdf-compress-meta"></span>
+				</div>
+				<button
+					id="pdf-compress-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-compress-options">
+				<button
+					class="pdf-compress-option"
+					type="button"
+					data-compression-mode="lossless"
+					aria-pressed="false"
+				>
+					<span class="pdf-compress-option-title">
+						Verlustfrei
+					</span>
+					<span class="pdf-compress-option-description">
+						Optimiert PDF-Struktur und komprimierbare Streams,
+						ohne Bilder oder Inhalte neu zu berechnen.
+					</span>
+					<span class="pdf-compress-option-meta">
+						Originalqualität
+					</span>
+				</button>
+				<button
+					class="pdf-compress-option selected"
+					type="button"
+					data-compression-mode="balanced"
+					aria-pressed="true"
+				>
+					<span class="pdf-compress-option-title">
+						Ausgewogen
+					</span>
+					<span class="pdf-compress-option-description">
+						Komprimiert eingebettete Bilder moderat
+						und reduziert sie auf maximal etwa 150 dpi.
+					</span>
+					<span class="pdf-compress-option-meta">
+						Gute Qualität · kleinere Datei
+					</span>
+				</button>
+				<button
+					class="pdf-compress-option"
+					type="button"
+					data-compression-mode="strong"
+					aria-pressed="false"
+				>
+					<span class="pdf-compress-option-title">
+						Stark
+					</span>
+					<span class="pdf-compress-option-description">
+						Stärkere Bildkompression und Downsampling
+						für möglichst kleine Dateien.
+					</span>
+					<span class="pdf-compress-option-meta">
+						96 dpi · sichtbarer Qualitätsverlust möglich
+					</span>
+				</button>
+			</div>
+			<div
+				class="pdf-compress-notice"
+				id="pdf-compress-notice"
+			>
+				<strong>
+					Ausgewogen
+				</strong>
+				<span>
+					Geeignet für Bildschirmdarstellung, E-Mail und typische Dokumente.
+				</span>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						komprimiert.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-compress-submit"
+					class="pdf-button-primary"
+					type="button"
+				>
+					PDF komprimieren
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-compress-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird komprimiert …
+				</strong>
+				<span>
+					Je nach Dateigröße kann dies einen Moment dauern.
+				</span>
+			</div>
+		</div>
+	</div>
+}

@@ -18,27 +18,24 @@ import (
 const shutdownTimeout = 2 * time.Minute
 
 func main() {
-	logger :=
-		slog.New(
-			logging.NewPrettyHandler(
-				os.Stdout,
-				&logging.Options{
-					Level: slog.LevelInfo,
+	logger := slog.New(
+		logging.NewPrettyHandler(
+			os.Stdout,
+			&logging.Options{
+				Level: slog.LevelInfo,
 
-					Color: logging.SupportsColor(
-						os.Stdout,
-					),
-				},
-			),
-		)
+				Color: logging.SupportsColor(
+					os.Stdout,
+				),
+			},
+		),
+	)
 
 	slog.SetDefault(
 		logger,
 	)
 
-	imageMagick, err :=
-		converter.NewImageMagick()
-
+	imageMagick, err := converter.NewImageMagick()
 	if err != nil {
 		logger.Error(
 			"failed to initialize ImageMagick",
@@ -49,9 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ffmpeg, err :=
-		converter.NewFFmpeg()
-
+	ffmpeg, err := converter.NewFFmpeg()
 	if err != nil {
 		logger.Error(
 			"failed to initialize FFmpeg",
@@ -62,9 +57,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ffprobe, err :=
-		media.NewFFProbe()
-
+	ffprobe, err := media.NewFFProbe()
 	if err != nil {
 		logger.Error(
 			"failed to initialize ffprobe",
@@ -75,9 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	libreOffice, err :=
-		converter.NewLibreOffice()
-
+	libreOffice, err := converter.NewLibreOffice()
 	if err != nil {
 		logger.Error(
 			"failed to initialize LibreOffice",
@@ -88,11 +79,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	pdf, err :=
-		converter.NewPDF(
-			libreOffice,
-		)
-
+	pdf, err := converter.NewPDF(
+		libreOffice,
+	)
 	if err != nil {
 		logger.Error(
 			"failed to initialize PDF converter",
@@ -103,9 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	qpdf, err :=
-		converter.NewQPDF()
-
+	qpdf, err := converter.NewQPDF()
 	if err != nil {
 		logger.Error(
 			"failed to initialize qpdf",
@@ -116,31 +103,39 @@ func main() {
 		os.Exit(1)
 	}
 
-	server :=
-		web.NewServer(
-			logger,
-			imageMagick,
-			ffmpeg,
-			ffprobe,
-			libreOffice,
-			pdf,
-			qpdf,
+	ghostscript, err := converter.NewGhostscript()
+	if err != nil {
+		logger.Error(
+			"failed to initialize Ghostscript",
+			"error",
+			err,
 		)
 
-	signalCtx, stop :=
-		signal.NotifyContext(
-			context.Background(),
-			os.Interrupt,
-			syscall.SIGTERM,
-		)
+		os.Exit(1)
+	}
 
+	server := web.NewServer(
+		logger,
+		imageMagick,
+		ffmpeg,
+		ffprobe,
+		libreOffice,
+		pdf,
+		qpdf,
+		ghostscript,
+	)
+
+	signalCtx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
 	defer stop()
 
-	serverError :=
-		make(
-			chan error,
-			1,
-		)
+	serverError := make(
+		chan error,
+		1,
+	)
 
 	go func() {
 		logger.Info(
@@ -171,18 +166,15 @@ func main() {
 			"server shutting down",
 		)
 
-		shutdownCtx, cancel :=
-			context.WithTimeout(
-				context.Background(),
-				shutdownTimeout,
-			)
-
+		shutdownCtx, cancel := context.WithTimeout(
+			context.Background(),
+			shutdownTimeout,
+		)
 		defer cancel()
 
-		if err :=
-			server.Shutdown(
-				shutdownCtx,
-			); err != nil {
+		if err := server.Shutdown(
+			shutdownCtx,
+		); err != nil {
 			if !errors.Is(
 				err,
 				context.DeadlineExceeded,
@@ -194,8 +186,7 @@ func main() {
 				)
 			}
 
-			if err :=
-				server.Close(); err != nil {
+			if err := server.Close(); err != nil {
 				logger.Error(
 					"forced shutdown failed",
 					"error",

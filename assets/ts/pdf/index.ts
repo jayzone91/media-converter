@@ -1,3 +1,5 @@
+import { destroyPDFCompress, setupPDFCompress } from "./compress/index.ts";
+
 import { destroyPDFDelete, setupPDFDelete } from "./delete/index.ts";
 
 import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
@@ -13,6 +15,7 @@ import { destroyPDFSplit, setupPDFSplit } from "./split/index.ts";
 type PDFTool =
   | "merge"
   | "split"
+  | "compress"
   | "sort"
   | "delete"
   | "extract"
@@ -118,71 +121,31 @@ function setupWorkspaceEvents(
 }
 
 function initializeWorkspace(workspace: HTMLElement): boolean {
-  const merge = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="merge"]',
-  );
+  const initializers: Array<[string, (workspace: HTMLElement) => void]> = [
+    ["merge", setupPDFMerge],
+    ["split", setupPDFSplit],
+    ["compress", setupPDFCompress],
+    ["sort", setupPDFSort],
+    ["delete", setupPDFDelete],
+    ["extract", setupPDFExtract],
+    ["rotate", setupPDFRotate],
+  ];
 
-  if (merge) {
-    setupPDFMerge(merge);
+  for (const [tool, initialize] of initializers) {
+    const element = workspace.querySelector<HTMLElement>(
+      `[data-pdf-workspace="${tool}"]`,
+    );
 
-    return true;
-  }
+    if (!element) {
+      continue;
+    }
 
-  const split = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="split"]',
-  );
-
-  if (split) {
-    setupPDFSplit(split);
-
-    return true;
-  }
-
-  const sort = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="sort"]',
-  );
-
-  if (sort) {
-    setupPDFSort(sort);
+    initialize(element);
 
     return true;
   }
 
-  const deleteWorkspace = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="delete"]',
-  );
-
-  if (deleteWorkspace) {
-    setupPDFDelete(deleteWorkspace);
-
-    return true;
-  }
-
-  const extract = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="extract"]',
-  );
-
-  if (extract) {
-    setupPDFExtract(extract);
-
-    return true;
-  }
-
-  const rotate = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="rotate"]',
-  );
-
-  if (rotate) {
-    setupPDFRotate(rotate);
-
-    return true;
-  }
-
-  const placeholder = workspace.querySelector<HTMLElement>(
-    '[data-pdf-workspace="placeholder"]',
-  );
-
-  return placeholder !== null;
+  return workspace.querySelector('[data-pdf-workspace="placeholder"]') !== null;
 }
 
 function isWorkspaceSwap(event: Event, workspace: HTMLElement): boolean {
@@ -201,32 +164,30 @@ async function closePDFWorkspace(
   switch (activeTool) {
     case "merge":
       await destroyPDFMerge();
-
       break;
 
     case "split":
       await destroyPDFSplit();
+      break;
 
+    case "compress":
+      await destroyPDFCompress();
       break;
 
     case "sort":
       await destroyPDFSort();
-
       break;
 
     case "delete":
       await destroyPDFDelete();
-
       break;
 
     case "extract":
       await destroyPDFExtract();
-
       break;
 
     case "rotate":
       await destroyPDFRotate();
-
       break;
   }
 
