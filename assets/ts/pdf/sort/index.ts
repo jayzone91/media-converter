@@ -1,12 +1,16 @@
 import { downloadBlob } from "../../shared/download.ts";
+
 import {
   deletePDFUpload,
   isPDFFile,
   type PDFUpload,
   uploadPDF,
 } from "../uploads.ts";
+
 import { sortPDFPages } from "./api.ts";
-import { renderSortPages } from "./render.ts";
+
+import { createSortPageRenderer, type SortPageRenderer } from "./render.ts";
+
 import type { SortPage } from "./types.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
@@ -17,16 +21,25 @@ let upload: PDFUpload | null = null;
 
 let pages: SortPage[] = [];
 
+let renderer: SortPageRenderer | null = null;
+
 let uploading = false;
 let sorting = false;
 
 export function setupPDFSort(workspace: HTMLElement): void {
+  renderer?.destroy();
+
   root = workspace;
 
   upload = null;
+
   pages = [];
+
   uploading = false;
+
   sorting = false;
+
+  renderer = createSortPageRenderer(workspace, reorderPage);
 
   const input = getElement<HTMLInputElement>("#pdf-sort-file");
 
@@ -37,6 +50,10 @@ export function setupPDFSort(workspace: HTMLElement): void {
   const submit = getElement<HTMLButtonElement>("#pdf-sort-submit");
 
   if (!input || !dropZone || !reset || !submit) {
+    renderer.destroy();
+
+    renderer = null;
+
     return;
   }
 
@@ -66,10 +83,18 @@ export function setupPDFSort(workspace: HTMLElement): void {
 export async function destroyPDFSort(): Promise<void> {
   const uploadID = upload?.id;
 
+  renderer?.destroy();
+
+  renderer = null;
+
   root = null;
+
   upload = null;
+
   pages = [];
+
   uploading = false;
+
   sorting = false;
 
   if (uploadID) {
@@ -151,6 +176,7 @@ async function selectFile(file: File): Promise<void> {
     await deletePDFUpload(upload.id);
 
     upload = null;
+
     pages = [];
   }
 
@@ -174,9 +200,18 @@ async function selectFile(file: File): Promise<void> {
     }));
 
     render();
+
+    const viewport = getElement<HTMLElement>("#pdf-sort-pages");
+
+    if (viewport) {
+      viewport.scrollTop = 0;
+    }
   } catch (error: unknown) {
     upload = null;
+
     pages = [];
+
+    renderer?.setPages([]);
 
     showError(
       error instanceof Error
@@ -202,6 +237,7 @@ async function resetUpload(): Promise<void> {
   const uploadID = upload?.id;
 
   upload = null;
+
   pages = [];
 
   render();
@@ -232,11 +268,18 @@ function reorderPage(sourcePage: number, targetPage: number): void {
 
   pages.splice(sourceIndex, 1);
 
+  /*
+   * Wir interpretieren das Ziel als konkrete
+   * Zielposition. Nach dem Entfernen der Quelle
+   * muss bei einer Bewegung nach rechts/unten
+   * der Index um eins korrigiert werden.
+   */
   const destination = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
 
   pages.splice(destination, 0, page);
 
   renderPages();
+
   updateControls();
 }
 
@@ -272,10 +315,11 @@ async function createSortedPDF(): Promise<void> {
     downloadBlob(result.blob, result.filename);
 
     /*
-     * Backend löscht den Upload nach
-     * erfolgreicher Sortierung.
+     * Das Backend entfernt den Upload
+     * nach erfolgreicher Verarbeitung.
      */
     upload = null;
+
     pages = [];
 
     render();
@@ -327,11 +371,7 @@ function render(): void {
 }
 
 function renderPages(): void {
-  if (!root) {
-    return;
-  }
-
-  renderSortPages(root, pages, reorderPage);
+  renderer?.setPages(pages);
 }
 
 function hasChangedOrder(): boolean {

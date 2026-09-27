@@ -52,17 +52,47 @@
 }
 
 .pdf-sort-pages {
-  display: grid;
+  position: relative;
 
-  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  width: 100%;
+  height: min(70vh, 48rem);
 
-  gap: $space-3;
+  min-height: 24rem;
 
-  align-items: start;
+  overflow: auto;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-bg-soft;
+
+  overscroll-behavior: contain;
+
+  scrollbar-width: thin;
+
+  @include mobile {
+    height: min(65vh, 40rem);
+
+    min-height: 20rem;
+  }
+}
+
+.pdf-sort-canvas {
+  position: relative;
+
+  width: 100%;
+
+  min-height: 100%;
 }
 
 .pdf-sort-page {
-  position: relative;
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  box-sizing: border-box;
 
   min-width: 0;
 
@@ -74,16 +104,12 @@
 
   background: $color-surface;
 
-  cursor: grab;
+  user-select: none;
 
   @include interactive;
 
-  &:active {
-    cursor: grabbing;
-  }
-
   &.dragging {
-    opacity: 0.4;
+    opacity: 0.35;
   }
 
   &.drag-target {
@@ -91,7 +117,7 @@
 
     background: $color-surface-raised;
 
-    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px $color-border-active;
   }
 
   .pdf-page-image {
@@ -135,6 +161,8 @@
   font-weight: $font-weight-bold;
 
   box-shadow: 0 0.125rem 0.375rem rgb(0 0 0 / 0.3);
+
+  pointer-events: none;
 }
 
 .pdf-sort-page-footer {
@@ -154,7 +182,41 @@
 }
 
 .pdf-sort-page-drag {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 2rem;
+
+  height: 1.75rem;
+
+  border-radius: $radius-sm;
+
   color: $color-text-disabled;
 
   font-size: 1rem;
+
+  cursor: grab;
+
+  touch-action: none;
+
+  @include interactive;
+
+  &:hover {
+    background: $color-surface-hover;
+
+    color: $color-text-secondary;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.pdf-sort-dragging {
+  cursor: grabbing;
+
+  user-select: none;
 }
