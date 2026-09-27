@@ -29,6 +29,8 @@ func (s *Server) handlePDFSort(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	started := time.Now()
+
 	r.Body =
 		http.MaxBytesReader(
 			w,
@@ -51,9 +53,12 @@ func (s *Server) handlePDFSort(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		s.logError(
+		s.logWarn(
 			r,
-			"failed to decode PDF sort request",
+			"PDF sort rejected",
+			"reason",
+			"invalid request",
+			"error",
 			err,
 		)
 
@@ -74,7 +79,9 @@ func (s *Server) handlePDFSort(
 	if !ok {
 		s.logWarn(
 			r,
-			"PDF sort requested for unknown upload",
+			"PDF sort rejected",
+			"reason",
+			"unknown upload",
 			"upload_id",
 			request.UploadID,
 		)
@@ -95,17 +102,15 @@ func (s *Server) handlePDFSort(
 		); err != nil {
 		s.logWarn(
 			r,
-			"invalid PDF sort page order",
-			"upload_id",
-			upload.ID,
+			"PDF sort rejected",
+			"reason",
+			err.Error(),
 			"filename",
 			upload.Filename,
-			"page_count",
+			"pages",
 			upload.PageCount,
 			"requested_pages",
 			len(request.Pages),
-			"reason",
-			err.Error(),
 		)
 
 		http.Error(
@@ -123,10 +128,8 @@ func (s *Server) handlePDFSort(
 		); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF sort conversion slot",
+			"PDF sort queue failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -151,10 +154,8 @@ func (s *Server) handlePDFSort(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to create PDF sort temporary directory",
+			"PDF sort temp directory failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -175,7 +176,7 @@ func (s *Server) handlePDFSort(
 			); err != nil {
 			s.logError(
 				r,
-				"failed to remove PDF sort temporary directory",
+				"PDF sort cleanup failed",
 				err,
 				"directory",
 				tempDir,
@@ -204,24 +205,20 @@ func (s *Server) handlePDFSort(
 			request.Pages,
 			outputPath,
 		); err != nil {
-		s.logError(
-			r,
-			"PDF page sorting failed",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"size_bytes",
-			upload.Size,
-			"page_count",
-			upload.PageCount,
-		)
-
 		if errors.Is(
 			ctx.Err(),
 			context.DeadlineExceeded,
 		) {
+			s.logError(
+				r,
+				"PDF sort timed out",
+				ctx.Err(),
+				"filename",
+				upload.Filename,
+				"pages",
+				upload.PageCount,
+			)
+
 			http.Error(
 				w,
 				"Das Sortieren der PDF hat zu lange gedauert.",
@@ -230,6 +227,18 @@ func (s *Server) handlePDFSort(
 
 			return
 		}
+
+		s.logError(
+			r,
+			"PDF sort failed",
+			err,
+			"filename",
+			upload.Filename,
+			"pages",
+			upload.PageCount,
+			"size",
+			upload.Size,
+		)
 
 		http.Error(
 			w,
@@ -248,10 +257,8 @@ func (s *Server) handlePDFSort(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to open sorted PDF",
+			"PDF sort output open failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -273,10 +280,8 @@ func (s *Server) handlePDFSort(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to inspect sorted PDF",
+			"PDF sort output stat failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -321,30 +326,8 @@ func (s *Server) handlePDFSort(
 		"no-store",
 	)
 
-	/*
-		Die Quelldatei kann jetzt entfernt werden.
-		Die Ausgabe liegt in einem separaten Temp-Verzeichnis.
-	*/
 	s.pdfUploads.Delete(
 		upload.ID,
-	)
-
-	s.logger.Info(
-		"PDF pages sorted",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
-		"page_count",
-		upload.PageCount,
-		"input_size_bytes",
-		upload.Size,
-		"output_size_bytes",
-		info.Size(),
 	)
 
 	if _, err :=
@@ -354,16 +337,28 @@ func (s *Server) handlePDFSort(
 		); err != nil {
 		s.logError(
 			r,
-			"failed to send sorted PDF",
+			"PDF sort response failed",
 			err,
 			"filename",
 			upload.Filename,
-			"output_size_bytes",
+			"output_size",
 			info.Size(),
 		)
 
 		return
 	}
+
+	s.logInfo(
+		"PDF sort",
+		"pages",
+		upload.PageCount,
+		"input",
+		upload.Size,
+		"output",
+		info.Size(),
+		"duration",
+		time.Since(started),
+	)
 }
 
 func validatePDFPageOrder(

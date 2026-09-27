@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	qrservice "github.com/jayzone91/media-converter/internal/qr"
 )
@@ -17,6 +18,8 @@ func (s *Server) handleQRGenerate(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	started := time.Now()
+
 	var request qrGenerateRequest
 
 	decoder := json.NewDecoder(r.Body)
@@ -25,7 +28,9 @@ func (s *Server) handleQRGenerate(
 	if err := decoder.Decode(&request); err != nil {
 		s.logWarn(
 			r,
-			"invalid QR generate request",
+			"QR generate rejected",
+			"reason",
+			"invalid request",
 			"error",
 			err,
 		)
@@ -40,6 +45,15 @@ func (s *Server) handleQRGenerate(
 
 	payload, err := buildQRPayload(request)
 	if err != nil {
+		s.logWarn(
+			r,
+			"QR generate rejected",
+			"type",
+			request.Type,
+			"reason",
+			err.Error(),
+		)
+
 		http.Error(
 			w,
 			err.Error(),
@@ -50,6 +64,15 @@ func (s *Server) handleQRGenerate(
 
 	style, err := buildQRStyle(request.Style)
 	if err != nil {
+		s.logWarn(
+			r,
+			"QR generate rejected",
+			"type",
+			request.Type,
+			"reason",
+			err.Error(),
+		)
+
 		http.Error(
 			w,
 			err.Error(),
@@ -65,7 +88,7 @@ func (s *Server) handleQRGenerate(
 	if err != nil {
 		s.logError(
 			r,
-			"QR code generation failed",
+			"QR generation failed",
 			err,
 			"type",
 			request.Type,
@@ -86,10 +109,12 @@ func (s *Server) handleQRGenerate(
 	if err != nil {
 		s.logError(
 			r,
-			"QR code rendering failed",
+			"QR render failed",
 			err,
 			"type",
 			request.Type,
+			"version",
+			matrix.Version,
 		)
 
 		http.Error(
@@ -114,8 +139,24 @@ func (s *Server) handleQRGenerate(
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		s.logError(
 			r,
-			"failed to encode QR generate response",
+			"QR response failed",
 			err,
+			"type",
+			request.Type,
 		)
+
+		return
 	}
+
+	s.logInfo(
+		"QR generate",
+		"type",
+		request.Type,
+		"version",
+		matrix.Version,
+		"ecc",
+		matrix.ErrorCorrection,
+		"duration",
+		time.Since(started),
+	)
 }
