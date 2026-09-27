@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -22,7 +23,10 @@ const (
 	conversionTimeout          = 30 * time.Minute
 )
 
-func parseMultipartForm(w http.ResponseWriter, r *http.Request) bool {
+func parseMultipartForm(
+	w http.ResponseWriter,
+	r *http.Request,
+) bool {
 	r.Body = http.MaxBytesReader(
 		w,
 		r.Body,
@@ -34,12 +38,16 @@ func parseMultipartForm(w http.ResponseWriter, r *http.Request) bool {
 	); err != nil {
 		var maxBytesError *http.MaxBytesError
 
-		if errors.As(err, &maxBytesError) {
+		if errors.As(
+			err,
+			&maxBytesError,
+		) {
 			http.Error(
 				w,
 				"upload too large",
 				http.StatusRequestEntityTooLarge,
 			)
+
 			return false
 		}
 
@@ -48,17 +56,24 @@ func parseMultipartForm(w http.ResponseWriter, r *http.Request) bool {
 			"invalid multipart form",
 			http.StatusBadRequest,
 		)
+
 		return false
 	}
 
 	return true
 }
 
-func validateFileSize(header *multipart.FileHeader) bool {
+func validateFileSize(
+	header *multipart.FileHeader,
+) bool {
 	return header.Size <= maxFileSize
 }
 
-func saveUpload(file multipart.File, filename, tempDir string) (string, error) {
+func saveUpload(
+	file multipart.File,
+	filename string,
+	tempDir string,
+) (string, error) {
 	path := filepath.Join(
 		tempDir,
 		filepath.Base(filename),
@@ -74,9 +89,13 @@ func saveUpload(file multipart.File, filename, tempDir string) (string, error) {
 		maxFileSize+1,
 	)
 
-	written, err := io.Copy(dst, limited)
+	written, err := io.Copy(
+		dst,
+		limited,
+	)
 	if err != nil {
-		dst.Close()
+		_ = dst.Close()
+
 		return "", err
 	}
 
@@ -95,38 +114,111 @@ func saveUpload(file multipart.File, filename, tempDir string) (string, error) {
 	return path, nil
 }
 
-func detectFormat(ctx context.Context, path string, ffprobe *media.FFProbe) (media.Format, error) {
+func detectFormat(
+	ctx context.Context,
+	path string,
+	ffprobe *media.FFProbe,
+) (media.Format, error) {
 	ctx, cancel := context.WithTimeout(
 		ctx,
 		detectionTimeout,
 	)
 	defer cancel()
 
-	if format, ok := media.FindMarkdownByExtension(
-		path,
-	); ok {
-		return format, nil
-	}
+	expected, hasExpected :=
+		media.FindByExtension(path)
 
-	detection, err := media.Detect(path)
-	if err == nil {
-		if format, ok := media.FindByMIME(
-			detection.MIME,
-		); ok {
-			return format, nil
-		}
-	}
+	/*
+		Strukturierte Dokumente müssen vor der generischen
+		MIME-Erkennung geprüft werden.
 
+		RTF wird von net/http häufig als text/plain erkannt.
+	*/
 	if format, err := media.DetectDocument(
 		path,
 	); err == nil {
+		if !media.FormatMatchesExtension(
+			path,
+			format,
+		) {
+			return media.Format{},
+				formatMismatchError(
+					path,
+					format,
+				)
+		}
+
 		return format, nil
 	}
 
-	if format, ok := media.FindImageByExtension(
-		path,
-	); ok {
+	detection, detectionErr :=
+		media.Detect(path)
+
+	if detectionErr == nil {
+		if hasExpected &&
+			media.FormatAcceptsMIME(
+				expected,
+				detection.MIME,
+			) {
+			return expected, nil
+		}
+
+		if detected, ok :=
+			media.FindByMIME(
+				detection.MIME,
+			); ok {
+			if !hasExpected {
+				return media.Format{},
+					fmt.Errorf(
+						"unsupported file extension %q for detected format %s",
+						filepath.Ext(path),
+						detected.ID,
+					)
+			}
+
+			return media.Format{},
+				fmt.Errorf(
+					"file extension %q does not match detected format %s",
+					filepath.Ext(path),
+					detected.ID,
+				)
+		}
+	}
+
+	/*
+		Textformate dürfen niemals ausschließlich anhand ihrer
+		Dateiendung akzeptiert werden.
+	*/
+	if hasExpected {
+		switch expected.ID {
+		case "txt", "markdown":
+			return media.Format{},
+				fmt.Errorf(
+					"file content does not match %s",
+					expected.ID,
+				)
+		}
+	}
+
+	/*
+		Einige Bildformate werden von http.DetectContentType
+		nicht zuverlässig erkannt.
+
+		Diese bleiben vorerst über den bestehenden
+		Extension-Fallback kompatibel.
+	*/
+	if format, ok :=
+		media.FindImageByExtension(
+			path,
+		); ok {
 		return format, nil
+	}
+
+	if ffprobe == nil {
+		return media.Format{},
+			errors.New(
+				"media format could not be detected",
+			)
 	}
 
 	format, err := ffprobe.Detect(
@@ -137,5 +229,38 @@ func detectFormat(ctx context.Context, path string, ffprobe *media.FFProbe) (med
 		return media.Format{}, err
 	}
 
+	if !media.FormatMatchesExtension(
+		path,
+		format,
+	) {
+		return media.Format{},
+			formatMismatchError(
+				path,
+				format,
+			)
+	}
+
 	return format, nil
+}
+
+func formatMismatchError(
+	path string,
+	detected media.Format,
+) error {
+	expected, ok :=
+		media.FindByExtension(path)
+
+	if !ok {
+		return fmt.Errorf(
+			"unsupported file extension %q for detected format %s",
+			filepath.Ext(path),
+			detected.ID,
+		)
+	}
+
+	return fmt.Errorf(
+		"file extension indicates %s but content is %s",
+		expected.ID,
+		detected.ID,
+	)
 }
