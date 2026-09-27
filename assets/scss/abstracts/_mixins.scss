@@ -1,16 +1,5 @@
 @use "tokens" as *;
 
-@mixin surface(
-  $background: $color-surface,
-  $border: $color-border,
-  $radius: $radius-lg
-) {
-  border: 1px solid $border;
-  border-radius: $radius;
-
-  background: $background;
-}
-
 @mixin interactive {
   transition:
     background-color $duration-normal $ease-standard,
@@ -20,18 +9,49 @@
     transform $duration-normal $ease-standard;
 }
 
-@mixin button-reset {
-  margin: 0;
-  padding: 0;
+@mixin panel {
+  overflow: hidden;
 
-  border: 0;
+  border: 1px solid $color-border;
+  border-radius: $radius-panel;
 
-  background: none;
-  color: inherit;
+  background: $panel-background;
 
-  font: inherit;
+  box-shadow: $shadow-panel;
 
-  cursor: pointer;
+  backdrop-filter: blur($blur-panel);
+}
+
+@mixin surface(
+  $background: $color-bg-panel,
+  $border: $color-border,
+  $radius: $radius-lg
+) {
+  border: 1px solid $border;
+  border-radius: $radius;
+
+  background: $background;
+}
+
+@mixin input {
+  width: 100%;
+  min-width: 0;
+
+  padding: 0.6875rem 0.75rem;
+
+  border: 1px solid $color-border-strong;
+  border-radius: 0.5625rem;
+
+  outline: none;
+
+  background: $color-bg-soft;
+  color: $color-text;
+
+  transition: border-color $duration-normal $ease-standard;
+
+  &:focus {
+    border-color: $color-border-active;
+  }
 }
 
 @mixin truncate {
@@ -41,21 +61,26 @@
   white-space: nowrap;
 }
 
-@mixin flex-center {
-  display: flex;
+@mixin center {
+  display: grid;
 
-  align-items: center;
-  justify-content: center;
+  place-items: center;
+}
+
+@mixin hidden {
+  &[hidden] {
+    display: none;
+  }
 }
 
 @mixin mobile {
-  @media (max-width: $mobile-breakpoint) {
+  @media (max-width: $breakpoint-mobile) {
     @content;
   }
 }
 
 @mixin tablet {
-  @media (max-width: $tablet-breakpoint) {
+  @media (max-width: $breakpoint-tablet) {
     @content;
   }
 }

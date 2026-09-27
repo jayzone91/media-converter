@@ -1,10 +1,8 @@
-/*
- * Main stylesheet entry point.
- *
- * Die aktuelle app.css/pdf.css werden im nächsten
- * Schritt vollständig nach SCSS migriert.
- */
+@use "base/reset";
+@use "base/globals";
 
-@use "abstracts/tokens";
-@use "abstracts/functions";
-@use "abstracts/mixins";
+@use "layout/shell";
+
+@use "features/converter";
+@use "features/pdf";
+@use "features/qr";

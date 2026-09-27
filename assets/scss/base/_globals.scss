@@ -1,0 +1,73 @@
+@use "../abstracts/tokens" as *;
+
+:root {
+  color-scheme: dark;
+
+  font-family: $font-family;
+
+  background: $color-bg;
+  color: $color-text;
+}
+
+body {
+  min-height: 100vh;
+
+  background: radial-gradient(circle at top, $color-surface 0, $color-bg 42rem);
+
+  color: $color-text;
+}
+
+h1 {
+  margin: 0;
+
+  font-size: clamp(2rem, 6vw, 3rem);
+
+  line-height: 1.05;
+
+  letter-spacing: -0.04em;
+}
+
+.eyebrow {
+  display: inline-block;
+
+  margin-bottom: $space-3;
+
+  color: $color-text-muted;
+
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+
+  letter-spacing: 0.12em;
+
+  text-transform: uppercase;
+}
+
+.small-spinner {
+  width: 1rem;
+  height: 1rem;
+
+  flex: none;
+
+  border: 2px solid $color-border-strong;
+  border-top-color: $color-text;
+  border-radius: $radius-round;
+
+  animation: spin 700ms linear infinite;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+
+  border: 4px solid $color-border-strong;
+  border-top-color: $color-text;
+  border-radius: $radius-round;
+
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
