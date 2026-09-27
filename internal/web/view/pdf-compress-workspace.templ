@@ -13,7 +13,7 @@ templ PDFCompressWorkspace() {
 				</h3>
 				<p>
 					Reduziere die Dateigröße einer PDF.
-					Wähle zwischen verlustfreier Optimierung und stärkerer Bildkompression.
+					Die mögliche Ersparnis wird vor dem Download exakt berechnet.
 				</p>
 			</div>
 		</div>
@@ -143,6 +143,48 @@ templ PDFCompressWorkspace() {
 					Geeignet für Bildschirmdarstellung, E-Mail und typische Dokumente.
 				</span>
 			</div>
+			<div class="pdf-compress-analysis">
+				<div class="pdf-compress-analysis-grid">
+					<div class="pdf-compress-stat">
+						<span>
+							Original
+						</span>
+						<strong id="pdf-compress-original-size">
+							—
+						</strong>
+					</div>
+					<div class="pdf-compress-stat">
+						<span>
+							Komprimiert
+						</span>
+						<strong id="pdf-compress-result-size">
+							—
+						</strong>
+					</div>
+					<div class="pdf-compress-stat">
+						<span>
+							Ersparnis
+						</span>
+						<strong id="pdf-compress-savings-size">
+							—
+						</strong>
+					</div>
+					<div class="pdf-compress-stat pdf-compress-stat-highlight">
+						<span>
+							Reduktion
+						</span>
+						<strong id="pdf-compress-savings-percent">
+							—
+						</strong>
+					</div>
+				</div>
+				<div
+					id="pdf-compress-analysis-status"
+					class="pdf-compress-analysis-status"
+				>
+					Noch nicht berechnet
+				</div>
+			</div>
 			<div class="pdf-action-row">
 				<div>
 					<strong>
@@ -156,8 +198,9 @@ templ PDFCompressWorkspace() {
 					id="pdf-compress-submit"
 					class="pdf-button-primary"
 					type="button"
+					disabled
 				>
-					PDF komprimieren
+					Komprimierte PDF herunterladen
 				</button>
 			</div>
 		</section>
@@ -169,10 +212,10 @@ templ PDFCompressWorkspace() {
 			<span class="small-spinner"></span>
 			<div>
 				<strong>
-					PDF wird komprimiert …
+					PDF wird vorbereitet …
 				</strong>
 				<span>
-					Je nach Dateigröße kann dies einen Moment dauern.
+					Das bereits berechnete Ergebnis wird zum Download bereitgestellt.
 				</span>
 			</div>
 		</div>

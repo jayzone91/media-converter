@@ -9,10 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
-
-	"github.com/jayzone91/media-converter/internal/converter"
 )
 
 const (
@@ -26,10 +23,324 @@ type pdfCompressRequest struct {
 	Mode     string `json:"mode"`
 }
 
+type pdfCompressionAnalysisResponse struct {
+	OriginalSize int64 `json:"original_size"`
+	ResultSize   int64 `json:"result_size"`
+	SavingsBytes int64 `json:"savings_bytes"`
+
+	SavingsPercent float64 `json:"savings_percent"`
+
+	Unchanged bool `json:"unchanged"`
+}
+
+func (s *Server) handlePDFCompressionAnalyze(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	request, upload, ok :=
+		s.parsePDFCompressionRequest(
+			w,
+			r,
+		)
+
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(
+		r.Context(),
+		pdfCompressTimeout,
+	)
+	defer cancel()
+
+	result, err :=
+		s.ensurePDFCompressionResult(
+			ctx,
+			upload,
+			request.Mode,
+		)
+
+	if err != nil {
+		if errors.Is(
+			ctx.Err(),
+			context.Canceled,
+		) {
+			return
+		}
+
+		if errors.Is(
+			ctx.Err(),
+			context.DeadlineExceeded,
+		) {
+			http.Error(
+				w,
+				"Die Berechnung der Kompression hat zu lange gedauert.",
+				http.StatusGatewayTimeout,
+			)
+			return
+		}
+
+		s.logError(
+			r,
+			"PDF compression analysis failed",
+			err,
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+			"mode",
+			request.Mode,
+		)
+
+		http.Error(
+			w,
+			"Die mögliche Kompression konnte nicht berechnet werden.",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	savings :=
+		result.OriginalSize -
+			result.ResultSize
+
+	if savings < 0 {
+		savings = 0
+	}
+
+	percent := 0.0
+
+	if result.OriginalSize > 0 {
+		percent =
+			float64(savings) /
+				float64(result.OriginalSize) *
+				100
+	}
+
+	response :=
+		pdfCompressionAnalysisResponse{
+			OriginalSize: result.OriginalSize,
+
+			ResultSize: result.ResultSize,
+
+			SavingsBytes: savings,
+
+			SavingsPercent: percent,
+
+			Unchanged: result.Unchanged,
+		}
+
+	w.Header().Set(
+		"Content-Type",
+		"application/json; charset=utf-8",
+	)
+
+	w.Header().Set(
+		"Cache-Control",
+		"no-store",
+	)
+
+	if err := json.NewEncoder(
+		w,
+	).Encode(
+		response,
+	); err != nil {
+		s.logError(
+			r,
+			"failed to encode PDF compression analysis",
+			err,
+			"upload_id",
+			upload.ID,
+		)
+		return
+	}
+
+	s.logger.Info(
+		"PDF compression analyzed",
+		"method",
+		r.Method,
+		"path",
+		r.URL.Path,
+		"upload_id",
+		upload.ID,
+		"filename",
+		upload.Filename,
+		"mode",
+		request.Mode,
+		"input_size_bytes",
+		result.OriginalSize,
+		"output_size_bytes",
+		result.ResultSize,
+		"savings_bytes",
+		savings,
+		"savings_percent",
+		percent,
+		"unchanged",
+		result.Unchanged,
+	)
+}
+
 func (s *Server) handlePDFCompress(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	request, upload, ok :=
+		s.parsePDFCompressionRequest(
+			w,
+			r,
+		)
+
+	if !ok {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(
+		r.Context(),
+		pdfCompressTimeout,
+	)
+	defer cancel()
+
+	result, err :=
+		s.ensurePDFCompressionResult(
+			ctx,
+			upload,
+			request.Mode,
+		)
+
+	if err != nil {
+		s.handlePDFCompressionError(
+			w,
+			r,
+			ctx,
+			upload,
+			request.Mode,
+			err,
+		)
+		return
+	}
+
+	file, err := os.Open(
+		result.Path,
+	)
+	if err != nil {
+		s.logError(
+			r,
+			"failed to open PDF compression result",
+			err,
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+		)
+
+		http.Error(
+			w,
+			"Die erzeugte PDF konnte nicht geöffnet werden.",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+	defer file.Close()
+
+	disposition :=
+		mime.FormatMediaType(
+			"attachment",
+			map[string]string{
+				"filename": "komprimiert.pdf",
+			},
+		)
+
+	w.Header().Set(
+		"Content-Type",
+		"application/pdf",
+	)
+
+	w.Header().Set(
+		"Content-Disposition",
+		disposition,
+	)
+
+	w.Header().Set(
+		"Content-Length",
+		fmt.Sprintf(
+			"%d",
+			result.ResultSize,
+		),
+	)
+
+	w.Header().Set(
+		"Cache-Control",
+		"no-store",
+	)
+
+	w.Header().Set(
+		"X-Original-Size",
+		fmt.Sprintf(
+			"%d",
+			result.OriginalSize,
+		),
+	)
+
+	w.Header().Set(
+		"X-Result-Size",
+		fmt.Sprintf(
+			"%d",
+			result.ResultSize,
+		),
+	)
+
+	if result.Unchanged {
+		w.Header().Set(
+			"X-Compression-Unchanged",
+			"true",
+		)
+	}
+
+	s.logger.Info(
+		"PDF compression download started",
+		"method",
+		r.Method,
+		"path",
+		r.URL.Path,
+		"upload_id",
+		upload.ID,
+		"filename",
+		upload.Filename,
+		"mode",
+		request.Mode,
+		"input_size_bytes",
+		result.OriginalSize,
+		"output_size_bytes",
+		result.ResultSize,
+		"unchanged",
+		result.Unchanged,
+	)
+
+	if _, err := io.Copy(
+		w,
+		file,
+	); err != nil {
+		s.logError(
+			r,
+			"failed to send compressed PDF",
+			err,
+			"filename",
+			upload.Filename,
+			"output_size_bytes",
+			result.ResultSize,
+		)
+		return
+	}
+
+	s.pdfUploads.Delete(
+		upload.ID,
+	)
+}
+
+func (s *Server) parsePDFCompressionRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+) (pdfCompressRequest, storedPDFUpload, bool) {
 	r.Body = http.MaxBytesReader(
 		w,
 		r.Body,
@@ -47,18 +358,15 @@ func (s *Server) handlePDFCompress(
 	if err := decoder.Decode(
 		&request,
 	); err != nil {
-		s.logError(
-			r,
-			"failed to decode PDF compression request",
-			err,
-		)
-
 		http.Error(
 			w,
 			"Ungültige Anfrage.",
 			http.StatusBadRequest,
 		)
-		return
+
+		return request,
+			storedPDFUpload{},
+			false
 	}
 
 	if request.UploadID == "" {
@@ -67,7 +375,10 @@ func (s *Server) handlePDFCompress(
 			"Upload-ID fehlt.",
 			http.StatusBadRequest,
 		)
-		return
+
+		return request,
+			storedPDFUpload{},
+			false
 	}
 
 	if !validPDFCompressionMode(
@@ -78,119 +389,46 @@ func (s *Server) handlePDFCompress(
 			"Ungültiger Kompressionsmodus.",
 			http.StatusBadRequest,
 		)
-		return
+
+		return request,
+			storedPDFUpload{},
+			false
 	}
 
-	upload, ok := s.pdfUploads.Get(
-		request.UploadID,
-	)
-	if !ok {
-		s.logWarn(
-			r,
-			"PDF compression requested for unknown upload",
-			"upload_id",
+	upload, ok :=
+		s.pdfUploads.Get(
 			request.UploadID,
 		)
 
+	if !ok {
 		http.Error(
 			w,
 			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
 		)
-		return
+
+		return request,
+			storedPDFUpload{},
+			false
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
-		s.logError(
-			r,
-			"failed to acquire PDF compression slot",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-		)
+	return request,
+		upload,
+		true
+}
 
-		http.Error(
-			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
-		)
-		return
-	}
-
-	defer s.releaseConversionSlot()
-
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-pdf-compress-*",
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to create PDF compression temporary directory",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-		)
-
-		http.Error(
-			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	defer func() {
-		if err := os.RemoveAll(
-			tempDir,
-		); err != nil {
-			s.logError(
-				r,
-				"failed to remove PDF compression temporary directory",
-				err,
-				"directory",
-				tempDir,
-			)
-		}
-	}()
-
-	outputPath := filepath.Join(
-		tempDir,
-		"komprimiert.pdf",
-	)
-
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		pdfCompressTimeout,
-	)
-	defer cancel()
-
-	if err := s.compressPDF(
+func (s *Server) handlePDFCompressionError(
+	w http.ResponseWriter,
+	r *http.Request,
+	ctx context.Context,
+	upload storedPDFUpload,
+	mode string,
+	err error,
+) {
+	if compressionWasCancelled(
+		err,
 		ctx,
-		upload.Path,
-		outputPath,
-		request.Mode,
-	); err != nil {
-		s.logError(
-			r,
-			"PDF compression failed",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"mode",
-			request.Mode,
-			"size_bytes",
-			upload.Size,
-		)
-
+	) {
 		if errors.Is(
 			ctx.Err(),
 			context.DeadlineExceeded,
@@ -200,215 +438,28 @@ func (s *Server) handlePDFCompress(
 				"Die PDF-Komprimierung hat zu lange gedauert.",
 				http.StatusGatewayTimeout,
 			)
-			return
 		}
 
-		http.Error(
-			w,
-			"Die PDF konnte nicht komprimiert werden.",
-			http.StatusInternalServerError,
-		)
 		return
 	}
 
-	outputInfo, err := os.Stat(
-		outputPath,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to inspect compressed PDF",
-			err,
-			"upload_id",
-			upload.ID,
-		)
-
-		http.Error(
-			w,
-			"Die komprimierte PDF konnte nicht gelesen werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	resultPath := outputPath
-	resultSize := outputInfo.Size()
-	usedOriginal := false
-
-	if resultSize >= upload.Size {
-		resultPath = upload.Path
-		resultSize = upload.Size
-		usedOriginal = true
-	}
-
-	file, err := os.Open(
-		resultPath,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open compressed PDF result",
-			err,
-			"upload_id",
-			upload.ID,
-		)
-
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	disposition := mime.FormatMediaType(
-		"attachment",
-		map[string]string{
-			"filename": "komprimiert.pdf",
-		},
-	)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			resultSize,
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	w.Header().Set(
-		"X-Original-Size",
-		fmt.Sprintf(
-			"%d",
-			upload.Size,
-		),
-	)
-
-	w.Header().Set(
-		"X-Result-Size",
-		fmt.Sprintf(
-			"%d",
-			resultSize,
-		),
-	)
-
-	if usedOriginal {
-		w.Header().Set(
-			"X-Compression-Unchanged",
-			"true",
-		)
-	}
-
-	s.logger.Info(
-		"PDF compression completed",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
+	s.logError(
+		r,
+		"PDF compression failed",
+		err,
 		"upload_id",
 		upload.ID,
 		"filename",
 		upload.Filename,
 		"mode",
-		request.Mode,
-		"input_size_bytes",
+		mode,
+		"size_bytes",
 		upload.Size,
-		"output_size_bytes",
-		resultSize,
-		"used_original",
-		usedOriginal,
 	)
 
-	_, copyErr := io.Copy(
+	http.Error(
 		w,
-		file,
+		"Die PDF konnte nicht komprimiert werden.",
+		http.StatusInternalServerError,
 	)
-
-	if copyErr != nil {
-		s.logError(
-			r,
-			"failed to send compressed PDF",
-			copyErr,
-			"filename",
-			upload.Filename,
-			"output_size_bytes",
-			resultSize,
-		)
-
-		return
-	}
-
-	s.pdfUploads.Delete(
-		upload.ID,
-	)
-}
-
-func (s *Server) compressPDF(
-	ctx context.Context,
-	input string,
-	output string,
-	mode string,
-) error {
-	switch mode {
-	case "lossless":
-		return s.qpdf.Optimize(
-			ctx,
-			input,
-			output,
-		)
-
-	case "balanced":
-		return s.ghostscript.CompressPDF(
-			ctx,
-			input,
-			output,
-			converter.PDFCompressionBalanced,
-		)
-
-	case "strong":
-		return s.ghostscript.CompressPDF(
-			ctx,
-			input,
-			output,
-			converter.PDFCompressionStrong,
-		)
-
-	default:
-		return fmt.Errorf(
-			"unsupported PDF compression mode: %s",
-			mode,
-		)
-	}
-}
-
-func validPDFCompressionMode(
-	mode string,
-) bool {
-	switch mode {
-	case
-		"lossless",
-		"balanced",
-		"strong":
-
-		return true
-
-	default:
-		return false
-	}
 }

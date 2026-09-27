@@ -182,3 +182,79 @@
     flex-direction: column;
   }
 }
+
+.pdf-compress-analysis {
+  margin-top: $space-4;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-bg-soft;
+}
+
+.pdf-compress-analysis-grid {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: $space-2;
+
+  @include tablet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-compress-stat {
+  min-width: 0;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-sm;
+
+  background: $color-surface;
+
+  span {
+    display: block;
+
+    color: $color-text-subtle;
+
+    font-size: $font-size-xs;
+  }
+
+  strong {
+    display: block;
+
+    margin-top: $space-1;
+
+    color: $color-text;
+
+    font-size: $font-size-lg;
+
+    font-weight: $font-weight-bold;
+  }
+}
+
+.pdf-compress-stat-highlight {
+  border-color: $color-border-active;
+
+  background: $color-surface-raised;
+}
+
+.pdf-compress-analysis-status {
+  margin-top: $space-3;
+
+  color: $color-text-subtle;
+
+  font-size: $font-size-sm;
+
+  text-align: center;
+}

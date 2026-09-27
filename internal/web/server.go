@@ -159,6 +159,11 @@ func (s *Server) routes() {
 	)
 
 	s.mux.HandleFunc(
+		"POST /pdf/compress/analyze",
+		s.handlePDFCompressionAnalyze,
+	)
+
+	s.mux.HandleFunc(
 		"POST /pdf/compress",
 		s.handlePDFCompress,
 	)
@@ -175,10 +180,11 @@ func (s *Server) routes() {
 func (s *Server) acquireConversionSlot(
 	ctx context.Context,
 ) error {
-	queueCtx, cancel := context.WithTimeout(
-		ctx,
-		conversionQueueTimeout,
-	)
+	queueCtx, cancel :=
+		context.WithTimeout(
+			ctx,
+			conversionQueueTimeout,
+		)
 	defer cancel()
 
 	select {
@@ -197,17 +203,22 @@ func (s *Server) releaseConversionSlot() {
 func (s *Server) ListenAndServe(
 	addr string,
 ) error {
-	s.httpServer = &http.Server{
-		Addr: addr,
+	s.httpServer =
+		&http.Server{
+			Addr: addr,
 
-		Handler: s.mux,
+			Handler: s.mux,
 
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		IdleTimeout:       idleTimeout,
-	}
+			ReadHeaderTimeout: readHeaderTimeout,
 
-	err := s.httpServer.ListenAndServe()
+			ReadTimeout: readTimeout,
+
+			IdleTimeout: idleTimeout,
+		}
+
+	err :=
+		s.httpServer.
+			ListenAndServe()
 
 	if errors.Is(
 		err,
@@ -228,9 +239,9 @@ func (s *Server) Shutdown(
 		return nil
 	}
 
-	err := s.httpServer.Shutdown(
-		ctx,
-	)
+	err :=
+		s.httpServer.
+			Shutdown(ctx)
 
 	s.closeStores()
 

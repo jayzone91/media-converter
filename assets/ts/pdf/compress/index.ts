@@ -7,7 +7,12 @@ import {
   uploadPDF,
 } from "../uploads.ts";
 
-import { compressPDF, type PDFCompressionMode } from "./api.ts";
+import {
+  analyzePDFCompression,
+  compressPDF,
+  type PDFCompressionAnalysis,
+  type PDFCompressionMode,
+} from "./api.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
 
@@ -17,7 +22,17 @@ let upload: PDFUpload | null = null;
 
 let mode: PDFCompressionMode = "balanced";
 
+let analysis: PDFCompressionAnalysis | null = null;
+
+const analysisCache = new Map<PDFCompressionMode, PDFCompressionAnalysis>();
+
+let analysisController: AbortController | null = null;
+
+let analysisRequestID = 0;
+
 let uploading = false;
+
+let analyzing = false;
 
 let processing = false;
 
@@ -28,7 +43,17 @@ export function setupPDFCompress(workspace: HTMLElement): void {
 
   mode = "balanced";
 
+  analysis = null;
+
+  analysisCache.clear();
+
+  analysisController = null;
+
+  analysisRequestID = 0;
+
   uploading = false;
+
+  analyzing = false;
 
   processing = false;
 
@@ -63,22 +88,34 @@ export function setupPDFCompress(workspace: HTMLElement): void {
   });
 
   submit.addEventListener("click", () => {
-    void createCompressedPDF();
+    void downloadCompressedPDF();
   });
 
   render();
 }
 
 export async function destroyPDFCompress(): Promise<void> {
+  analysisController?.abort();
+
+  analysisController = null;
+
+  analysisRequestID++;
+
   const uploadID = upload?.id;
 
   root = null;
 
   upload = null;
 
+  analysis = null;
+
+  analysisCache.clear();
+
   mode = "balanced";
 
   uploading = false;
+
+  analyzing = false;
 
   processing = false;
 
@@ -100,7 +137,7 @@ function setupModeButtons(): void {
     button.addEventListener("click", () => {
       const candidate = button.dataset.compressionMode;
 
-      if (!isCompressionMode(candidate)) {
+      if (!isCompressionMode(candidate) || candidate === mode) {
         return;
       }
 
@@ -115,6 +152,28 @@ function setupModeButtons(): void {
       }
 
       updateNotice();
+
+      if (!upload) {
+        return;
+      }
+
+      const cached = analysisCache.get(mode);
+
+      if (cached) {
+        analysisController?.abort();
+
+        analysis = cached;
+
+        analyzing = false;
+
+        renderAnalysis();
+
+        updateControls();
+
+        return;
+      }
+
+      void analyzeCurrentMode();
     });
   }
 }
@@ -169,6 +228,12 @@ async function selectFile(file: File): Promise<void> {
 
   clearError();
 
+  analysisController?.abort();
+
+  analysis = null;
+
+  analysisCache.clear();
+
   if (!isPDFFile(file)) {
     showError("Es können nur PDF-Dateien hochgeladen werden.");
 
@@ -203,8 +268,12 @@ async function selectFile(file: File): Promise<void> {
     progress.hidden = false;
   }
 
+  let uploaded = false;
+
   try {
     upload = await uploadPDF(file);
+
+    uploaded = true;
 
     render();
   } catch (error: unknown) {
@@ -224,6 +293,95 @@ async function selectFile(file: File): Promise<void> {
 
     updateControls();
   }
+
+  if (uploaded) {
+    await analyzeCurrentMode();
+  }
+}
+
+async function analyzeCurrentMode(): Promise<void> {
+  if (!upload || uploading || processing) {
+    return;
+  }
+
+  const cached = analysisCache.get(mode);
+
+  if (cached) {
+    analysis = cached;
+
+    analyzing = false;
+
+    renderAnalysis();
+
+    updateControls();
+
+    return;
+  }
+
+  analysisController?.abort();
+
+  const controller = new AbortController();
+
+  analysisController = controller;
+
+  const requestID = ++analysisRequestID;
+
+  const uploadID = upload.id;
+
+  const requestedMode = mode;
+
+  analysis = null;
+
+  analyzing = true;
+
+  clearError();
+
+  renderAnalysis();
+
+  updateControls();
+
+  try {
+    const result = await analyzePDFCompression(
+      uploadID,
+      requestedMode,
+      controller.signal,
+    );
+
+    if (
+      requestID !== analysisRequestID ||
+      !upload ||
+      upload.id !== uploadID ||
+      mode !== requestedMode
+    ) {
+      return;
+    }
+
+    analysisCache.set(requestedMode, result);
+
+    analysis = result;
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return;
+    }
+
+    if (requestID === analysisRequestID) {
+      showError(
+        error instanceof Error
+          ? error.message
+          : "Die mögliche Kompression konnte nicht berechnet werden.",
+      );
+    }
+  } finally {
+    if (requestID === analysisRequestID) {
+      analyzing = false;
+
+      analysisController = null;
+
+      renderAnalysis();
+
+      updateControls();
+    }
+  }
 }
 
 async function resetUpload(): Promise<void> {
@@ -231,9 +389,21 @@ async function resetUpload(): Promise<void> {
     return;
   }
 
+  analysisController?.abort();
+
+  analysisController = null;
+
+  analysisRequestID++;
+
   const uploadID = upload?.id;
 
   upload = null;
+
+  analysis = null;
+
+  analysisCache.clear();
+
+  analyzing = false;
 
   render();
 
@@ -242,8 +412,8 @@ async function resetUpload(): Promise<void> {
   }
 }
 
-async function createCompressedPDF(): Promise<void> {
-  if (!upload || uploading || processing) {
+async function downloadCompressedPDF(): Promise<void> {
+  if (!upload || !analysis || uploading || analyzing || processing) {
     return;
   }
 
@@ -264,20 +434,18 @@ async function createCompressedPDF(): Promise<void> {
 
     downloadBlob(result.blob, result.filename);
 
-    if (result.unchanged) {
-      showError(
-        "Die gewählte Kompression konnte die Datei nicht weiter verkleinern. Das Original wurde ausgegeben.",
-      );
-    }
-
     upload = null;
+
+    analysis = null;
+
+    analysisCache.clear();
 
     render();
   } catch (error: unknown) {
     showError(
       error instanceof Error
         ? error.message
-        : "Die PDF konnte nicht komprimiert werden.",
+        : "Die PDF konnte nicht heruntergeladen werden.",
     );
   } finally {
     processing = false;
@@ -317,7 +485,61 @@ function render(): void {
 
   updateNotice();
 
+  renderAnalysis();
+
   updateControls();
+}
+
+function renderAnalysis(): void {
+  const original = getElement<HTMLElement>("#pdf-compress-original-size");
+
+  const result = getElement<HTMLElement>("#pdf-compress-result-size");
+
+  const savings = getElement<HTMLElement>("#pdf-compress-savings-size");
+
+  const percent = getElement<HTMLElement>("#pdf-compress-savings-percent");
+
+  const status = getElement<HTMLElement>("#pdf-compress-analysis-status");
+
+  if (!original || !result || !savings || !percent || !status) {
+    return;
+  }
+
+  original.textContent = upload ? formatBytes(upload.size) : "—";
+
+  if (analyzing) {
+    result.textContent = "…";
+
+    savings.textContent = "…";
+
+    percent.textContent = "…";
+
+    status.textContent = "Kompression wird berechnet …";
+
+    return;
+  }
+
+  if (!analysis) {
+    result.textContent = "—";
+
+    savings.textContent = "—";
+
+    percent.textContent = "—";
+
+    status.textContent = "Noch nicht berechnet";
+
+    return;
+  }
+
+  result.textContent = formatBytes(analysis.resultSize);
+
+  savings.textContent = formatBytes(analysis.savingsBytes);
+
+  percent.textContent = `${formatPercent(analysis.savingsPercent)} %`;
+
+  status.textContent = analysis.unchanged
+    ? "Mit diesem Preset ist keine weitere Reduktion möglich."
+    : `${formatBytes(analysis.originalSize)} → ${formatBytes(analysis.resultSize)}`;
 }
 
 function updateNotice(): void {
@@ -373,22 +595,25 @@ function updateControls(): void {
     "[data-compression-mode]",
   );
 
-  const busy = uploading || processing;
-
   if (input) {
-    input.disabled = busy;
+    input.disabled = uploading || processing;
   }
 
   if (reset) {
-    reset.disabled = !upload || busy;
+    reset.disabled = !upload || uploading || processing;
   }
 
   if (submit) {
-    submit.disabled = !upload || busy;
+    submit.disabled =
+      !upload || !analysis || uploading || analyzing || processing;
+
+    submit.textContent = analysis?.unchanged
+      ? "Original herunterladen"
+      : "Komprimierte PDF herunterladen";
   }
 
   buttons?.forEach((button) => {
-    button.disabled = busy;
+    button.disabled = uploading || processing;
   });
 }
 
@@ -436,7 +661,18 @@ function formatBytes(bytes: number): string {
 
   const value = bytes / 1024 ** index;
 
-  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index] ?? "B"}`;
+  return `${value.toLocaleString("de-DE", {
+    minimumFractionDigits: index === 0 ? 0 : 1,
+
+    maximumFractionDigits: 1,
+  })} ${units[index] ?? "B"}`;
+}
+
+function formatPercent(value: number): string {
+  return value.toLocaleString("de-DE", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 }
 
 function getElement<T extends Element>(selector: string): T | null {
