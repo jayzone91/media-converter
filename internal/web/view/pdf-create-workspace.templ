@@ -12,7 +12,7 @@ templ PDFCreateWorkspace() {
 					PDF erstellen
 				</h3>
 				<p>
-					Erstelle ein einfaches PDF-Dokument direkt aus Text.
+					Erstelle ein PDF-Dokument aus normalem Text oder Markdown.
 				</p>
 			</div>
 		</div>
@@ -41,7 +41,7 @@ templ PDFCreateWorkspace() {
 					id="pdf-create-body"
 					maxlength="100000"
 					rows="16"
-					placeholder="Text des Dokuments …"
+					placeholder="Text oder Markdown des Dokuments …"
 				></textarea>
 			</label>
 			<div class="pdf-create-options">
@@ -119,14 +119,30 @@ templ PDFCreateWorkspace() {
 						</span>
 					</div>
 				</label>
+				<label>
+					<input
+						id="pdf-create-markdown"
+						type="checkbox"
+					/>
+					<div>
+						<strong>
+							Markdown verwenden
+						</strong>
+						<span>
+							Überschriften, Listen, Tabellen, Links,
+							Code und weitere Markdown-Formatierungen rendern.
+						</span>
+					</div>
+				</label>
 			</div>
 			<div class="pdf-create-info">
 				<strong>
-					Sicheres Textdokument
+					Sichere Darstellung
 				</strong>
 				<span>
-					Eingegebener Inhalt wird als Text behandelt.
-					HTML und Skripte werden nicht ausgeführt.
+					Raw HTML und Skripte werden nicht ausgeführt.
+					Markdown-Bilder sind deaktiviert, damit beim Rendern
+					keine externen oder internen Ressourcen geladen werden können.
 				</span>
 			</div>
 			<div class="pdf-action-row">

@@ -52,6 +52,13 @@
     min-height: 18rem;
     line-height: $line-height-normal;
     resize: vertical;
+
+    &.pdf-create-markdown-input {
+      font-family: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+
+      font-size: $font-size-sm;
+      line-height: 1.6;
+    }
   }
 }
 
@@ -125,6 +132,7 @@
       margin-top: $space-1;
       color: $color-text-subtle;
       font-size: $font-size-xs;
+      line-height: $line-height-normal;
     }
   }
 
@@ -155,6 +163,7 @@
   span {
     color: $color-text-subtle;
     font-size: $font-size-sm;
+    line-height: $line-height-normal;
   }
 
   @include mobile {

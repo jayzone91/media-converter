@@ -34,6 +34,8 @@ type pdfCreateRequest struct {
 	FontSize int `json:"font_size"`
 
 	IncludeDate bool `json:"include_date"`
+
+	Markdown bool `json:"markdown"`
 }
 
 func (s *Server) handlePDFCreate(
@@ -174,6 +176,8 @@ func (s *Server) handlePDFCreate(
 			request.PaperSize,
 			"landscape",
 			request.Landscape,
+			"markdown",
+			request.Markdown,
 		)
 
 		http.Error(
@@ -257,12 +261,28 @@ func readPDFCreateRequest(
 			request.Body,
 			request.FontSize,
 			request.IncludeDate,
+			request.Markdown,
 		)
 
 	if err :=
 		validatePDFCreateDocument(
 			document,
 		); err != nil {
+		if errors.Is(
+			err,
+			errPDFCreateMarkdownImage,
+		) {
+			http.Error(
+				w,
+				"Bilder sind im Markdown-Modus aus Sicherheitsgründen nicht erlaubt.",
+				http.StatusBadRequest,
+			)
+
+			return request,
+				pdfCreateDocument{},
+				false
+		}
+
 		http.Error(
 			w,
 			"Das Dokument ist leer oder enthält ungültige Angaben.",
@@ -370,6 +390,8 @@ func (s *Server) writeCreatedPDF(
 		request.FontSize,
 		"include_date",
 		request.IncludeDate,
+		"markdown",
+		request.Markdown,
 		"output_size_bytes",
 		info.Size(),
 	)

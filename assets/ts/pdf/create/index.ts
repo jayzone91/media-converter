@@ -14,9 +14,11 @@ export function setupPDFCreate(workspace: HTMLElement): void {
 
   const body = getElement<HTMLTextAreaElement>("#pdf-create-body");
 
+  const markdown = getElement<HTMLInputElement>("#pdf-create-markdown");
+
   const submit = getElement<HTMLButtonElement>("#pdf-create-submit");
 
-  if (!title || !body || !submit) {
+  if (!title || !body || !markdown || !submit) {
     return;
   }
 
@@ -24,10 +26,16 @@ export function setupPDFCreate(workspace: HTMLElement): void {
 
   body.addEventListener("input", updateControls);
 
+  markdown.addEventListener("change", () => {
+    updateEditorMode();
+    updateControls();
+  });
+
   submit.addEventListener("click", () => {
     void createDocument();
   });
 
+  updateEditorMode();
   updateControls();
 }
 
@@ -53,7 +61,17 @@ async function createDocument(): Promise<void> {
 
   const includeDate = getElement<HTMLInputElement>("#pdf-create-date");
 
-  if (!title || !body || !paper || !fontSize || !landscape || !includeDate) {
+  const markdown = getElement<HTMLInputElement>("#pdf-create-markdown");
+
+  if (
+    !title ||
+    !body ||
+    !paper ||
+    !fontSize ||
+    !landscape ||
+    !includeDate ||
+    !markdown
+  ) {
     return;
   }
 
@@ -107,6 +125,8 @@ async function createDocument(): Promise<void> {
       fontSize: parsedFontSize,
 
       includeDate: includeDate.checked,
+
+      markdown: markdown.checked,
     });
 
     downloadBlob(result.blob, result.filename);
@@ -125,6 +145,22 @@ async function createDocument(): Promise<void> {
 
     updateControls();
   }
+}
+
+function updateEditorMode(): void {
+  const body = getElement<HTMLTextAreaElement>("#pdf-create-body");
+
+  const markdown = getElement<HTMLInputElement>("#pdf-create-markdown");
+
+  if (!body || !markdown) {
+    return;
+  }
+
+  body.placeholder = markdown.checked
+    ? "# Überschrift\n\nText mit **fett**, *kursiv*, Listen, Tabellen oder Code …"
+    : "Text des Dokuments …";
+
+  body.classList.toggle("pdf-create-markdown-input", markdown.checked);
 }
 
 function updateControls(): void {

@@ -7,6 +7,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f
 	github.com/chromedp/chromedp v0.16.0
 	github.com/yeqown/go-qrcode/v2 v2.3.0
+	github.com/yuin/goldmark v1.7.17
 )
 
 require (

@@ -9,6 +9,7 @@ export interface PDFCreateOptions {
   landscape: boolean;
   fontSize: number;
   includeDate: boolean;
+  markdown: boolean;
 }
 
 export interface PDFCreateResult {
@@ -33,6 +34,7 @@ export async function createPDFDocument(
       landscape: options.landscape,
       font_size: options.fontSize,
       include_date: options.includeDate,
+      markdown: options.markdown,
     }),
   });
 
