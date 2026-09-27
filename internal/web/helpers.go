@@ -128,90 +128,63 @@ func detectFormat(
 	expected, hasExpected :=
 		media.FindByExtension(path)
 
-	/*
-		Strukturierte Dokumente müssen vor der generischen
-		MIME-Erkennung geprüft werden.
+	if !hasExpected {
+		return media.Format{},
+			fmt.Errorf(
+				"unsupported file extension %q",
+				filepath.Ext(path),
+			)
+	}
 
-		RTF wird von net/http häufig als text/plain erkannt.
-	*/
-	if format, err := media.DetectDocument(
-		path,
-	); err == nil {
-		if !media.FormatMatchesExtension(
+	if format, err :=
+		media.DetectDocument(
+			path,
+		); err == nil {
+		return validateDetectedFormat(
 			path,
 			format,
-		) {
-			return media.Format{},
-				formatMismatchError(
-					path,
-					format,
-				)
-		}
+		)
+	}
 
-		return format, nil
+	if format, err :=
+		media.DetectSignature(
+			path,
+		); err == nil {
+		return validateDetectedFormat(
+			path,
+			format,
+		)
 	}
 
 	detection, detectionErr :=
 		media.Detect(path)
 
-	if detectionErr == nil {
-		if hasExpected &&
-			media.FormatAcceptsMIME(
-				expected,
-				detection.MIME,
-			) {
-			return expected, nil
-		}
-
-		if detected, ok :=
-			media.FindByMIME(
-				detection.MIME,
-			); ok {
-			if !hasExpected {
-				return media.Format{},
-					fmt.Errorf(
-						"unsupported file extension %q for detected format %s",
-						filepath.Ext(path),
-						detected.ID,
-					)
-			}
-
-			return media.Format{},
-				fmt.Errorf(
-					"file extension %q does not match detected format %s",
-					filepath.Ext(path),
-					detected.ID,
-				)
-		}
-	}
-
-	/*
-		Textformate dürfen niemals ausschließlich anhand ihrer
-		Dateiendung akzeptiert werden.
-	*/
-	if hasExpected {
+	if detectionErr == nil &&
+		media.FormatAcceptsMIME(
+			expected,
+			detection.MIME,
+		) {
 		switch expected.ID {
 		case "txt", "markdown":
-			return media.Format{},
-				fmt.Errorf(
-					"file content does not match %s",
-					expected.ID,
-				)
+			return expected, nil
 		}
 	}
 
-	/*
-		Einige Bildformate werden von http.DetectContentType
-		nicht zuverlässig erkannt.
+	switch expected.Category {
+	case media.CategoryImage,
+		media.CategoryPDF,
+		media.CategoryDocument:
+		return media.Format{},
+			fmt.Errorf(
+				"file content does not match %s",
+				expected.ID,
+			)
 
-		Diese bleiben vorerst über den bestehenden
-		Extension-Fallback kompatibel.
-	*/
-	if format, ok :=
-		media.FindImageByExtension(
-			path,
-		); ok {
-		return format, nil
+	case media.CategoryMarkdown:
+		return media.Format{},
+			fmt.Errorf(
+				"file content does not match markdown",
+			)
 	}
 
 	if ffprobe == nil {
@@ -229,18 +202,28 @@ func detectFormat(
 		return media.Format{}, err
 	}
 
-	if !media.FormatMatchesExtension(
+	return validateDetectedFormat(
 		path,
 		format,
+	)
+}
+
+func validateDetectedFormat(
+	path string,
+	detected media.Format,
+) (media.Format, error) {
+	if media.FormatMatchesExtension(
+		path,
+		detected,
 	) {
-		return media.Format{},
-			formatMismatchError(
-				path,
-				format,
-			)
+		return detected, nil
 	}
 
-	return format, nil
+	return media.Format{},
+		formatMismatchError(
+			path,
+			detected,
+		)
 }
 
 func formatMismatchError(
