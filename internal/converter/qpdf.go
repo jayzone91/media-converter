@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
@@ -12,8 +13,16 @@ type QPDF struct {
 	binary string
 }
 
+type QPDFPageCountResult struct {
+	Count    int
+	Warnings string
+}
+
 func NewQPDF() (*QPDF, error) {
-	binary, err := exec.LookPath("qpdf")
+	binary, err :=
+		exec.LookPath(
+			"qpdf",
+		)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"qpdf not found: %w",
@@ -38,6 +47,7 @@ func (q *QPDF) Merge(
 	}
 
 	args := []string{
+		"--warning-exit-0",
 		"--empty",
 		"--pages",
 	}
@@ -56,18 +66,34 @@ func (q *QPDF) Merge(
 		output,
 	)
 
-	cmd := exec.CommandContext(
-		ctx,
-		q.binary,
-		args...,
-	)
+	cmd :=
+		exec.CommandContext(
+			ctx,
+			q.binary,
+			args...,
+		)
 
-	result, err := cmd.CombinedOutput()
-	if err != nil {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctxErr :=
+			ctx.Err(); ctxErr != nil {
+			return fmt.Errorf(
+				"qpdf merge failed: %w",
+				ctxErr,
+			)
+		}
+
 		return fmt.Errorf(
 			"qpdf merge failed: %w: %s",
 			err,
-			string(result),
+			strings.TrimSpace(
+				stderr.String(),
+			),
 		)
 	}
 
@@ -77,42 +103,72 @@ func (q *QPDF) Merge(
 func (q *QPDF) PageCount(
 	ctx context.Context,
 	input string,
-) (int, error) {
-	cmd := exec.CommandContext(
-		ctx,
-		q.binary,
-		"--show-npages",
-		input,
-	)
-
-	result, err := cmd.CombinedOutput()
-	if err != nil {
-		return 0, fmt.Errorf(
-			"qpdf page count failed: %w: %s",
-			err,
-			strings.TrimSpace(
-				string(result),
-			),
+) (QPDFPageCountResult, error) {
+	cmd :=
+		exec.CommandContext(
+			ctx,
+			q.binary,
+			"--warning-exit-0",
+			"--show-npages",
+			input,
 		)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctxErr :=
+			ctx.Err(); ctxErr != nil {
+			return QPDFPageCountResult{},
+				fmt.Errorf(
+					"qpdf page count failed: %w",
+					ctxErr,
+				)
+		}
+
+		return QPDFPageCountResult{},
+			fmt.Errorf(
+				"qpdf page count failed: %w: %s",
+				err,
+				strings.TrimSpace(
+					stderr.String(),
+				),
+			)
 	}
 
-	count, err := strconv.Atoi(
+	output :=
 		strings.TrimSpace(
-			string(result),
-		),
-	)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"invalid qpdf page count: %w",
-			err,
+			stdout.String(),
 		)
+
+	count, err :=
+		strconv.Atoi(
+			output,
+		)
+	if err != nil {
+		return QPDFPageCountResult{},
+			fmt.Errorf(
+				"invalid qpdf page count %q: %w",
+				output,
+				err,
+			)
 	}
 
 	if count < 1 {
-		return 0, fmt.Errorf(
-			"PDF contains no pages",
-		)
+		return QPDFPageCountResult{},
+			fmt.Errorf(
+				"PDF contains no pages",
+			)
 	}
 
-	return count, nil
+	return QPDFPageCountResult{
+		Count: count,
+
+		Warnings: strings.TrimSpace(
+			stderr.String(),
+		),
+	}, nil
 }

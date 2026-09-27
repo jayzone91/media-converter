@@ -56,6 +56,13 @@ func (s *Server) handlePDFUpload(
 			err,
 			&maxBytesError,
 		) {
+			s.logWarn(
+				r,
+				"PDF upload rejected because request is too large",
+				"limit_bytes",
+				maxFileSize,
+			)
+
 			http.Error(
 				w,
 				"Die PDF ist größer als 512 MiB.",
@@ -64,6 +71,12 @@ func (s *Server) handlePDFUpload(
 
 			return
 		}
+
+		s.logError(
+			r,
+			"failed to parse PDF upload",
+			err,
+		)
 
 		http.Error(
 			w,
@@ -79,9 +92,16 @@ func (s *Server) handlePDFUpload(
 	}
 
 	file, header, err :=
-		r.FormFile("file")
+		r.FormFile(
+			"file",
+		)
 
 	if err != nil {
+		s.logWarn(
+			r,
+			"PDF upload contains no file",
+		)
+
 		http.Error(
 			w,
 			"Keine PDF-Datei ausgewählt.",
@@ -93,9 +113,21 @@ func (s *Server) handlePDFUpload(
 
 	defer file.Close()
 
-	if err := validatePDFUpload(
-		header,
-	); err != nil {
+	if err :=
+		validatePDFUpload(
+			header,
+		); err != nil {
+		s.logWarn(
+			r,
+			"PDF upload validation failed",
+			"filename",
+			header.Filename,
+			"size_bytes",
+			header.Size,
+			"reason",
+			err.Error(),
+		)
+
 		http.Error(
 			w,
 			err.Error(),
@@ -112,6 +144,16 @@ func (s *Server) handlePDFUpload(
 		)
 
 	if err != nil {
+		s.logError(
+			r,
+			"failed to create PDF temporary directory",
+			err,
+			"filename",
+			header.Filename,
+			"size_bytes",
+			header.Size,
+		)
+
 		http.Error(
 			w,
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
@@ -124,8 +166,19 @@ func (s *Server) handlePDFUpload(
 	keepTempDir := false
 
 	defer func() {
-		if !keepTempDir {
-			_ = os.RemoveAll(
+		if keepTempDir {
+			return
+		}
+
+		if err :=
+			os.RemoveAll(
+				tempDir,
+			); err != nil {
+			s.logError(
+				r,
+				"failed to remove PDF temporary directory",
+				err,
+				"directory",
 				tempDir,
 			)
 		}
@@ -144,6 +197,16 @@ func (s *Server) handlePDFUpload(
 		)
 
 	if err != nil {
+		s.logError(
+			r,
+			"failed to save PDF upload",
+			err,
+			"filename",
+			header.Filename,
+			"declared_size_bytes",
+			header.Size,
+		)
+
 		http.Error(
 			w,
 			"PDF konnte nicht gespeichert werden.",
@@ -153,9 +216,21 @@ func (s *Server) handlePDFUpload(
 		return
 	}
 
-	if err := validatePDFSignature(
-		inputPath,
-	); err != nil {
+	if err :=
+		validatePDFSignature(
+			inputPath,
+		); err != nil {
+		s.logWarn(
+			r,
+			"PDF signature validation failed",
+			"filename",
+			header.Filename,
+			"size_bytes",
+			size,
+			"reason",
+			err.Error(),
+		)
+
 		http.Error(
 			w,
 			"Die Datei ist keine gültige PDF.",
@@ -171,19 +246,38 @@ func (s *Server) handlePDFUpload(
 			pdfMetadataTimeout,
 		)
 
-	pageCount, err :=
+	metadata, err :=
 		s.qpdf.PageCount(
 			ctx,
 			inputPath,
 		)
 
+	contextErr :=
+		ctx.Err()
+
 	cancel()
 
 	if err != nil {
+		s.logError(
+			r,
+			"PDF metadata analysis failed",
+			err,
+			"filename",
+			header.Filename,
+			"size_bytes",
+			size,
+			"timeout",
+			pdfMetadataTimeout.String(),
+		)
+
 		if errors.Is(
-			ctx.Err(),
+			contextErr,
 			context.DeadlineExceeded,
-		) {
+		) ||
+			errors.Is(
+				err,
+				context.DeadlineExceeded,
+			) {
 			http.Error(
 				w,
 				"Die PDF konnte nicht rechtzeitig analysiert werden.",
@@ -202,16 +296,47 @@ func (s *Server) handlePDFUpload(
 		return
 	}
 
+	pageCount :=
+		metadata.Count
+
+	if metadata.Warnings != "" {
+		s.logWarn(
+			r,
+			"qpdf recovered PDF with warnings",
+			"filename",
+			header.Filename,
+			"size_bytes",
+			size,
+			"page_count",
+			pageCount,
+			"warnings",
+			metadata.Warnings,
+		)
+	}
+
 	previewDirectory :=
 		filepath.Join(
 			tempDir,
 			"previews",
 		)
 
-	if err := os.MkdirAll(
-		previewDirectory,
-		0700,
-	); err != nil {
+	if err :=
+		os.MkdirAll(
+			previewDirectory,
+			0700,
+		); err != nil {
+		s.logError(
+			r,
+			"failed to create PDF preview directory",
+			err,
+			"filename",
+			header.Filename,
+			"size_bytes",
+			size,
+			"page_count",
+			pageCount,
+		)
+
 		http.Error(
 			w,
 			"Vorschau-Verzeichnis konnte nicht erstellt werden.",
@@ -232,6 +357,18 @@ func (s *Server) handlePDFUpload(
 		)
 
 	if err != nil {
+		s.logError(
+			r,
+			"failed to register PDF upload",
+			err,
+			"filename",
+			header.Filename,
+			"size_bytes",
+			size,
+			"page_count",
+			pageCount,
+		)
+
 		http.Error(
 			w,
 			"PDF-Upload konnte nicht gespeichert werden.",
@@ -280,17 +417,48 @@ func (s *Server) handlePDFUpload(
 		"no-store",
 	)
 
-	if err := json.NewEncoder(
-		w,
-	).Encode(
-		response,
-	); err != nil {
+	if err :=
+		json.NewEncoder(
+			w,
+		).Encode(
+			response,
+		); err != nil {
+		s.logError(
+			r,
+			"failed to encode PDF upload response",
+			err,
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+			"size_bytes",
+			upload.Size,
+			"page_count",
+			upload.PageCount,
+		)
+
 		s.pdfUploads.Delete(
 			upload.ID,
 		)
 
 		return
 	}
+
+	s.logger.Info(
+		"PDF upload ready",
+		"method",
+		r.Method,
+		"path",
+		r.URL.Path,
+		"upload_id",
+		upload.ID,
+		"filename",
+		upload.Filename,
+		"size_bytes",
+		upload.Size,
+		"page_count",
+		upload.PageCount,
+	)
 }
 
 func (s *Server) handlePDFPreview(
@@ -302,15 +470,27 @@ func (s *Server) handlePDFPreview(
 			"id",
 		)
 
+	pageValue :=
+		r.PathValue(
+			"page",
+		)
+
 	page, err :=
 		strconv.Atoi(
-			r.PathValue(
-				"page",
-			),
+			pageValue,
 		)
 
 	if err != nil ||
 		page < 1 {
+		s.logWarn(
+			r,
+			"invalid PDF preview page requested",
+			"upload_id",
+			id,
+			"page_value",
+			pageValue,
+		)
+
 		http.NotFound(
 			w,
 			r,
@@ -325,6 +505,15 @@ func (s *Server) handlePDFPreview(
 		)
 
 	if !ok {
+		s.logWarn(
+			r,
+			"PDF preview requested for unknown upload",
+			"upload_id",
+			id,
+			"page",
+			page,
+		)
+
 		http.NotFound(
 			w,
 			r,
@@ -335,6 +524,19 @@ func (s *Server) handlePDFPreview(
 
 	if page >
 		upload.PageCount {
+		s.logWarn(
+			r,
+			"PDF preview page exceeds document page count",
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+			"page",
+			page,
+			"page_count",
+			upload.PageCount,
+		)
+
 		http.NotFound(
 			w,
 			r,
@@ -348,9 +550,10 @@ func (s *Server) handlePDFPreview(
 			page,
 		)
 
-	if _, err := os.Stat(
-		previewPath,
-	); errors.Is(
+	if _, err :=
+		os.Stat(
+			previewPath,
+		); errors.Is(
 		err,
 		os.ErrNotExist,
 	) {
@@ -361,6 +564,35 @@ func (s *Server) handlePDFPreview(
 				page,
 				previewPath,
 			); err != nil {
+			s.logError(
+				r,
+				"PDF preview rendering failed",
+				err,
+				"upload_id",
+				upload.ID,
+				"filename",
+				upload.Filename,
+				"size_bytes",
+				upload.Size,
+				"page",
+				page,
+				"page_count",
+				upload.PageCount,
+			)
+
+			if errors.Is(
+				err,
+				context.DeadlineExceeded,
+			) {
+				http.Error(
+					w,
+					"PDF-Vorschau konnte nicht rechtzeitig erstellt werden.",
+					http.StatusGatewayTimeout,
+				)
+
+				return
+			}
+
 			http.Error(
 				w,
 				"PDF-Vorschau konnte nicht erstellt werden.",
@@ -370,6 +602,18 @@ func (s *Server) handlePDFPreview(
 			return
 		}
 	} else if err != nil {
+		s.logError(
+			r,
+			"failed to inspect PDF preview cache",
+			err,
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+			"page",
+			page,
+		)
+
 		http.Error(
 			w,
 			"PDF-Vorschau konnte nicht gelesen werden.",
@@ -406,7 +650,10 @@ func (s *Server) renderPDFPreview(
 		s.acquireConversionSlot(
 			r.Context(),
 		); err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to acquire conversion slot: %w",
+			err,
+		)
 	}
 
 	defer s.releaseConversionSlot()
@@ -419,12 +666,25 @@ func (s *Server) renderPDFPreview(
 
 	defer cancel()
 
-	return s.pdf.RenderPreviewPage(
-		ctx,
-		upload.Path,
-		outputPath,
-		page,
-	)
+	if err :=
+		s.pdf.RenderPreviewPage(
+			ctx,
+			upload.Path,
+			outputPath,
+			page,
+		); err != nil {
+		if ctxErr :=
+			ctx.Err(); ctxErr != nil {
+			return fmt.Errorf(
+				"PDF preview rendering failed: %w",
+				ctxErr,
+			)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (s *Server) handlePDFUploadDelete(
@@ -445,10 +705,12 @@ func (s *Server) handlePDFUploadDelete(
 		return
 	}
 
-	if _, ok :=
+	upload, ok :=
 		s.pdfUploads.Get(
 			id,
-		); !ok {
+		)
+
+	if !ok {
 		http.NotFound(
 			w,
 			r,
@@ -459,6 +721,18 @@ func (s *Server) handlePDFUploadDelete(
 
 	s.pdfUploads.Delete(
 		id,
+	)
+
+	s.logger.Info(
+		"PDF upload deleted",
+		"method",
+		r.Method,
+		"path",
+		r.URL.Path,
+		"upload_id",
+		id,
+		"filename",
+		upload.Filename,
 	)
 
 	w.WriteHeader(

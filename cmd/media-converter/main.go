@@ -32,7 +32,6 @@ func main() {
 
 	imageMagick, err :=
 		converter.NewImageMagick()
-
 	if err != nil {
 		logger.Error(
 			"failed to initialize ImageMagick",
@@ -45,7 +44,6 @@ func main() {
 
 	ffmpeg, err :=
 		converter.NewFFmpeg()
-
 	if err != nil {
 		logger.Error(
 			"failed to initialize FFmpeg",
@@ -58,7 +56,6 @@ func main() {
 
 	ffprobe, err :=
 		media.NewFFProbe()
-
 	if err != nil {
 		logger.Error(
 			"failed to initialize ffprobe",
@@ -71,7 +68,6 @@ func main() {
 
 	libreOffice, err :=
 		converter.NewLibreOffice()
-
 	if err != nil {
 		logger.Error(
 			"failed to initialize LibreOffice",
@@ -86,7 +82,6 @@ func main() {
 		converter.NewPDF(
 			libreOffice,
 		)
-
 	if err != nil {
 		logger.Error(
 			"failed to initialize PDF converter",
@@ -99,7 +94,6 @@ func main() {
 
 	qpdf, err :=
 		converter.NewQPDF()
-
 	if err != nil {
 		logger.Error(
 			"failed to initialize qpdf",
@@ -127,7 +121,6 @@ func main() {
 			os.Interrupt,
 			syscall.SIGTERM,
 		)
-
 	defer stop()
 
 	serverError :=
@@ -170,7 +163,6 @@ func main() {
 				context.Background(),
 				shutdownTimeout,
 			)
-
 		defer cancel()
 
 		if err :=
