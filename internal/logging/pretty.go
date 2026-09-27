@@ -98,6 +98,11 @@ func (h *Handler) Handle(
 	)
 
 	if record.Level < slog.LevelWarn {
+		fields = compactRecordFields(
+			record.Message,
+			fields,
+		)
+
 		h.writeCompactRecord(
 			timestamp,
 			record.Level,

@@ -12,6 +12,133 @@ type field struct {
 	value string
 }
 
+const maxCompactFields = 6
+
+var compactFieldAliases = map[string]string{
+	"input_size_bytes":      "input",
+	"original_size_bytes":   "input",
+	"before_size_bytes":     "input",
+	"output_size_bytes":     "output",
+	"compressed_size_bytes": "output",
+	"optimized_size_bytes":  "output",
+	"after_size_bytes":      "output",
+	"size_bytes":            "size",
+	"page_count":            "pages",
+	"original_page_count":   "pages",
+	"deleted_page_count":    "deleted",
+	"result_page_count":     "remaining",
+	"requested_pages":       "selected",
+	"delete_count":          "selected",
+	"selected_page_count":   "selected",
+	"extracted_page_count":  "extracted",
+	"rotated_page_count":    "rotated",
+	"file_count":            "files",
+	"files_count":           "files",
+}
+
+var compactIgnoredFields = map[string]struct{}{
+	"method":     {},
+	"path":       {},
+	"upload_id":  {},
+	"filename":   {},
+	"client_ip":  {},
+	"user_agent": {},
+	"bytes":      {},
+}
+
+func compactRecordFields(
+	message string,
+	fields []field,
+) []field {
+	if message == "http" {
+		return selectCompactFields(
+			fields,
+			[]string{
+				"method",
+				"path",
+				"status",
+				"duration",
+			},
+		)
+	}
+
+	capacity := len(fields)
+	if capacity > maxCompactFields {
+		capacity = maxCompactFields
+	}
+
+	result := make(
+		[]field,
+		0,
+		capacity,
+	)
+
+	seen := make(
+		map[string]struct{},
+		maxCompactFields,
+	)
+
+	for _, entry := range fields {
+		if _, ignored := compactIgnoredFields[entry.key]; ignored {
+			continue
+		}
+
+		key := entry.key
+
+		if alias, ok := compactFieldAliases[key]; ok {
+			key = alias
+		}
+
+		if _, exists := seen[key]; exists {
+			continue
+		}
+
+		seen[key] = struct{}{}
+
+		result = append(
+			result,
+			field{
+				key:   key,
+				value: entry.value,
+			},
+		)
+
+		if len(result) >= maxCompactFields {
+			break
+		}
+	}
+
+	return result
+}
+
+func selectCompactFields(
+	fields []field,
+	keys []string,
+) []field {
+	result := make(
+		[]field,
+		0,
+		len(keys),
+	)
+
+	for _, key := range keys {
+		for _, entry := range fields {
+			if entry.key != key {
+				continue
+			}
+
+			result = append(
+				result,
+				entry,
+			)
+
+			break
+		}
+	}
+
+	return result
+}
+
 func (h *Handler) writeInlineFields(
 	fields []field,
 ) {
