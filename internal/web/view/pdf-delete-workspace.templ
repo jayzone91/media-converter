@@ -1,0 +1,150 @@
+package view
+
+templ PDFDeleteWorkspace() {
+	<div data-pdf-workspace="delete">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					Seiten löschen
+				</h3>
+				<p>
+					Wähle die Seiten aus, die aus der PDF entfernt werden sollen.
+					Mehrere Seiten können einzeln oder mit Umschalt + Klick ausgewählt werden.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-delete-drop-zone"
+			for="pdf-delete-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-delete-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-delete-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-delete-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-delete-editor"
+			class="pdf-delete-editor"
+			hidden
+		>
+			<header class="pdf-delete-header">
+				<div>
+					<strong id="pdf-delete-filename"></strong>
+					<span id="pdf-delete-meta"></span>
+				</div>
+				<button
+					id="pdf-delete-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-delete-selection-bar">
+				<div>
+					<strong>
+						Seitenauswahl
+					</strong>
+					<span id="pdf-delete-selected-count">
+						0 Seiten ausgewählt
+					</span>
+				</div>
+				<div class="pdf-delete-selection-actions">
+					<button
+						id="pdf-delete-select-all"
+						class="pdf-button-secondary"
+						type="button"
+					>
+						Alle auswählen
+					</button>
+					<button
+						id="pdf-delete-clear-selection"
+						class="pdf-button-secondary"
+						type="button"
+						disabled
+					>
+						Auswahl aufheben
+					</button>
+				</div>
+			</div>
+			<div
+				id="pdf-delete-pages"
+				class="pdf-page-selector"
+				aria-label="PDF-Seiten auswählen"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						seiten-entfernt.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-delete-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					Ausgewählte Seiten löschen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-delete-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird erstellt …
+				</strong>
+				<span>
+					Die ausgewählten Seiten werden entfernt.
+				</span>
+			</div>
+		</div>
+		@PDFSelectablePageTemplate()
+	</div>
+}

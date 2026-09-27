@@ -1,0 +1,123 @@
+package view
+
+templ PDFSortWorkspace() {
+	<div data-pdf-workspace="sort">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					Seiten sortieren
+				</h3>
+				<p>
+					Lade eine PDF hoch und ziehe die Seiten anschließend
+					in die gewünschte Reihenfolge.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-sort-drop-zone"
+			for="pdf-sort-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-sort-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-sort-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-sort-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-sort-editor"
+			class="pdf-sort-editor"
+			hidden
+		>
+			<header class="pdf-sort-header">
+				<div>
+					<strong id="pdf-sort-filename"></strong>
+					<span id="pdf-sort-meta"></span>
+				</div>
+				<button
+					id="pdf-sort-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div
+				id="pdf-sort-pages"
+				class="pdf-sort-pages"
+				aria-label="PDF-Seiten"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						sortiert.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-sort-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					Sortierte PDF erstellen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-sort-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird erstellt …
+				</strong>
+				<span>
+					Die Seiten werden in die neue Reihenfolge übernommen.
+				</span>
+			</div>
+		</div>
+		@PDFSortPageTemplate()
+	</div>
+}

@@ -1,0 +1,129 @@
+package view
+
+templ PDFMergeWorkspace() {
+	<div data-pdf-workspace="merge">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDFs zusammenfügen
+				</h3>
+				<p>
+					Wähle mindestens zwei PDF-Dateien.
+					Die Reihenfolge der Dokumente kann anschließend
+					per Drag & Drop oder mit den Pfeiltasten geändert werden.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-merge-drop-zone"
+			for="pdf-merge-files"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDFs auswählen
+			</strong>
+			<span>
+				oder mehrere Dateien hier ablegen
+			</span>
+			<small>
+				Max. 50 Dateien · 512 MiB pro Datei · 1 GiB gesamt
+			</small>
+			<input
+				id="pdf-merge-files"
+				type="file"
+				accept="application/pdf,.pdf"
+				multiple
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-merge-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span id="pdf-upload-progress-text">
+					Upload und Seitenvorschau werden erstellt.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-merge-selection"
+			class="pdf-selection"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong>
+						Reihenfolge
+					</strong>
+					<span id="pdf-merge-count">
+						0 Dateien
+					</span>
+				</div>
+				<button
+					id="pdf-merge-clear"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Alle entfernen
+				</button>
+			</header>
+			<div
+				id="pdf-merge-list"
+				class="pdf-file-list"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						zusammengefuegt.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-merge-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDFs zusammenfügen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-merge-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDFs werden zusammengefügt …
+				</strong>
+				<span>
+					Bitte diese Seite geöffnet lassen.
+				</span>
+			</div>
+		</div>
+		@PDFMergeDocumentTemplate()
+		@PDFPagePreviewTemplate("pdf-merge-page-template")
+	</div>
+}

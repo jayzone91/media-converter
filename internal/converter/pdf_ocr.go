@@ -1,0 +1,199 @@
+package converter
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+func (c *PDF) extractTextWithOCR(
+	ctx context.Context,
+	input string,
+	output string,
+) error {
+	tempDir, err := os.MkdirTemp(
+		filepath.Dir(input),
+		"pdf-ocr-*",
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to create OCR temp dir: %w",
+			err,
+		)
+	}
+	defer os.RemoveAll(tempDir)
+
+	prefix := filepath.Join(
+		tempDir,
+		"page",
+	)
+
+	cmd := exec.CommandContext(
+		ctx,
+		c.pdfToPPM,
+		"-png",
+		"-r",
+		"300",
+		input,
+		prefix,
+	)
+
+	if result, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf(
+			"pdftoppm failed: %w: %s",
+			err,
+			string(result),
+		)
+	}
+
+	pages, err := filepath.Glob(
+		prefix + "-*.png",
+	)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to find rendered PDF pages: %w",
+			err,
+		)
+	}
+
+	if len(pages) == 0 {
+		return fmt.Errorf(
+			"pdftoppm produced no pages",
+		)
+	}
+
+	sortPDFPagePaths(pages)
+
+	textPages := make(
+		[]string,
+		0,
+		len(pages),
+	)
+
+	for index, page := range pages {
+		pageText, err := c.ocrPage(
+			ctx,
+			page,
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"OCR failed for page %d: %w",
+				index+1,
+				err,
+			)
+		}
+
+		textPages = append(
+			textPages,
+			pageText,
+		)
+	}
+
+	return writePDFTextPages(
+		output,
+		textPages,
+	)
+}
+
+func (c *PDF) ocrPDFPage(
+	ctx context.Context,
+	input string,
+	pageNumber int,
+) (string, error) {
+	tempDir, err := os.MkdirTemp(
+		filepath.Dir(input),
+		"pdf-ocr-page-*",
+	)
+	if err != nil {
+		return "", fmt.Errorf(
+			"failed to create page OCR temp dir: %w",
+			err,
+		)
+	}
+	defer os.RemoveAll(tempDir)
+
+	prefix := filepath.Join(
+		tempDir,
+		"page",
+	)
+
+	page := strconv.Itoa(
+		pageNumber,
+	)
+
+	cmd := exec.CommandContext(
+		ctx,
+		c.pdfToPPM,
+		"-f",
+		page,
+		"-l",
+		page,
+		"-singlefile",
+		"-png",
+		"-r",
+		"300",
+		input,
+		prefix,
+	)
+
+	if result, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf(
+			"pdftoppm failed: %w: %s",
+			err,
+			string(result),
+		)
+	}
+
+	imagePath := prefix + ".png"
+
+	if _, err := os.Stat(imagePath); err != nil {
+		return "", fmt.Errorf(
+			"rendered PDF page not created: %w",
+			err,
+		)
+	}
+
+	return c.ocrPage(
+		ctx,
+		imagePath,
+	)
+}
+
+func (c *PDF) ocrPage(
+	ctx context.Context,
+	image string,
+) (string, error) {
+	cmd := exec.CommandContext(
+		ctx,
+		c.tesseract,
+		image,
+		"stdout",
+		"--tessdata-dir",
+		c.tessdataDir,
+		"-l",
+		"deu+eng",
+		"--psm",
+		"3",
+	)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf(
+			"tesseract failed: %w: %s",
+			err,
+			strings.TrimSpace(
+				stderr.String(),
+			),
+		)
+	}
+
+	return string(output), nil
+}
