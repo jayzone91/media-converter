@@ -92,6 +92,10 @@ templ QRTypeButton(
 		}
 		type="button"
 		data-qr-type={ id }
+		hx-get={ "/qr/fields?type=" + id }
+		hx-target="#qr-fields"
+		hx-swap="innerHTML"
+		hx-sync="#qr-fields:replace"
 	>
 		<strong>
 			{ title }
@@ -122,22 +126,9 @@ templ QRContentSection() {
 			id="qr-fields"
 			class="qr-fields"
 		>
-			@QRURLFields()
+			@QRFields("url")
 		</div>
 	</section>
-}
-
-templ QRURLFields() {
-	<label class="field">
-		<span>
-			URL
-		</span>
-		<input
-			type="url"
-			name="qr_url"
-			placeholder="https://example.com"
-		/>
-	</label>
 }
 
 templ QRColorSection() {

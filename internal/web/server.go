@@ -84,6 +84,11 @@ func (s *Server) routes() {
 	)
 
 	s.mux.HandleFunc(
+		"GET /qr/fields",
+		s.handleQRFields,
+	)
+
+	s.mux.HandleFunc(
 		"POST /qr/generate",
 		s.handleQRGenerate,
 	)
@@ -110,6 +115,7 @@ func (s *Server) acquireConversionSlot(
 			ctx,
 			conversionQueueTimeout,
 		)
+
 	defer cancel()
 
 	select {

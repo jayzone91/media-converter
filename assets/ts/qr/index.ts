@@ -1,7 +1,3 @@
-import { renderQRFields } from "./fields.ts";
-
-import { getActiveQRType } from "./request.ts";
-
 import { setupQRLogo } from "./logo.ts";
 
 import { setupQRDownloads } from "./download.ts";
@@ -19,6 +15,7 @@ export function setupQRUI(): void {
   setupQRColorMode();
   setupQRLivePreview();
   setupQRColorLabels();
+  setupQRFieldSwaps();
 
   setupQRLogo(scheduleQRPreview, showQRStatus);
 
@@ -33,12 +30,20 @@ function setupQRTypes(): void {
       for (const candidate of buttons) {
         candidate.classList.toggle("active", candidate === button);
       }
-
-      renderQRFields(getActiveQRType());
-
-      scheduleQRPreview();
     });
   }
+}
+
+function setupQRFieldSwaps(): void {
+  const fields = document.querySelector<HTMLElement>("#qr-fields");
+
+  if (!fields) {
+    return;
+  }
+
+  fields.addEventListener("htmx:afterSwap", () => {
+    scheduleQRPreview();
+  });
 }
 
 function setupQRStyles(): void {
