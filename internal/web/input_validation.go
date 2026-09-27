@@ -45,24 +45,46 @@ func (s *Server) validateConversionInput(
 			)
 		}
 
-	/*
-		Audio und Video wurden bereits vollständig
-		durch ffprobe erkannt.
+	case media.CategoryDocument:
+		if isArchiveDocument(
+			format.ID,
+		) {
+			if err :=
+				media.ValidateDocumentArchive(
+					path,
+				); err != nil {
+				return fmt.Errorf(
+					"invalid %s document: %w",
+					format.ID,
+					err,
+				)
+			}
+		}
 
-		Office-Dokumente wurden zuvor über ihre
-		Container-Struktur erkannt.
-
-		TXT und Markdown wurden über MIME und Inhalt
-		validiert.
-	*/
 	case media.CategoryAudio,
 		media.CategoryVideo,
-		media.CategoryDocument,
 		media.CategoryMarkdown:
 		return nil
 	}
 
 	return nil
+}
+
+func isArchiveDocument(
+	formatID string,
+) bool {
+	switch formatID {
+	case "docx",
+		"xlsx",
+		"pptx",
+		"odt",
+		"ods",
+		"odp":
+		return true
+
+	default:
+		return false
+	}
 }
 
 func validateSVGFile(
