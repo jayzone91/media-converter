@@ -89,6 +89,74 @@
   font-size: $font-size-md;
 }
 
+.supported-formats {
+  margin-top: $space-4;
+
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+
+  background: $color-surface;
+
+  summary {
+    padding: $space-4 $space-5;
+
+    color: $color-text-secondary;
+
+    font-size: $font-size-base;
+    font-weight: $font-weight-semibold;
+
+    cursor: pointer;
+
+    user-select: none;
+
+    @include interactive;
+  }
+
+  &[open] {
+    summary {
+      border-bottom: 1px solid $color-border;
+    }
+  }
+}
+
+.supported-formats-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: $space-5;
+
+  padding: $space-5;
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.supported-format-group {
+  h3 {
+    margin: 0 0 $space-2;
+
+    color: $color-text-secondary;
+
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
+  }
+
+  p {
+    margin: 0;
+
+    color: $color-text-muted;
+
+    font-size: $font-size-base;
+    line-height: $line-height-normal;
+  }
+}
+
 .indicator {
   display: flex;
 

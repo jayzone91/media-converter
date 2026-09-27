@@ -54,7 +54,7 @@
 
 ### Medien-Konverter UX
 
-- [ ] Unterstützte Eingabeformate vollständig in der UI anzeigen
+- [x] Unterstützte Eingabeformate vollständig in der UI anzeigen
 - [x] Unterstützte Zielformate abhängig vom erkannten Eingabeformat anzeigen
 - [x] Batch-Konvertierung mehrerer Dateien gleichen Typs
   - [x] maximal 20 Dateien gleichzeitig
