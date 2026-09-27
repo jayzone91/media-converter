@@ -74,6 +74,11 @@ func (s *Server) routes() {
 		s.handleConvert,
 	)
 
+	s.mux.HandleFunc(
+		"POST /qr/generate",
+		s.handleQRGenerate,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(

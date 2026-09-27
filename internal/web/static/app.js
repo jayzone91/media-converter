@@ -236,10 +236,7 @@ function setupToolSelections() {
   });
 }
 
-function setupQRUI() {
-  setupQRTypes();
-  setupQRStyles();
-
+function setupQRColorMode() {
   const colorModes = document.querySelectorAll('input[name="qr_color_mode"]');
 
   const gradientSettings = document.getElementById("qr-gradient-settings");
@@ -247,8 +244,55 @@ function setupQRUI() {
   colorModes.forEach((mode) => {
     mode.addEventListener("change", () => {
       gradientSettings.hidden = mode.value !== "gradient" || !mode.checked;
+
+      scheduleQRPreview();
     });
   });
+}
+
+let qrPreviewTimeout = null;
+let qrPreviewRequest = null;
+
+function setupQRLivePreview() {
+  const panel = document.querySelector('[data-panel="qr"]');
+
+  if (!panel) {
+    return;
+  }
+
+  panel.addEventListener("input", () => {
+    scheduleQRPreview();
+  });
+
+  panel.addEventListener("change", () => {
+    scheduleQRPreview();
+  });
+
+  document.querySelectorAll(".qr-type").forEach((button) => {
+    button.addEventListener("click", () => {
+      scheduleQRPreview();
+    });
+  });
+
+  document.querySelectorAll(".style-option").forEach((button) => {
+    button.addEventListener("click", () => {
+      scheduleQRPreview();
+    });
+  });
+
+  const generateButton = document.getElementById("qr-generate");
+
+  generateButton?.addEventListener("click", () => {
+    generateQRPreview();
+  });
+}
+
+function scheduleQRPreview() {
+  clearTimeout(qrPreviewTimeout);
+
+  qrPreviewTimeout = setTimeout(() => {
+    generateQRPreview();
+  }, 250);
 }
 
 function setupQRTypes() {
@@ -581,4 +625,271 @@ function renderQRFields(type) {
       `;
       break;
   }
+}
+
+function getActiveQRType() {
+  return document.querySelector(".qr-type.active")?.dataset.qrType ?? "url";
+}
+
+function getActiveQRStyle(group) {
+  return (
+    document.querySelector(`[data-style-group="${group}"] .style-option.active`)
+      ?.dataset.style ?? "square"
+  );
+}
+
+function getQRField(name) {
+  return document.querySelector(`[name="${name}"]`)?.value ?? "";
+}
+
+function getQRCheckbox(name) {
+  return document.querySelector(`[name="${name}"]`)?.checked ?? false;
+}
+
+function buildQRRequest() {
+  const type = getActiveQRType();
+
+  const gradient =
+    document.querySelector('input[name="qr_color_mode"]:checked')?.value ===
+    "gradient";
+
+  return {
+    type,
+
+    url: getQRField("qr_url"),
+    text: getQRField("qr_text"),
+    phone: getQRField("qr_phone"),
+
+    wifi: {
+      ssid: getQRField("wifi_ssid"),
+
+      password: getQRField("wifi_password"),
+
+      encryption: getQRField("wifi_encryption"),
+
+      hidden: getQRCheckbox("wifi_hidden"),
+    },
+
+    vcard: {
+      first_name: getQRField("vcard_firstname"),
+
+      last_name: getQRField("vcard_lastname"),
+
+      company: getQRField("vcard_company"),
+
+      position: getQRField("vcard_position"),
+
+      phone_work: getQRField("vcard_phone_work"),
+
+      phone_home: getQRField("vcard_phone_home"),
+
+      mobile_work: getQRField("vcard_mobile_work"),
+
+      mobile_home: getQRField("vcard_mobile_home"),
+
+      fax_work: getQRField("vcard_fax_work"),
+
+      email: getQRField("vcard_email"),
+
+      website: getQRField("vcard_website"),
+
+      street: getQRField("vcard_street"),
+
+      postal_code: getQRField("vcard_postal_code"),
+
+      city: getQRField("vcard_city"),
+
+      region: getQRField("vcard_region"),
+
+      country: getQRField("vcard_country"),
+    },
+
+    event: {
+      title: getQRField("event_title"),
+
+      start: getQRField("event_start"),
+
+      end: getQRField("event_end"),
+
+      location: getQRField("event_location"),
+
+      description: getQRField("event_description"),
+    },
+
+    style: {
+      foreground: document.getElementById("qr-foreground")?.value ?? "#000000",
+
+      background: document.getElementById("qr-background")?.value ?? "#ffffff",
+
+      gradient_enabled: gradient,
+
+      gradient_start:
+        document.getElementById("qr-gradient-start")?.value ?? "#000000",
+
+      gradient_end:
+        document.getElementById("qr-gradient-end")?.value ?? "#3b82f6",
+
+      module: getActiveQRStyle("dots"),
+
+      corner_outer: getActiveQRStyle("corners-square"),
+
+      corner_inner: getActiveQRStyle("corners-dot"),
+
+      has_logo: false,
+    },
+  };
+}
+
+async function generateQRPreview() {
+  const preview = document.getElementById("qr-preview");
+
+  const errorLevel = document.getElementById("qr-error-level");
+
+  const version = document.getElementById("qr-version");
+
+  const status = document.querySelector(".qr-status");
+
+  if (!preview) {
+    return;
+  }
+
+  const request = buildQRRequest();
+
+  if (!hasQRPayload(request)) {
+    showEmptyQRPreview(preview);
+
+    if (errorLevel) {
+      errorLevel.textContent = "L";
+    }
+
+    if (version) {
+      version.textContent = "Auto";
+    }
+
+    if (status) {
+      status.textContent = "Bereit";
+    }
+
+    return;
+  }
+
+  if (qrPreviewRequest) {
+    qrPreviewRequest.abort();
+  }
+
+  qrPreviewRequest = new AbortController();
+
+  if (status) {
+    status.textContent = "Aktualisiert …";
+  }
+
+  try {
+    const response = await fetch("/qr/generate", {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(request),
+
+      signal: qrPreviewRequest.signal,
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+
+      throw new Error(message.trim() || "QR Code konnte nicht erzeugt werden.");
+    }
+
+    const result = await response.json();
+
+    preview.innerHTML = result.svg;
+
+    const svg = preview.querySelector("svg");
+
+    if (svg) {
+      svg.removeAttribute("width");
+
+      svg.removeAttribute("height");
+
+      svg.style.width = "100%";
+
+      svg.style.height = "100%";
+
+      svg.style.display = "block";
+    }
+
+    if (errorLevel) {
+      errorLevel.textContent = result.error_correction;
+    }
+
+    if (version) {
+      version.textContent = String(result.version);
+    }
+
+    if (status) {
+      status.textContent = "Aktuell";
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return;
+    }
+
+    if (status) {
+      status.textContent = "Ungültig";
+    }
+  } finally {
+    qrPreviewRequest = null;
+  }
+}
+
+function hasQRPayload(request) {
+  switch (request.type) {
+    case "url":
+      return request.url.trim() !== "";
+
+    case "text":
+      return request.text.trim() !== "";
+
+    case "phone":
+      return request.phone.trim() !== "";
+
+    case "wifi":
+      return request.wifi.ssid.trim() !== "";
+
+    case "vcard":
+      return (
+        request.vcard.first_name.trim() !== "" ||
+        request.vcard.last_name.trim() !== ""
+      );
+
+    case "event":
+      return (
+        request.event.title.trim() !== "" &&
+        request.event.start !== "" &&
+        request.event.end !== ""
+      );
+
+    default:
+      return false;
+  }
+}
+
+function showEmptyQRPreview(preview) {
+  preview.innerHTML = `
+    <div class="qr-preview-placeholder">
+      <div class="preview-icon">
+        ▦
+      </div>
+
+      <strong>
+        QR Code Vorschau
+      </strong>
+
+      <span>
+        Gib links einen Inhalt ein.
+      </span>
+    </div>
+  `;
 }
