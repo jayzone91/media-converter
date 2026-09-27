@@ -31,6 +31,7 @@ type Server struct {
 	pdf         *converter.PDF
 	qpdf        *converter.QPDF
 	ghostscript *converter.Ghostscript
+	webPDF      *converter.WebPDF
 
 	uploads    *uploadStore
 	pdfUploads *pdfUploadStore
@@ -50,6 +51,7 @@ func NewServer(
 	pdf *converter.PDF,
 	qpdf *converter.QPDF,
 	ghostscript *converter.Ghostscript,
+	webPDF *converter.WebPDF,
 ) *Server {
 	if logger == nil {
 		logger = defaultLogger()
@@ -65,6 +67,7 @@ func NewServer(
 		pdf:         pdf,
 		qpdf:        qpdf,
 		ghostscript: ghostscript,
+		webPDF:      webPDF,
 
 		uploads:    newUploadStore(),
 		pdfUploads: newPDFUploadStore(),
@@ -191,6 +194,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc(
 		"POST /pdf/optimize",
 		s.handlePDFOptimize,
+	)
+
+	s.mux.HandleFunc(
+		"POST /pdf/web",
+		s.handlePDFWeb,
 	)
 
 	s.mux.Handle(

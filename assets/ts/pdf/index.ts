@@ -18,6 +18,8 @@ import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
 import { destroyPDFSplit, setupPDFSplit } from "./split/index.ts";
 
+import { destroyPDFWeb, setupPDFWeb } from "./web/index.ts";
+
 type PDFTool = string;
 
 let activeTool: PDFTool | null = null;
@@ -130,6 +132,7 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
     ["encrypt", setupPDFEncrypt],
     ["decrypt", setupPDFDecrypt],
     ["optimize", setupPDFOptimize],
+    ["web", setupPDFWeb],
   ];
 
   for (const [tool, initialize] of initializers) {
@@ -201,6 +204,10 @@ async function closePDFWorkspace(
 
     case "optimize":
       await destroyPDFOptimize();
+      break;
+
+    case "web":
+      destroyPDFWeb();
       break;
   }
 

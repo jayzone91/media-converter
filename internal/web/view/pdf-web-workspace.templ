@@ -1,0 +1,156 @@
+package view
+
+templ PDFWebWorkspace() {
+	<div data-pdf-workspace="web">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					Webseite in PDF
+				</h3>
+				<p>
+					Rendere eine Webseite mit einer echten Browser-Engine
+					und speichere das Ergebnis als PDF.
+				</p>
+			</div>
+		</div>
+		<div
+			id="pdf-web-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<section class="pdf-web-editor">
+			<label class="pdf-web-url-field">
+				<span>
+					Webadresse
+				</span>
+				<input
+					id="pdf-web-url"
+					type="url"
+					inputmode="url"
+					autocomplete="url"
+					placeholder="https://example.com"
+				/>
+			</label>
+			<div class="pdf-web-options">
+				<label>
+					<span>
+						Papierformat
+					</span>
+					<select id="pdf-web-paper-size">
+						<option
+							value="a4"
+							selected
+						>
+							A4
+						</option>
+						<option value="letter">
+							Letter
+						</option>
+					</select>
+				</label>
+				<label>
+					<span>
+						Zusätzliche Wartezeit
+					</span>
+					<select id="pdf-web-wait">
+						<option value="0">
+							Keine
+						</option>
+						<option
+							value="1000"
+							selected
+						>
+							1 Sekunde
+						</option>
+						<option value="3000">
+							3 Sekunden
+						</option>
+						<option value="5000">
+							5 Sekunden
+						</option>
+						<option value="10000">
+							10 Sekunden
+						</option>
+					</select>
+				</label>
+			</div>
+			<div class="pdf-web-toggles">
+				<label>
+					<input
+						id="pdf-web-landscape"
+						type="checkbox"
+					/>
+					<div>
+						<strong>
+							Querformat
+						</strong>
+						<span>
+							Seiten horizontal ausgeben.
+						</span>
+					</div>
+				</label>
+				<label>
+					<input
+						id="pdf-web-background"
+						type="checkbox"
+						checked
+					/>
+					<div>
+						<strong>
+							Hintergründe drucken
+						</strong>
+						<span>
+							CSS-Hintergrundfarben und Hintergrundbilder übernehmen.
+						</span>
+					</div>
+				</label>
+			</div>
+			<div class="pdf-web-info">
+				<strong>
+					Browser-Rendering
+				</strong>
+				<span>
+					JavaScript und CSS werden vor der PDF-Erstellung in Chromium ausgeführt.
+					Die zusätzliche Wartezeit hilft bei dynamisch nachgeladenen Inhalten.
+				</span>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						webseite.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-web-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDF erstellen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-web-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					Webseite wird gerendert …
+				</strong>
+				<span>
+					Chromium lädt die Seite und erstellt anschließend die PDF.
+				</span>
+			</div>
+		</div>
+	</div>
+}
