@@ -62,7 +62,7 @@
   - [x] mehrere Ergebnisse automatisch als ZIP ausgeben
   - [x] Drag-and-Drop mehrerer Medien
 - [ ] verständlichere Fehlermeldung bei nicht unterstützten Dateitypen weiter vereinheitlichen
-- [ ] Dateiendung und tatsächlichen MIME-/Dateityp gegeneinander validieren
+- [x] Dateiendung und tatsächlichen MIME-/Dateityp gegeneinander validieren
 - [x] Ausgabe-Dateinamen konsistent aus dem ursprünglichen Dateinamen ableiten
 
 
@@ -122,12 +122,12 @@
   - [x] Mobil-Modus testen
   - [x] Druckansicht testen
   - [x] responsive Breakpoints mit realen Webseiten testen
-  - [ ] Weiterleitungen sicher behandeln
-  - [ ] SSRF-Schutz auch nach Redirects sicherstellen
+  - [x] Weiterleitungen sicher behandeln
+  - [x] SSRF-Schutz auch nach Redirects sicherstellen
   - [ ] DNS-Rebinding berücksichtigen
   - [ ] Ziel-IP unmittelbar vor Verbindung erneut prüfen
-  - [ ] lokale Server-IP weiterhin blockieren
-  - [ ] localhost / Loopback weiterhin blockieren
+  - [x] lokale Server-IP weiterhin blockieren
+  - [x] localhost / Loopback weiterhin blockieren
 
 - [ ] PDF erstellen
   - [ ] Markdown-Modus mit größeren Dokumenten testen
@@ -142,47 +142,47 @@
 
 ### Web-/Chromium-Rendering
 
-- [ ] SSRF-Schutz zentralisieren
-- [ ] localhost blockieren
-- [ ] IPv4-Loopback `127.0.0.0/8` blockieren
-- [ ] IPv6-Loopback `::1` blockieren
-- [ ] alle IP-Adressen des Media-Converter-Servers blockieren
-- [ ] DNS-Namen blockieren, die auf den Media-Converter-Server zeigen
-- [ ] Redirect-Ziele ebenfalls validieren
+- [x] SSRF-Schutz zentralisieren
+- [x] localhost blockieren
+- [x] IPv4-Loopback `127.0.0.0/8` blockieren
+- [x] IPv6-Loopback `::1` blockieren
+- [x] alle IP-Adressen des Media-Converter-Servers blockieren
+- [x] DNS-Namen blockieren, die auf den Media-Converter-Server zeigen
+- [x] Redirect-Ziele ebenfalls validieren
 - [ ] DNS-Rebinding absichern
-- [ ] Chromium-Netzwerkzugriffe auf Subresources bewerten
-  - [ ] Bilder
-  - [ ] CSS
-  - [ ] Fonts
-  - [ ] JavaScript
-  - [ ] iframes
+- [x] Chromium-Netzwerkzugriffe auf Subresources bewerten
+  - [x] Bilder
+  - [x] CSS
+  - [x] Fonts
+  - [x] JavaScript
+  - [x] iframes
 - [ ] entscheiden, ob weitere sensible Netze explizit blockiert werden sollen
-  - [ ] Link-local
-  - [ ] Cloud-Metadata-Adressen
+  - [x] Link-local
+  - [x] Cloud-Metadata-Adressen
   - [ ] Docker-/Container-Netze
   - [ ] Proxmox-/Management-Netze
 
 ### Uploads
 
-- [ ] Upload-Dateitypen nicht ausschließlich anhand der Dateiendung akzeptieren
-- [ ] Magic Bytes / Signaturen vollständig prüfen
-- [ ] beschädigte Dateien sauber ablehnen
-- [ ] Zip-Bomb-/Decompression-Bomb-Risiken prüfen
-- [ ] maximale entpackte/verarbeitete Dateigrößen definieren
+- [x] Upload-Dateitypen nicht ausschließlich anhand der Dateiendung akzeptieren
+- [x] Magic Bytes / Signaturen vollständig prüfen
+- [x] beschädigte Dateien sauber ablehnen
+- [x] Zip-Bomb-/Decompression-Bomb-Risiken prüfen
+- [x] maximale entpackte/verarbeitete Dateigrößen definieren
 
 
 ## 4. Upload- und Dateiverwaltung
 
-- [ ] Upload-Store gegen Race Conditions absichern
-  - [ ] laufende Verarbeitung darf nicht vom Cleanup gelöscht werden
-  - [ ] Acquire/Release bzw. Lease-System einführen
-  - [ ] Cleanup nur unbenutzte Uploads entfernen
+- [x] Upload-Store gegen Race Conditions absichern
+  - [x] laufende Verarbeitung darf nicht vom Cleanup gelöscht werden
+  - [x] Acquire/Release bzw. Lease-System einführen
+  - [x] Cleanup nur unbenutzte Uploads entfernen
 
-- [ ] PDF-Upload-Store ebenfalls mit Lease-System versehen
+- [x] PDF-Upload-Store ebenfalls mit Lease-System versehen
 
-- [ ] temporäre Dateien nach Erfolg zuverlässig löschen
-- [ ] temporäre Dateien nach Fehler zuverlässig löschen
-- [ ] temporäre Dateien nach Client-Abbruch zuverlässig löschen
+- [x] temporäre Dateien nach Erfolg zuverlässig löschen
+- [x] temporäre Dateien nach Fehler zuverlässig löschen
+- [x] temporäre Dateien nach Client-Abbruch zuverlässig löschen
 - [ ] Cleanup beim Server-Shutdown testen
 
 - [ ] einheitliche Lebensdauer für temporäre Uploads dokumentieren
@@ -190,16 +190,16 @@
 
 ## 5. Downloads und große Dateien
 
-- [ ] große Downloads nicht vollständig mit `fetch().blob()` im Browser puffern
-- [ ] Download-Token bzw. temporären Download-Endpunkt implementieren
-- [ ] Browser direkt auf Download-Endpunkt navigieren lassen
-- [ ] große Dateien streamen
-- [ ] Content-Length soweit möglich setzen
-- [ ] Client-Abbruch beim Streaming korrekt behandeln
+- [x] große Downloads nicht vollständig mit `fetch().blob()` im Browser puffern
+- [x] Download-Token bzw. temporären Download-Endpunkt implementieren
+- [x] Browser direkt auf Download-Endpunkt navigieren lassen
+- [x] große Dateien streamen
+- [x] Content-Length soweit möglich setzen
+- [x] Client-Abbruch beim Streaming korrekt behandeln
 
-- [ ] bestehende PDF-Handler vereinheitlichen
-  - [ ] Quelldatei erst nach erfolgreichem Ergebnis löschen
-  - [ ] Fehler während des Downloads korrekt behandeln
+- [x] bestehende PDF-Handler vereinheitlichen
+  - [x] Quelldatei erst nach erfolgreichem Ergebnis löschen
+  - [x] Fehler während des Downloads korrekt behandeln
 
 
 ## 6. Parallelisierung und Ressourcen
@@ -289,19 +289,19 @@
 
 ## 9. Abhängigkeiten und Systemprüfung
 
-- [ ] beim Start alle erforderlichen Tools prüfen
-  - [ ] FFmpeg
-  - [ ] ffprobe
-  - [ ] ImageMagick
-  - [ ] LibreOffice
-  - [ ] Poppler
-  - [ ] Ghostscript
-  - [ ] qpdf
-  - [ ] Tesseract
-  - [ ] Chromium / Chrome / Edge
+- [x] beim Start alle erforderlichen Tools prüfen
+  - [x] FFmpeg
+  - [x] ffprobe
+  - [x] ImageMagick
+  - [x] LibreOffice
+  - [x] Poppler
+  - [x] Ghostscript
+  - [x] qpdf
+  - [x] Tesseract
+  - [x] Chromium / Chrome / Edge
 
-- [ ] Versionen der erkannten Tools beim Start loggen
-- [ ] verständliche Fehlermeldung bei fehlender Dependency
+- [x] Versionen der erkannten Tools beim Start loggen
+- [x] verständliche Fehlermeldung bei fehlender Dependency
 - [ ] optionale vs. zwingende Dependencies unterscheiden
 
 - [ ] Debian-Installationsanleitung aktualisieren
@@ -313,13 +313,13 @@
 
 ### Backend
 
-- [ ] Tests für Medienerkennung erweitern
-- [ ] `.txt`
-- [ ] `.rtf`
-- [ ] `.md`
-- [ ] `.mdx`
-- [ ] falsche Dateiendungen
-- [ ] beschädigte Dateien
+- [x] Tests für Medienerkennung erweitern
+- [x] `.txt`
+- [x] `.rtf`
+- [x] `.md`
+- [x] `.mdx`
+- [x] falsche Dateiendungen
+- [x] beschädigte Dateien
 
 - [ ] Tests für Markdown
   - [ ] Überschriften
@@ -339,12 +339,12 @@
   - [ ] Abbruch bei Fehler einer Batch-Datei
 
 - [ ] Tests für Web-PDF-Sicherheit
-  - [ ] localhost
-  - [ ] `127.0.0.1`
+  - [x] localhost
+  - [x] `127.0.0.1`
   - [ ] anderes `127.x.x.x`
-  - [ ] `::1`
-  - [ ] eigene Server-IP
-  - [ ] DNS → eigene Server-IP
+  - [x] `::1`
+  - [x] eigene Server-IP
+  - [x] DNS → eigene Server-IP
   - [ ] Redirect → localhost
   - [ ] Redirect → eigene Server-IP
   - [ ] DNS-Rebinding
