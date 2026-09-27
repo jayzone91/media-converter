@@ -40,11 +40,10 @@ export async function analyzePDFCompression(
 
     body: JSON.stringify({
       upload_id: uploadID,
-
       mode,
     }),
 
-    signal,
+    signal: signal ?? null,
   });
 
   if (!response.ok) {
@@ -66,13 +65,9 @@ export async function analyzePDFCompression(
 
   return {
     originalSize: data.original_size,
-
     resultSize: data.result_size,
-
     savingsBytes: data.savings_bytes,
-
     savingsPercent: data.savings_percent,
-
     unchanged: data.unchanged,
   };
 }
@@ -90,7 +85,6 @@ export async function compressPDF(
 
     body: JSON.stringify({
       upload_id: uploadID,
-
       mode,
     }),
   });
