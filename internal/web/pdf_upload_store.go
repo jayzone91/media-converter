@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const pdfUploadProtectionDuration = 35 * time.Minute
+
 type storedPDFUpload struct {
 	ID string
 
@@ -38,10 +40,18 @@ func (u storedPDFUpload) PreviewPath(
 	)
 }
 
+type storedPDFUploadEntry struct {
+	Upload storedPDFUpload
+
+	ProtectedUntil time.Time
+
+	DeletePending bool
+}
+
 type pdfUploadStore struct {
 	mu sync.Mutex
 
-	uploads map[string]storedPDFUpload
+	uploads map[string]storedPDFUploadEntry
 
 	stop chan struct{}
 	done chan struct{}
@@ -52,7 +62,7 @@ type pdfUploadStore struct {
 func newPDFUploadStore() *pdfUploadStore {
 	store := &pdfUploadStore{
 		uploads: make(
-			map[string]storedPDFUpload,
+			map[string]storedPDFUploadEntry,
 		),
 
 		stop: make(
@@ -102,7 +112,10 @@ func (s *pdfUploadStore) Add(
 
 	s.mu.Lock()
 
-	s.uploads[id] = upload
+	s.uploads[id] =
+		storedPDFUploadEntry{
+			Upload: upload,
+		}
 
 	s.mu.Unlock()
 
@@ -116,9 +129,11 @@ func (s *pdfUploadStore) Get(
 		return storedPDFUpload{}, false
 	}
 
+	now := time.Now()
+
 	s.mu.Lock()
 
-	upload, ok :=
+	entry, ok :=
 		s.uploads[id]
 
 	if !ok {
@@ -127,9 +142,19 @@ func (s *pdfUploadStore) Get(
 		return storedPDFUpload{}, false
 	}
 
-	if time.Since(
-		upload.CreatedAt,
-	) > uploadTTL {
+	if entry.DeletePending {
+		s.mu.Unlock()
+
+		return storedPDFUpload{}, false
+	}
+
+	if now.Sub(
+		entry.Upload.CreatedAt,
+	) > uploadTTL &&
+		!pdfUploadEntryProtected(
+			entry,
+			now,
+		) {
 		delete(
 			s.uploads,
 			id,
@@ -138,15 +163,24 @@ func (s *pdfUploadStore) Get(
 		s.mu.Unlock()
 
 		_ = os.RemoveAll(
-			upload.Directory,
+			entry.Upload.Directory,
 		)
 
 		return storedPDFUpload{}, false
 	}
 
+	entry.ProtectedUntil =
+		now.Add(
+			pdfUploadProtectionDuration,
+		)
+
+	s.uploads[id] =
+		entry
+
 	s.mu.Unlock()
 
-	return upload, true
+	return entry.Upload,
+		true
 }
 
 func (s *pdfUploadStore) Delete(
@@ -156,25 +190,44 @@ func (s *pdfUploadStore) Delete(
 		return
 	}
 
+	now := time.Now()
+
 	s.mu.Lock()
 
-	upload, ok :=
+	entry, ok :=
 		s.uploads[id]
 
-	if ok {
-		delete(
-			s.uploads,
-			id,
-		)
+	if !ok {
+		s.mu.Unlock()
+
+		return
 	}
+
+	if pdfUploadEntryProtected(
+		entry,
+		now,
+	) {
+		entry.DeletePending =
+			true
+
+		s.uploads[id] =
+			entry
+
+		s.mu.Unlock()
+
+		return
+	}
+
+	delete(
+		s.uploads,
+		id,
+	)
 
 	s.mu.Unlock()
 
-	if ok {
-		_ = os.RemoveAll(
-			upload.Directory,
-		)
-	}
+	_ = os.RemoveAll(
+		entry.Upload.Directory,
+	)
 }
 
 func (s *pdfUploadStore) cleanupLoop() {
@@ -197,16 +250,33 @@ func (s *pdfUploadStore) cleanupLoop() {
 }
 
 func (s *pdfUploadStore) cleanupExpired() {
-	now := time.Now()
+	s.cleanupAt(
+		time.Now(),
+	)
+}
 
-	var expired []storedPDFUpload
+func (s *pdfUploadStore) cleanupAt(
+	now time.Time,
+) {
+	var removable []storedPDFUpload
 
 	s.mu.Lock()
 
-	for id, upload := range s.uploads {
-		if now.Sub(
-			upload.CreatedAt,
-		) <= uploadTTL {
+	for id, entry := range s.uploads {
+		if pdfUploadEntryProtected(
+			entry,
+			now,
+		) {
+			continue
+		}
+
+		expired :=
+			now.Sub(
+				entry.Upload.CreatedAt,
+			) > uploadTTL
+
+		if !entry.DeletePending &&
+			!expired {
 			continue
 		}
 
@@ -215,15 +285,32 @@ func (s *pdfUploadStore) cleanupExpired() {
 			id,
 		)
 
-		expired = append(
-			expired,
-			upload,
+		removable = append(
+			removable,
+			entry.Upload,
 		)
 	}
 
 	s.mu.Unlock()
 
-	for _, upload := range expired {
+	removePDFUploadDirectories(
+		removable,
+	)
+}
+
+func pdfUploadEntryProtected(
+	entry storedPDFUploadEntry,
+	now time.Time,
+) bool {
+	return entry.ProtectedUntil.After(
+		now,
+	)
+}
+
+func removePDFUploadDirectories(
+	uploads []storedPDFUpload,
+) {
+	for _, upload := range uploads {
 		_ = os.RemoveAll(
 			upload.Directory,
 		)
@@ -245,10 +332,10 @@ func (s *pdfUploadStore) Close() {
 				len(s.uploads),
 			)
 
-			for _, upload := range s.uploads {
+			for _, entry := range s.uploads {
 				uploads = append(
 					uploads,
-					upload,
+					entry.Upload,
 				)
 			}
 
@@ -258,11 +345,9 @@ func (s *pdfUploadStore) Close() {
 
 			s.mu.Unlock()
 
-			for _, upload := range uploads {
-				_ = os.RemoveAll(
-					upload.Directory,
-				)
-			}
+			removePDFUploadDirectories(
+				uploads,
+			)
 		},
 	)
 }
