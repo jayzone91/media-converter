@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jayzone91/media-converter/internal/converter"
+	"github.com/jayzone91/media-converter/internal/dependencies"
 	"github.com/jayzone91/media-converter/internal/logging"
 	"github.com/jayzone91/media-converter/internal/media"
 	"github.com/jayzone91/media-converter/internal/web"
@@ -35,56 +36,54 @@ func main() {
 		logger,
 	)
 
+	if !checkDependencies(
+		logger,
+	) {
+		os.Exit(1)
+	}
+
 	imageMagick, err :=
 		converter.NewImageMagick()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize ImageMagick",
-			"error",
+		startupError(
+			logger,
+			"ImageMagick",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	ffmpeg, err :=
 		converter.NewFFmpeg()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize FFmpeg",
-			"error",
+		startupError(
+			logger,
+			"FFmpeg",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	ffprobe, err :=
 		media.NewFFProbe()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize ffprobe",
-			"error",
+		startupError(
+			logger,
+			"ffprobe",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	libreOffice, err :=
 		converter.NewLibreOffice()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize LibreOffice",
-			"error",
+		startupError(
+			logger,
+			"LibreOffice",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	pdf, err :=
@@ -93,52 +92,44 @@ func main() {
 		)
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize PDF converter",
-			"error",
+		startupError(
+			logger,
+			"PDF converter",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	qpdf, err :=
 		converter.NewQPDF()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize qpdf",
-			"error",
+		startupError(
+			logger,
+			"qpdf",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	ghostscript, err :=
 		converter.NewGhostscript()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize Ghostscript",
-			"error",
+		startupError(
+			logger,
+			"Ghostscript",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	webPDF, err :=
 		converter.NewWebPDF()
 
 	if err != nil {
-		logger.Error(
-			"failed to initialize browser PDF converter",
-			"error",
+		startupError(
+			logger,
+			"browser PDF converter",
 			err,
 		)
-
-		os.Exit(1)
 	}
 
 	server :=
@@ -154,6 +145,78 @@ func main() {
 			webPDF,
 		)
 
+	runServer(
+		logger,
+		server,
+	)
+}
+
+func checkDependencies(
+	logger *slog.Logger,
+) bool {
+	ctx, cancel :=
+		context.WithTimeout(
+			context.Background(),
+			30*time.Second,
+		)
+	defer cancel()
+
+	tools, err :=
+		dependencies.CheckAll(
+			ctx,
+		)
+
+	for _, tool := range tools {
+		logger.Info(
+			"dependency",
+			"name",
+			tool.Name,
+			"version",
+			tool.Version,
+			"path",
+			tool.Path,
+		)
+	}
+
+	if err != nil {
+		logger.Error(
+			"dependency check failed",
+			"error",
+			err,
+		)
+
+		return false
+	}
+
+	logger.Info(
+		"dependency check completed",
+		"tools",
+		len(tools),
+	)
+
+	return true
+}
+
+func startupError(
+	logger *slog.Logger,
+	name string,
+	err error,
+) {
+	logger.Error(
+		"dependency initialization failed",
+		"name",
+		name,
+		"error",
+		err,
+	)
+
+	os.Exit(1)
+}
+
+func runServer(
+	logger *slog.Logger,
+	server *web.Server,
+) {
 	signalCtx, stop :=
 		signal.NotifyContext(
 			context.Background(),
@@ -195,44 +258,54 @@ func main() {
 		}
 
 	case <-signalCtx.Done():
-		logger.Info(
-			"server shutting down",
-		)
-
-		shutdownCtx, cancel :=
-			context.WithTimeout(
-				context.Background(),
-				shutdownTimeout,
-			)
-		defer cancel()
-
-		if err :=
-			server.Shutdown(
-				shutdownCtx,
-			); err != nil {
-			if !errors.Is(
-				err,
-				context.DeadlineExceeded,
-			) {
-				logger.Error(
-					"graceful shutdown failed",
-					"error",
-					err,
-				)
-			}
-
-			if err :=
-				server.Close(); err != nil {
-				logger.Error(
-					"forced shutdown failed",
-					"error",
-					err,
-				)
-			}
-		}
-
-		logger.Info(
-			"server stopped",
+		shutdownServer(
+			logger,
+			server,
 		)
 	}
+}
+
+func shutdownServer(
+	logger *slog.Logger,
+	server *web.Server,
+) {
+	logger.Info(
+		"server shutting down",
+	)
+
+	shutdownCtx, cancel :=
+		context.WithTimeout(
+			context.Background(),
+			shutdownTimeout,
+		)
+	defer cancel()
+
+	if err :=
+		server.Shutdown(
+			shutdownCtx,
+		); err != nil {
+		if !errors.Is(
+			err,
+			context.DeadlineExceeded,
+		) {
+			logger.Error(
+				"graceful shutdown failed",
+				"error",
+				err,
+			)
+		}
+
+		if err :=
+			server.Close(); err != nil {
+			logger.Error(
+				"forced shutdown failed",
+				"error",
+				err,
+			)
+		}
+	}
+
+	logger.Info(
+		"server stopped",
+	)
 }
