@@ -266,6 +266,16 @@ func (s *Server) handleConvert(
 				outputPath,
 			)
 
+		case "png", "jpeg", "webp":
+			err = converter.MarkdownToImage(
+				conversionCtx,
+				s.webPDF,
+				s.imageMagick,
+				inputPath,
+				outputPath,
+				target,
+			)
+
 		default:
 			http.Error(
 				w,
