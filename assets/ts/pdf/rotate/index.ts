@@ -7,26 +7,21 @@ import {
   uploadPDF,
 } from "../uploads.ts";
 
-import {
-  createPDFSelectionGrid,
-  type PDFSelectionGrid,
-} from "../shared/selection-grid.ts";
+import { type PDFPageRotation, rotatePDFPages } from "./api.ts";
 
-import { rotatePDFPages } from "./api.ts";
+import { createPDFRotationGrid, type PDFRotationGrid } from "./grid.ts";
+
+import type { RotatePage } from "./types.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
-
-type RotationAngle = 90 | 180 | 270;
 
 let root: HTMLElement | null = null;
 
 let upload: PDFUpload | null = null;
 
-let grid: PDFSelectionGrid | null = null;
+let grid: PDFRotationGrid | null = null;
 
-let selectedPages: number[] = [];
-
-let angle: RotationAngle = 90;
+let rotatedPages: RotatePage[] = [];
 
 let uploading = false;
 
@@ -39,45 +34,30 @@ export function setupPDFRotate(workspace: HTMLElement): void {
 
   upload = null;
 
-  selectedPages = [];
-
-  angle = 90;
+  rotatedPages = [];
 
   uploading = false;
   processing = false;
 
-  grid = createPDFSelectionGrid({
+  grid = createPDFRotationGrid({
     root: workspace,
 
-    viewportSelector: "#pdf-rotate-pages",
-
-    templateSelector: "#pdf-select-page-template",
-
-    onSelectionChange: handleSelectionChange,
+    onChange: handleRotationChange,
   });
 
   const input = getElement<HTMLInputElement>("#pdf-rotate-file");
 
   const dropZone = getElement<HTMLElement>("#pdf-rotate-drop-zone");
 
-  const reset = getElement<HTMLButtonElement>("#pdf-rotate-reset-file");
+  const resetFile = getElement<HTMLButtonElement>("#pdf-rotate-reset-file");
 
-  const selectAll = getElement<HTMLButtonElement>("#pdf-rotate-select-all");
-
-  const clearSelection = getElement<HTMLButtonElement>(
-    "#pdf-rotate-clear-selection",
+  const resetRotations = getElement<HTMLButtonElement>(
+    "#pdf-rotate-reset-rotations",
   );
 
   const submit = getElement<HTMLButtonElement>("#pdf-rotate-submit");
 
-  if (
-    !input ||
-    !dropZone ||
-    !reset ||
-    !selectAll ||
-    !clearSelection ||
-    !submit
-  ) {
+  if (!input || !dropZone || !resetFile || !resetRotations || !submit) {
     grid.destroy();
 
     grid = null;
@@ -97,18 +77,12 @@ export function setupPDFRotate(workspace: HTMLElement): void {
 
   setupDropZone(dropZone);
 
-  setupAngleButtons();
-
-  reset.addEventListener("click", () => {
+  resetFile.addEventListener("click", () => {
     void resetUpload();
   });
 
-  selectAll.addEventListener("click", () => {
-    grid?.selectAll();
-  });
-
-  clearSelection.addEventListener("click", () => {
-    grid?.clearSelection();
+  resetRotations.addEventListener("click", () => {
+    grid?.reset();
   });
 
   submit.addEventListener("click", () => {
@@ -124,13 +98,10 @@ export async function destroyPDFRotate(): Promise<void> {
   grid?.destroy();
 
   grid = null;
-
   root = null;
   upload = null;
 
-  selectedPages = [];
-
-  angle = 90;
+  rotatedPages = [];
 
   uploading = false;
   processing = false;
@@ -183,36 +154,6 @@ function setupDropZone(dropZone: HTMLElement): void {
   });
 }
 
-function setupAngleButtons(): void {
-  const buttons = root?.querySelectorAll<HTMLButtonElement>(
-    "[data-pdf-rotate-angle]",
-  );
-
-  if (!buttons) {
-    return;
-  }
-
-  for (const button of buttons) {
-    button.addEventListener("click", () => {
-      const value = Number.parseInt(button.dataset.pdfRotateAngle ?? "", 10);
-
-      if (!isRotationAngle(value)) {
-        return;
-      }
-
-      angle = value;
-
-      for (const candidate of buttons) {
-        const selected = candidate === button;
-
-        candidate.classList.toggle("selected", selected);
-
-        candidate.setAttribute("aria-pressed", selected ? "true" : "false");
-      }
-    });
-  }
-}
-
 async function selectFile(file: File): Promise<void> {
   if (uploading || processing) {
     return;
@@ -244,7 +185,7 @@ async function selectFile(file: File): Promise<void> {
     upload = null;
   }
 
-  selectedPages = [];
+  rotatedPages = [];
 
   grid?.setPages([]);
 
@@ -267,7 +208,7 @@ async function selectFile(file: File): Promise<void> {
   } catch (error: unknown) {
     upload = null;
 
-    selectedPages = [];
+    rotatedPages = [];
 
     grid?.setPages([]);
 
@@ -296,7 +237,7 @@ async function resetUpload(): Promise<void> {
 
   upload = null;
 
-  selectedPages = [];
+  rotatedPages = [];
 
   grid?.setPages([]);
 
@@ -307,16 +248,16 @@ async function resetUpload(): Promise<void> {
   }
 }
 
-function handleSelectionChange(pages: number[]): void {
-  selectedPages = pages;
+function handleRotationChange(pages: RotatePage[]): void {
+  rotatedPages = pages;
 
-  updateSelectionText();
+  updateRotationText();
 
   updateControls();
 }
 
 async function createPDF(): Promise<void> {
-  if (!upload || selectedPages.length === 0 || uploading || processing) {
+  if (!upload || rotatedPages.length === 0 || uploading || processing) {
     return;
   }
 
@@ -333,13 +274,19 @@ async function createPDF(): Promise<void> {
   }
 
   try {
-    const result = await rotatePDFPages(upload.id, selectedPages, angle);
+    const rotations: PDFPageRotation[] = rotatedPages.map((page) => ({
+      page: page.page,
+
+      angle: page.rotation as 90 | 180 | 270,
+    }));
+
+    const result = await rotatePDFPages(upload.id, rotations);
 
     downloadBlob(result.blob, result.filename);
 
     upload = null;
 
-    selectedPages = [];
+    rotatedPages = [];
 
     grid?.setPages([]);
 
@@ -348,7 +295,7 @@ async function createPDF(): Promise<void> {
     showError(
       error instanceof Error
         ? error.message
-        : "Die ausgewählten Seiten konnten nicht gedreht werden.",
+        : "Die Seiten konnten nicht gedreht werden.",
     );
   } finally {
     processing = false;
@@ -386,42 +333,40 @@ function render(): void {
     meta.textContent = `${upload.pageCount} Seiten · ${formatBytes(upload.size)}`;
   }
 
-  updateSelectionText();
+  updateRotationText();
 
   updateControls();
 }
 
-function updateSelectionText(): void {
-  const element = getElement<HTMLElement>("#pdf-rotate-selected-count");
+function updateRotationText(): void {
+  const element = getElement<HTMLElement>("#pdf-rotate-changed-count");
 
   if (!element) {
     return;
   }
 
-  if (selectedPages.length === 0) {
-    element.textContent = "0 Seiten ausgewählt";
+  if (rotatedPages.length === 0) {
+    element.textContent = "Keine Seiten geändert";
 
     return;
   }
 
-  if (selectedPages.length === 1) {
-    element.textContent = "1 Seite ausgewählt";
+  if (rotatedPages.length === 1) {
+    element.textContent = "1 Seite geändert";
 
     return;
   }
 
-  element.textContent = `${selectedPages.length} Seiten ausgewählt`;
+  element.textContent = `${rotatedPages.length} Seiten geändert`;
 }
 
 function updateControls(): void {
   const input = getElement<HTMLInputElement>("#pdf-rotate-file");
 
-  const reset = getElement<HTMLButtonElement>("#pdf-rotate-reset-file");
+  const resetFile = getElement<HTMLButtonElement>("#pdf-rotate-reset-file");
 
-  const selectAll = getElement<HTMLButtonElement>("#pdf-rotate-select-all");
-
-  const clearSelection = getElement<HTMLButtonElement>(
-    "#pdf-rotate-clear-selection",
+  const resetRotations = getElement<HTMLButtonElement>(
+    "#pdf-rotate-reset-rotations",
   );
 
   const submit = getElement<HTMLButtonElement>("#pdf-rotate-submit");
@@ -432,21 +377,16 @@ function updateControls(): void {
     input.disabled = busy;
   }
 
-  if (reset) {
-    reset.disabled = !upload || busy;
+  if (resetFile) {
+    resetFile.disabled = !upload || busy;
   }
 
-  if (selectAll) {
-    selectAll.disabled =
-      !upload || busy || selectedPages.length === upload.pageCount;
-  }
-
-  if (clearSelection) {
-    clearSelection.disabled = selectedPages.length === 0 || busy;
+  if (resetRotations) {
+    resetRotations.disabled = rotatedPages.length === 0 || busy;
   }
 
   if (submit) {
-    submit.disabled = !upload || selectedPages.length === 0 || busy;
+    submit.disabled = !upload || rotatedPages.length === 0 || busy;
   }
 }
 
@@ -472,10 +412,6 @@ function clearError(): void {
   element.textContent = "";
 
   element.hidden = true;
-}
-
-function isRotationAngle(value: number): value is RotationAngle {
-  return value === 90 || value === 180 || value === 270;
 }
 
 function formatBytes(bytes: number): string {

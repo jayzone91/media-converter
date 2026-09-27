@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/jayzone91/media-converter/internal/converter"
 )
 
 const (
@@ -20,9 +22,13 @@ const (
 )
 
 type pdfRotateRequest struct {
-	UploadID string `json:"upload_id"`
-	Pages    []int  `json:"pages"`
-	Angle    int    `json:"angle"`
+	UploadID  string                   `json:"upload_id"`
+	Rotations []pdfPageRotationRequest `json:"rotations"`
+}
+
+type pdfPageRotationRequest struct {
+	Page  int `json:"page"`
+	Angle int `json:"angle"`
 }
 
 func (s *Server) handlePDFRotatePages(
@@ -69,24 +75,6 @@ func (s *Server) handlePDFRotatePages(
 		return
 	}
 
-	if err := validatePDFRotationAngle(
-		request.Angle,
-	); err != nil {
-		s.logWarn(
-			r,
-			"invalid PDF rotation angle",
-			"angle",
-			request.Angle,
-		)
-
-		http.Error(
-			w,
-			"Ungültiger Drehwinkel.",
-			http.StatusBadRequest,
-		)
-		return
-	}
-
 	upload, ok := s.pdfUploads.Get(
 		request.UploadID,
 	)
@@ -106,10 +94,11 @@ func (s *Server) handlePDFRotatePages(
 		return
 	}
 
-	if err := validatePDFPageSelection(
-		request.Pages,
+	rotations, err := validatePDFRotations(
+		request.Rotations,
 		upload.PageCount,
-	); err != nil {
+	)
+	if err != nil {
 		s.logWarn(
 			r,
 			"invalid PDF page rotation request",
@@ -119,17 +108,15 @@ func (s *Server) handlePDFRotatePages(
 			upload.Filename,
 			"page_count",
 			upload.PageCount,
-			"selected_pages",
-			len(request.Pages),
-			"angle",
-			request.Angle,
+			"rotation_count",
+			len(request.Rotations),
 			"reason",
 			err.Error(),
 		)
 
 		http.Error(
 			w,
-			"Die Seitenauswahl ist ungültig.",
+			"Die Seitendrehungen sind ungültig.",
 			http.StatusBadRequest,
 		)
 		return
@@ -206,11 +193,10 @@ func (s *Server) handlePDFRotatePages(
 	)
 	defer cancel()
 
-	if err := s.qpdf.Rotate(
+	if err := s.qpdf.RotatePages(
 		ctx,
 		upload.Path,
-		request.Pages,
-		request.Angle,
+		rotations,
 		outputPath,
 	); err != nil {
 		s.logError(
@@ -225,10 +211,8 @@ func (s *Server) handlePDFRotatePages(
 			upload.Size,
 			"page_count",
 			upload.PageCount,
-			"selected_pages",
-			len(request.Pages),
-			"angle",
-			request.Angle,
+			"rotation_count",
+			len(rotations),
 		)
 
 		if errors.Is(
@@ -245,7 +229,7 @@ func (s *Server) handlePDFRotatePages(
 
 		http.Error(
 			w,
-			"Die ausgewählten Seiten konnten nicht gedreht werden.",
+			"Die Seiten konnten nicht gedreht werden.",
 			http.StatusInternalServerError,
 		)
 		return
@@ -338,9 +322,7 @@ func (s *Server) handlePDFRotatePages(
 		"page_count",
 		upload.PageCount,
 		"rotated_page_count",
-		len(request.Pages),
-		"angle",
-		request.Angle,
+		len(rotations),
 		"input_size_bytes",
 		upload.Size,
 		"output_size_bytes",
@@ -363,17 +345,76 @@ func (s *Server) handlePDFRotatePages(
 	}
 }
 
-func validatePDFRotationAngle(
-	angle int,
-) error {
-	switch angle {
-	case 90, 180, 270:
-		return nil
-
-	default:
-		return fmt.Errorf(
-			"unsupported rotation angle: %d",
-			angle,
+func validatePDFRotations(
+	requests []pdfPageRotationRequest,
+	pageCount int,
+) ([]converter.PDFPageRotation, error) {
+	if pageCount < 1 {
+		return nil, fmt.Errorf(
+			"invalid page count",
 		)
 	}
+
+	if len(requests) == 0 {
+		return nil, fmt.Errorf(
+			"no rotations supplied",
+		)
+	}
+
+	if len(requests) > pageCount {
+		return nil, fmt.Errorf(
+			"too many rotations supplied",
+		)
+	}
+
+	seen := make(
+		map[int]struct{},
+		len(requests),
+	)
+
+	rotations := make(
+		[]converter.PDFPageRotation,
+		0,
+		len(requests),
+	)
+
+	for _, request := range requests {
+		if request.Page < 1 ||
+			request.Page > pageCount {
+			return nil, fmt.Errorf(
+				"page %d is outside range 1-%d",
+				request.Page,
+				pageCount,
+			)
+		}
+
+		if _, exists := seen[request.Page]; exists {
+			return nil, fmt.Errorf(
+				"page %d occurs more than once",
+				request.Page,
+			)
+		}
+
+		seen[request.Page] = struct{}{}
+
+		switch request.Angle {
+		case 90, 180, 270:
+		default:
+			return nil, fmt.Errorf(
+				"invalid angle %d for page %d",
+				request.Angle,
+				request.Page,
+			)
+		}
+
+		rotations = append(
+			rotations,
+			converter.PDFPageRotation{
+				Page:  request.Page,
+				Angle: request.Angle,
+			},
+		)
+	}
+
+	return rotations, nil
 }

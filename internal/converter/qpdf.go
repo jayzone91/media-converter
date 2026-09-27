@@ -19,6 +19,11 @@ type QPDFPageCountResult struct {
 	Warnings string
 }
 
+type PDFPageRotation struct {
+	Page  int
+	Angle int
+}
+
 func NewQPDF() (*QPDF, error) {
 	binary, err := exec.LookPath("qpdf")
 	if err != nil {
@@ -123,38 +128,69 @@ func (q *QPDF) Reorder(
 	)
 }
 
-func (q *QPDF) Rotate(
+func (q *QPDF) RotatePages(
 	ctx context.Context,
 	input string,
-	pages []int,
-	angle int,
+	rotations []PDFPageRotation,
 	output string,
 ) error {
-	rotation, err := qpdfRotation(
-		angle,
+	grouped, err := groupPDFRotations(
+		rotations,
 	)
 	if err != nil {
 		return err
 	}
 
-	pageRange, err := qpdfPageRange(
-		pages,
-	)
-	if err != nil {
-		return err
+	if len(grouped) == 0 {
+		return fmt.Errorf(
+			"at least one page rotation is required",
+		)
 	}
 
 	args := []string{
 		"--warning-exit-0",
 		"--stream-data=preserve",
 		input,
-		fmt.Sprintf(
-			"--rotate=%s:%s",
-			rotation,
-			pageRange,
-		),
-		output,
 	}
+
+	for _, angle := range []int{
+		90,
+		180,
+		270,
+	} {
+		pages := grouped[angle]
+		if len(pages) == 0 {
+			continue
+		}
+
+		pageRange, err := qpdfPageRange(
+			pages,
+		)
+		if err != nil {
+			return err
+		}
+
+		rotation, err := qpdfRotation(
+			angle,
+		)
+		if err != nil {
+			return err
+		}
+
+		args = append(
+			args,
+			fmt.Sprintf(
+				"--rotate=%s:%s",
+				rotation,
+				pageRange,
+			),
+		)
+	}
+
+	args = append(
+		args,
+		output,
+	)
 
 	return q.run(
 		ctx,
@@ -279,6 +315,52 @@ func (q *QPDF) run(
 	return nil
 }
 
+func groupPDFRotations(
+	rotations []PDFPageRotation,
+) (map[int][]int, error) {
+	grouped := map[int][]int{
+		90:  {},
+		180: {},
+		270: {},
+	}
+
+	seen := make(
+		map[int]struct{},
+		len(rotations),
+	)
+
+	for _, rotation := range rotations {
+		if rotation.Page < 1 {
+			return nil, fmt.Errorf(
+				"invalid PDF page number: %d",
+				rotation.Page,
+			)
+		}
+
+		if _, exists := seen[rotation.Page]; exists {
+			return nil, fmt.Errorf(
+				"duplicate PDF page number: %d",
+				rotation.Page,
+			)
+		}
+
+		seen[rotation.Page] = struct{}{}
+
+		if _, err := qpdfRotation(
+			rotation.Angle,
+		); err != nil {
+			return nil, err
+		}
+
+		grouped[rotation.Angle] = append(
+			grouped[rotation.Angle],
+			rotation.Page,
+		)
+	}
+
+	return grouped, nil
+}
+
 func qpdfRotation(
 	angle int,
 ) (string, error) {
@@ -343,6 +425,7 @@ func qpdfPageRange(
 	for _, page := range sorted[1:] {
 		if page == end+1 {
 			end = page
+
 			continue
 		}
 

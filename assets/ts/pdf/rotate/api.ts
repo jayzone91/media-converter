@@ -1,5 +1,10 @@
 import { getDownloadFilename } from "../../shared/download.ts";
 
+export interface PDFPageRotation {
+  page: number;
+  angle: 90 | 180 | 270;
+}
+
 export interface PDFRotateResult {
   blob: Blob;
   filename: string;
@@ -7,8 +12,7 @@ export interface PDFRotateResult {
 
 export async function rotatePDFPages(
   uploadID: string,
-  pages: number[],
-  angle: number,
+  rotations: PDFPageRotation[],
 ): Promise<PDFRotateResult> {
   const response = await fetch("/pdf/rotate-pages", {
     method: "POST",
@@ -19,8 +23,7 @@ export async function rotatePDFPages(
 
     body: JSON.stringify({
       upload_id: uploadID,
-      pages,
-      angle,
+      rotations,
     }),
   });
 
@@ -28,7 +31,7 @@ export async function rotatePDFPages(
     const message = await response.text();
 
     throw new Error(
-      message.trim() || "Die ausgewählten Seiten konnten nicht gedreht werden.",
+      message.trim() || "Die Seiten konnten nicht gedreht werden.",
     );
   }
 
