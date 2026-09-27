@@ -241,28 +241,53 @@ func (s *Server) releaseConversionSlot() {
 func (s *Server) ListenAndServe(
 	addr string,
 ) error {
-	s.httpServer =
-		&http.Server{
-			Addr: addr,
+	s.httpServer = &http.Server{
+		Addr: addr,
 
-			Handler: s.mux,
+		Handler: s.requestLoggingMiddleware(
+			s.mux,
+		),
 
-			ReadHeaderTimeout: readHeaderTimeout,
+		ReadHeaderTimeout: readHeaderTimeout,
 
-			ReadTimeout: readTimeout,
+		ReadTimeout: readTimeout,
 
-			IdleTimeout: idleTimeout,
-		}
+		IdleTimeout: idleTimeout,
+	}
 
-	err :=
-		s.httpServer.
-			ListenAndServe()
+	s.logger.Info(
+		"http server starting",
+		"address",
+		addr,
+		"max_concurrent_conversions",
+		maxConcurrentConversions,
+		"conversion_queue_timeout",
+		conversionQueueTimeout,
+	)
+
+	err := s.httpServer.ListenAndServe()
 
 	if errors.Is(
 		err,
 		http.ErrServerClosed,
 	) {
+		s.logger.Info(
+			"http server stopped",
+			"address",
+			addr,
+		)
+
 		return nil
+	}
+
+	if err != nil {
+		s.logger.Error(
+			"http server failed",
+			"address",
+			addr,
+			"error",
+			err,
+		)
 	}
 
 	return err
@@ -271,32 +296,86 @@ func (s *Server) ListenAndServe(
 func (s *Server) Shutdown(
 	ctx context.Context,
 ) error {
+	s.logger.Info(
+		"http server shutdown started",
+	)
+
 	if s.httpServer == nil {
 		s.closeStores()
 
+		s.logger.Info(
+			"http server shutdown completed",
+		)
+
 		return nil
 	}
 
-	err :=
-		s.httpServer.
-			Shutdown(ctx)
+	err := s.httpServer.Shutdown(
+		ctx,
+	)
 
 	s.closeStores()
 
-	return err
+	if err != nil {
+		s.logger.Error(
+			"http server shutdown failed",
+			"error",
+			err,
+		)
+
+		return err
+	}
+
+	s.logger.Info(
+		"http server shutdown completed",
+	)
+
+	return nil
 }
 
 func (s *Server) Close() error {
+	s.logger.Info(
+		"http server forced close started",
+	)
+
 	s.closeStores()
 
 	if s.httpServer == nil {
+		s.logger.Info(
+			"http server forced close completed",
+		)
+
 		return nil
 	}
 
-	return s.httpServer.Close()
+	err := s.httpServer.Close()
+
+	if err != nil {
+		s.logger.Error(
+			"http server forced close failed",
+			"error",
+			err,
+		)
+
+		return err
+	}
+
+	s.logger.Info(
+		"http server forced close completed",
+	)
+
+	return nil
 }
 
 func (s *Server) closeStores() {
+	s.logger.Debug(
+		"closing upload stores",
+	)
+
 	s.uploads.Close()
 	s.pdfUploads.Close()
+
+	s.logger.Debug(
+		"upload stores closed",
+	)
 }

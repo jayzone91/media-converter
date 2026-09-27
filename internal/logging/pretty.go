@@ -71,12 +71,6 @@ func (h *Handler) Handle(
 		timestamp = time.Now()
 	}
 
-	h.writeHeader(
-		timestamp,
-		record.Level,
-		record.Message,
-	)
-
 	fields := make(
 		[]field,
 		0,
@@ -103,8 +97,27 @@ func (h *Handler) Handle(
 		},
 	)
 
+	if record.Level < slog.LevelWarn {
+		h.writeCompactRecord(
+			timestamp,
+			record.Level,
+			record.Message,
+			fields,
+		)
+
+		return nil
+	}
+
+	h.writeHeader(
+		timestamp,
+		record.Level,
+		record.Message,
+	)
+
 	if len(fields) > 0 {
-		h.writeFields(fields)
+		h.writeFields(
+			fields,
+		)
 	}
 
 	_, _ = fmt.Fprintln(
@@ -158,6 +171,53 @@ func (h *Handler) WithGroup(
 	)
 
 	return &clone
+}
+
+func (h *Handler) writeCompactRecord(
+	timestamp time.Time,
+	level slog.Level,
+	message string,
+	fields []field,
+) {
+	levelLabel := formatLevel(
+		level,
+	)
+
+	if h.color {
+		_, _ = fmt.Fprintf(
+			h.writer,
+			"%s%s%s  %s%-5s%s  %s",
+			ansiDim,
+			timestamp.Format(
+				"15:04:05.000",
+			),
+			ansiReset,
+			h.levelColor(level),
+			levelLabel,
+			ansiReset,
+			message,
+		)
+	} else {
+		_, _ = fmt.Fprintf(
+			h.writer,
+			"%s  %-5s  %s",
+			timestamp.Format(
+				"15:04:05.000",
+			),
+			levelLabel,
+			message,
+		)
+	}
+
+	if len(fields) > 0 {
+		h.writeInlineFields(
+			fields,
+		)
+	}
+
+	_, _ = fmt.Fprintln(
+		h.writer,
+	)
 }
 
 func (h *Handler) writeHeader(

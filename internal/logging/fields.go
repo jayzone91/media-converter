@@ -3,12 +3,62 @@ package logging
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 )
 
 type field struct {
 	key   string
 	value string
+}
+
+func (h *Handler) writeInlineFields(
+	fields []field,
+) {
+	for _, entry := range fields {
+		value := compactFieldValue(
+			entry.value,
+		)
+
+		if h.color {
+			_, _ = fmt.Fprintf(
+				h.writer,
+				"  %s%s%s=%s",
+				ansiDim,
+				entry.key,
+				ansiReset,
+				value,
+			)
+
+			continue
+		}
+
+		_, _ = fmt.Fprintf(
+			h.writer,
+			"  %s=%s",
+			entry.key,
+			value,
+		)
+	}
+}
+
+func compactFieldValue(
+	value string,
+) string {
+	value = normalizeFieldValue(
+		value,
+	)
+
+	if strings.ContainsAny(
+		value,
+		" \t\n",
+	) {
+		return strconv.Quote(
+			value,
+		)
+	}
+
+	return value
 }
 
 func (h *Handler) writeFields(
