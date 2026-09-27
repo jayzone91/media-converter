@@ -10,9 +10,10 @@ func (s *Server) handlePDFWorkspace(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	tool := r.PathValue(
-		"tool",
-	)
+	tool :=
+		r.PathValue(
+			"tool",
+		)
 
 	w.Header().Set(
 		"Content-Type",
@@ -60,6 +61,26 @@ func (s *Server) handlePDFWorkspace(
 			)
 		}
 
+	case "delete":
+		if err :=
+			view.PDFDeleteWorkspace().
+				Render(
+					r.Context(),
+					w,
+				); err != nil {
+			s.logError(
+				r,
+				"failed to render PDF delete workspace",
+				err,
+			)
+
+			http.Error(
+				w,
+				"PDF-Werkzeug konnte nicht geladen werden.",
+				http.StatusInternalServerError,
+			)
+		}
+
 	case
 		"split",
 		"compress",
@@ -67,7 +88,6 @@ func (s *Server) handlePDFWorkspace(
 		"encrypt",
 		"decrypt",
 		"rotate",
-		"delete",
 		"extract",
 		"web",
 		"optimize",

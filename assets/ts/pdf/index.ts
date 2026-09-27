@@ -1,7 +1,10 @@
+import { destroyPDFDelete, setupPDFDelete } from "./delete/index.ts";
+
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
+
 import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
-type PDFTool = "merge" | "sort" | string;
+type PDFTool = "merge" | "sort" | "delete" | string;
 
 let activeTool: PDFTool | null = null;
 
@@ -43,6 +46,7 @@ function setupToolSelection(
       }
 
       grid.hidden = true;
+
       workspace.hidden = false;
 
       workspace.replaceChildren();
@@ -92,6 +96,16 @@ function setupWorkspaceEvents(
 
     if (sort) {
       setupPDFSort(sort);
+
+      return;
+    }
+
+    const deleteWorkspace = workspace.querySelector<HTMLElement>(
+      '[data-pdf-workspace="delete"]',
+    );
+
+    if (deleteWorkspace) {
+      setupPDFDelete(deleteWorkspace);
     }
   });
 
@@ -135,6 +149,11 @@ async function closePDFWorkspace(
       await destroyPDFSort();
 
       break;
+
+    case "delete":
+      await destroyPDFDelete();
+
+      break;
   }
 
   activeTool = null;
@@ -148,6 +167,7 @@ async function closePDFWorkspace(
   workspace.replaceChildren();
 
   workspace.hidden = true;
+
   grid.hidden = false;
 
   panel.scrollIntoView({

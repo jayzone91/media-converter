@@ -135,6 +135,11 @@ func (s *Server) routes() {
 		s.handlePDFSort,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/delete-pages",
+		s.handlePDFDeletePages,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(
