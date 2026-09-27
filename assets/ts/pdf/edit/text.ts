@@ -7,6 +7,8 @@ import {
   type PDFTextObject,
 } from "./state.ts";
 
+import { updatePDFEditSubmitState } from "./submit.ts";
+
 export function setupPDFEditText(): boolean {
   const root = editorState.root;
 
@@ -186,6 +188,7 @@ function addTextObject(): void {
   renderTextObjects();
   updateTextProperties();
   updatePageChangeIndicators();
+  updatePDFEditSubmitState();
 }
 
 function createTextElement(object: PDFTextObject): HTMLButtonElement {
@@ -267,41 +270,20 @@ function beginTextDrag(
 
   editorState.dragState = {
     id,
+
     pointerId: event.pointerId,
+
     offsetX: event.clientX - elementRect.left,
+
     offsetY: event.clientY - elementRect.top,
   };
 
   element.setPointerCapture(event.pointerId);
-
-  renderTextObjects();
-  updateTextProperties();
-
-  const current = root.querySelector<HTMLElement>(
-    `[data-text-id="${CSS.escape(id)}"]`,
-  );
-
-  if (!current) {
-    editorState.dragState = null;
-
-    return;
-  }
-
-  current.setPointerCapture(event.pointerId);
-
-  const x =
-    (event.clientX - overlayRect.left - editorState.dragState.offsetX) /
-    overlayRect.width;
-
-  const y =
-    (event.clientY - overlayRect.top - editorState.dragState.offsetY) /
-    overlayRect.height;
-
-  setTextPosition(id, x, y, current);
 }
 
 function moveTextDrag(event: PointerEvent): void {
   const root = editorState.root;
+
   const drag = editorState.dragState;
 
   if (!root || !drag || drag.pointerId !== event.pointerId) {
@@ -413,6 +395,7 @@ function updateSelectedText(
   renderTextObjects();
   updateTextProperties();
   updatePageChangeIndicators();
+  updatePDFEditSubmitState();
 }
 
 function deleteSelectedText(): void {
@@ -433,4 +416,5 @@ function deleteSelectedText(): void {
   renderTextObjects();
   updateTextProperties();
   updatePageChangeIndicators();
+  updatePDFEditSubmitState();
 }

@@ -7,6 +7,8 @@ import {
 
 import { clearEditorState, editorState } from "./state.ts";
 
+import { setupPDFEditSubmit, updatePDFEditSubmitState } from "./submit.ts";
+
 import {
   renderTextObjects,
   setupPDFEditText,
@@ -29,7 +31,7 @@ export function setupPDFEdit(workspace: HTMLElement): void {
     return;
   }
 
-  if (!setupPDFEditText()) {
+  if (!setupPDFEditText() || !setupPDFEditSubmit()) {
     return;
   }
 
@@ -80,7 +82,9 @@ export async function destroyPDFEdit(): Promise<void> {
   clearEditorState();
 
   editorState.activeUpload = null;
+
   editorState.activePage = 0;
+
   editorState.root = null;
 }
 
@@ -113,6 +117,8 @@ async function selectFile(file: File): Promise<void> {
     editorState.activePage = 0;
 
     renderUpload(editorState.activeUpload);
+
+    updatePDFEditSubmitState();
   } catch (error: unknown) {
     showError(errorMessage(error));
   } finally {
@@ -311,6 +317,8 @@ async function resetEditor(): Promise<void> {
   }
 
   hideError();
+
+  updatePDFEditSubmitState();
 }
 
 function setUploading(uploading: boolean): void {
