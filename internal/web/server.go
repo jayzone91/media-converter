@@ -21,15 +21,19 @@ const (
 )
 
 type Server struct {
-	imageMagick     *converter.ImageMagick
-	ffmpeg          *converter.FFmpeg
-	ffprobe         *media.FFProbe
-	libreOffice     *converter.LibreOffice
-	pdf             *converter.PDF
-	uploads         *uploadStore
+	imageMagick *converter.ImageMagick
+	ffmpeg      *converter.FFmpeg
+	ffprobe     *media.FFProbe
+	libreOffice *converter.LibreOffice
+	pdf         *converter.PDF
+	qpdf        *converter.QPDF
+
+	uploads *uploadStore
+
 	conversionSlots chan struct{}
-	mux             *http.ServeMux
-	httpServer      *http.Server
+
+	mux        *http.ServeMux
+	httpServer *http.Server
 }
 
 func NewServer(
@@ -38,6 +42,7 @@ func NewServer(
 	ffprobe *media.FFProbe,
 	libreOffice *converter.LibreOffice,
 	pdf *converter.PDF,
+	qpdf *converter.QPDF,
 ) *Server {
 	server := &Server{
 		imageMagick: imageMagick,
@@ -45,11 +50,15 @@ func NewServer(
 		ffprobe:     ffprobe,
 		libreOffice: libreOffice,
 		pdf:         pdf,
-		uploads:     newUploadStore(),
+		qpdf:        qpdf,
+
+		uploads: newUploadStore(),
+
 		conversionSlots: make(
 			chan struct{},
 			maxConcurrentConversions,
 		),
+
 		mux: http.NewServeMux(),
 	}
 
@@ -79,6 +88,11 @@ func (s *Server) routes() {
 		s.handleQRGenerate,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/merge",
+		s.handlePDFMerge,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(
@@ -91,10 +105,11 @@ func (s *Server) routes() {
 func (s *Server) acquireConversionSlot(
 	ctx context.Context,
 ) error {
-	queueCtx, cancel := context.WithTimeout(
-		ctx,
-		conversionQueueTimeout,
-	)
+	queueCtx, cancel :=
+		context.WithTimeout(
+			ctx,
+			conversionQueueTimeout,
+		)
 	defer cancel()
 
 	select {
@@ -113,15 +128,22 @@ func (s *Server) releaseConversionSlot() {
 func (s *Server) ListenAndServe(
 	addr string,
 ) error {
-	s.httpServer = &http.Server{
-		Addr:              addr,
-		Handler:           s.mux,
-		ReadHeaderTimeout: readHeaderTimeout,
-		ReadTimeout:       readTimeout,
-		IdleTimeout:       idleTimeout,
-	}
+	s.httpServer =
+		&http.Server{
+			Addr: addr,
 
-	err := s.httpServer.ListenAndServe()
+			Handler: s.mux,
+
+			ReadHeaderTimeout: readHeaderTimeout,
+
+			ReadTimeout: readTimeout,
+
+			IdleTimeout: idleTimeout,
+		}
+
+	err :=
+		s.httpServer.
+			ListenAndServe()
 
 	if errors.Is(
 		err,
@@ -138,10 +160,13 @@ func (s *Server) Shutdown(
 ) error {
 	if s.httpServer == nil {
 		s.uploads.Close()
+
 		return nil
 	}
 
-	err := s.httpServer.Shutdown(ctx)
+	err :=
+		s.httpServer.
+			Shutdown(ctx)
 
 	s.uploads.Close()
 

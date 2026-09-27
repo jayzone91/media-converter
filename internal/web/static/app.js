@@ -1,22 +1,39 @@
 document.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
-  setupToolSelections();
   setupConverter();
+
+  await loadFeatureModules();
+});
+
+async function loadFeatureModules() {
+  try {
+    const pdf = await import("/static/pdf.js?v=1");
+
+    pdf.setupPDFUI();
+  } catch (error) {
+    console.error("PDF-Modul konnte nicht geladen werden:", error);
+  }
 
   try {
     const qr = await import("/static/qr.js?v=1");
+
     qr.setupQRUI();
   } catch (error) {
     console.error("QR-Modul konnte nicht geladen werden:", error);
   }
-});
+}
 
 function setupConverter() {
   const form = document.getElementById("conversion-form");
+
   const fileInput = document.getElementById("file");
+
   const dropZone = document.querySelector(".drop-zone");
+
   const options = document.getElementById("conversion-options");
+
   const overlay = document.getElementById("conversion-overlay");
+
   const errorBox = document.getElementById("conversion-error");
 
   if (!form || !fileInput || !dropZone || !options || !overlay || !errorBox) {
@@ -41,6 +58,7 @@ function setupConverter() {
     }
 
     errorBox.hidden = true;
+
     errorBox.textContent = "";
 
     overlay.hidden = false;
@@ -140,6 +158,7 @@ function setupDragAndDrop(dropZone, fileInput, errorBox) {
     }
 
     errorBox.hidden = true;
+
     errorBox.textContent = "";
 
     const transfer = new DataTransfer();
@@ -237,18 +256,6 @@ function setupTabs() {
 
         panel.hidden = !active;
       });
-    });
-  });
-}
-
-function setupToolSelections() {
-  document.querySelectorAll("[data-pdf-tool]").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.querySelectorAll("[data-pdf-tool]").forEach((candidate) => {
-        candidate.classList.remove("selected");
-      });
-
-      button.classList.add("selected");
     });
   });
 }
