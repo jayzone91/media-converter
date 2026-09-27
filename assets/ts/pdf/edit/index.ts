@@ -5,14 +5,17 @@ import {
   uploadPDF,
 } from "../uploads.ts";
 
-let activeUpload: PDFUpload | null = null;
+import { clearEditorState, editorState } from "./state.ts";
 
-let activePage = 0;
-
-let root: HTMLElement | null = null;
+import {
+  renderTextObjects,
+  setupPDFEditText,
+  updatePageChangeIndicators,
+  updateTextProperties,
+} from "./text.ts";
 
 export function setupPDFEdit(workspace: HTMLElement): void {
-  root = workspace;
+  editorState.root = workspace;
 
   const input = workspace.querySelector<HTMLInputElement>("#pdf-edit-file");
 
@@ -23,6 +26,10 @@ export function setupPDFEdit(workspace: HTMLElement): void {
   );
 
   if (!input || !dropZone || !resetButton) {
+    return;
+  }
+
+  if (!setupPDFEditText()) {
     return;
   }
 
@@ -66,17 +73,19 @@ export function setupPDFEdit(workspace: HTMLElement): void {
 }
 
 export async function destroyPDFEdit(): Promise<void> {
-  if (activeUpload) {
-    await deletePDFUpload(activeUpload.id);
+  if (editorState.activeUpload) {
+    await deletePDFUpload(editorState.activeUpload.id);
   }
 
-  activeUpload = null;
-  activePage = 0;
-  root = null;
+  clearEditorState();
+
+  editorState.activeUpload = null;
+  editorState.activePage = 0;
+  editorState.root = null;
 }
 
 async function selectFile(file: File): Promise<void> {
-  if (!root) {
+  if (!editorState.root) {
     return;
   }
 
@@ -91,17 +100,19 @@ async function selectFile(file: File): Promise<void> {
   setUploading(true);
 
   try {
-    if (activeUpload) {
-      await deletePDFUpload(activeUpload.id);
+    if (editorState.activeUpload) {
+      await deletePDFUpload(editorState.activeUpload.id);
 
-      activeUpload = null;
+      editorState.activeUpload = null;
     }
 
-    activeUpload = await uploadPDF(file);
+    clearEditorState();
 
-    activePage = 0;
+    editorState.activeUpload = await uploadPDF(file);
 
-    renderUpload(activeUpload);
+    editorState.activePage = 0;
+
+    renderUpload(editorState.activeUpload);
   } catch (error: unknown) {
     showError(errorMessage(error));
   } finally {
@@ -110,6 +121,8 @@ async function selectFile(file: File): Promise<void> {
 }
 
 function renderUpload(upload: PDFUpload): void {
+  const root = editorState.root;
+
   if (!root) {
     return;
   }
@@ -141,6 +154,8 @@ function renderUpload(upload: PDFUpload): void {
 }
 
 function renderPages(upload: PDFUpload): void {
+  const root = editorState.root;
+
   if (!root) {
     return;
   }
@@ -181,6 +196,7 @@ function renderPages(upload: PDFUpload): void {
     number.textContent = `Seite ${index + 1}`;
 
     image.src = preview;
+
     image.alt = `Vorschau Seite ${index + 1}`;
 
     button.addEventListener("click", () => {
@@ -189,18 +205,28 @@ function renderPages(upload: PDFUpload): void {
 
     container.append(fragment);
   });
+
+  updatePageChangeIndicators();
 }
 
 function selectPage(index: number): void {
-  if (!root || !activeUpload) {
+  const root = editorState.root;
+
+  const upload = editorState.activeUpload;
+
+  if (!root || !upload) {
     return;
   }
 
-  if (index < 0 || index >= activeUpload.pageCount) {
+  if (index < 0 || index >= upload.pageCount) {
     return;
   }
 
-  activePage = index;
+  editorState.activePage = index;
+
+  editorState.selectedTextID = null;
+
+  editorState.dragState = null;
 
   const preview = root.querySelector<HTMLImageElement>(
     "#pdf-edit-page-preview",
@@ -210,7 +236,8 @@ function selectPage(index: number): void {
     return;
   }
 
-  preview.src = activeUpload.previews[index] ?? "";
+  preview.src = upload.previews[index] ?? "";
+
   preview.alt = `PDF-Seite ${index + 1}`;
 
   root
@@ -224,20 +251,28 @@ function selectPage(index: number): void {
 
       button.setAttribute("aria-current", selected ? "page" : "false");
     });
+
+  renderTextObjects();
+
+  updateTextProperties();
 }
 
 async function resetEditor(): Promise<void> {
+  const root = editorState.root;
+
   if (!root) {
     return;
   }
 
-  if (activeUpload) {
-    await deletePDFUpload(activeUpload.id);
+  if (editorState.activeUpload) {
+    await deletePDFUpload(editorState.activeUpload.id);
 
-    activeUpload = null;
+    editorState.activeUpload = null;
   }
 
-  activePage = 0;
+  clearEditorState();
+
+  editorState.activePage = 0;
 
   const input = root.querySelector<HTMLInputElement>("#pdf-edit-file");
 
@@ -266,10 +301,12 @@ async function resetEditor(): Promise<void> {
   }
 
   pages?.replaceChildren();
+
   overlay?.replaceChildren();
 
   if (preview) {
     preview.removeAttribute("src");
+
     preview.alt = "";
   }
 
@@ -277,6 +314,8 @@ async function resetEditor(): Promise<void> {
 }
 
 function setUploading(uploading: boolean): void {
+  const root = editorState.root;
+
   if (!root) {
     return;
   }
@@ -295,6 +334,8 @@ function setUploading(uploading: boolean): void {
 }
 
 function showError(message: string): void {
+  const root = editorState.root;
+
   if (!root) {
     return;
   }
@@ -306,10 +347,13 @@ function showError(message: string): void {
   }
 
   element.textContent = message;
+
   element.hidden = false;
 }
 
 function hideError(): void {
+  const root = editorState.root;
+
   if (!root) {
     return;
   }
@@ -321,6 +365,7 @@ function hideError(): void {
   }
 
   element.textContent = "";
+
   element.hidden = true;
 }
 
@@ -332,6 +377,7 @@ function formatFileSize(bytes: number): string {
 
   while (value >= 1024 && unit < units.length - 1) {
     value /= 1024;
+
     unit++;
   }
 

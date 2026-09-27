@@ -88,12 +88,11 @@ templ PDFEditWorkspace() {
 				<section class="pdf-edit-work-area">
 					<div class="pdf-edit-toolbar">
 						<button
+							id="pdf-edit-add-text"
 							class="pdf-button-secondary"
 							type="button"
-							data-pdf-edit-tool="text"
-							disabled
 						>
-							Text
+							＋ Text
 						</button>
 						<button
 							class="pdf-button-secondary"
@@ -101,7 +100,7 @@ templ PDFEditWorkspace() {
 							data-pdf-edit-tool="image"
 							disabled
 						>
-							Bild
+							＋ Bild
 						</button>
 						<button
 							class="pdf-button-secondary"
@@ -109,11 +108,65 @@ templ PDFEditWorkspace() {
 							data-pdf-edit-tool="draw"
 							disabled
 						>
-							Freihand
+							✎ Freihand
 						</button>
-						<span class="pdf-edit-toolbar-note">
-							Werkzeuge werden im nächsten Schritt aktiviert.
+						<span
+							id="pdf-edit-toolbar-note"
+							class="pdf-edit-toolbar-note"
+						>
+							Text hinzufügen und anschließend frei verschieben.
 						</span>
+					</div>
+					<div
+						id="pdf-edit-text-properties"
+						class="pdf-edit-properties"
+						hidden
+					>
+						<div class="pdf-edit-property pdf-edit-property-text">
+							<label for="pdf-edit-text-content">
+								Text
+							</label>
+							<input
+								id="pdf-edit-text-content"
+								type="text"
+								maxlength="500"
+								autocomplete="off"
+							/>
+						</div>
+						<div class="pdf-edit-property">
+							<label for="pdf-edit-text-size">
+								Schriftgröße
+							</label>
+							<div class="pdf-edit-size-field">
+								<input
+									id="pdf-edit-text-size"
+									type="number"
+									min="6"
+									max="144"
+									step="1"
+									value="18"
+								/>
+								<span>pt</span>
+							</div>
+						</div>
+						<div class="pdf-edit-property">
+							<label for="pdf-edit-text-color">
+								Farbe
+							</label>
+							<input
+								id="pdf-edit-text-color"
+								class="pdf-edit-color-input"
+								type="color"
+								value="#000000"
+							/>
+						</div>
+						<button
+							id="pdf-edit-delete-text"
+							class="pdf-edit-delete-object"
+							type="button"
+						>
+							Text löschen
+						</button>
 					</div>
 					<div class="pdf-edit-canvas-shell">
 						<div
@@ -164,6 +217,13 @@ templ PDFEditWorkspace() {
 					decoding="async"
 					alt=""
 				/>
+				<span
+					class="pdf-edit-page-change-indicator"
+					hidden
+					aria-label="Seite wurde bearbeitet"
+				>
+					●
+				</span>
 			</button>
 		</template>
 	</div>
