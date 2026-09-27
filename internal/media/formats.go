@@ -1,6 +1,7 @@
 package media
 
 import (
+	"mime"
 	"path/filepath"
 	"strings"
 )
@@ -251,11 +252,23 @@ var Formats = map[string]Format{
 		Targets:    []string{"pdf", "docx", "odt"},
 		Extensions: []string{".rtf"},
 	},
+	"txt": {
+		ID:         "txt",
+		MIME:       "text/plain",
+		Category:   CategoryDocument,
+		Targets:    []string{"pdf", "docx", "odt"},
+		Extensions: []string{".txt"},
+	},
 }
 
-func FindByMIME(mime string) (Format, bool) {
+func FindByMIME(contentType string) (Format, bool) {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		mediaType = contentType
+	}
+
 	for _, format := range Formats {
-		if format.MIME == mime {
+		if format.MIME == mediaType {
 			return format, true
 		}
 	}
