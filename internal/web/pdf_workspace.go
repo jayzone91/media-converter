@@ -21,10 +21,38 @@ func (s *Server) handlePDFWorkspace(
 
 	switch tool {
 	case "merge":
-		if err := view.PDFMergeWorkspace().Render(
-			r.Context(),
-			w,
-		); err != nil {
+		if err :=
+			view.PDFMergeWorkspace().
+				Render(
+					r.Context(),
+					w,
+				); err != nil {
+			s.logError(
+				r,
+				"failed to render PDF merge workspace",
+				err,
+			)
+
+			http.Error(
+				w,
+				"PDF-Werkzeug konnte nicht geladen werden.",
+				http.StatusInternalServerError,
+			)
+		}
+
+	case "sort":
+		if err :=
+			view.PDFSortWorkspace().
+				Render(
+					r.Context(),
+					w,
+				); err != nil {
+			s.logError(
+				r,
+				"failed to render PDF sort workspace",
+				err,
+			)
+
 			http.Error(
 				w,
 				"PDF-Werkzeug konnte nicht geladen werden.",
@@ -41,20 +69,28 @@ func (s *Server) handlePDFWorkspace(
 		"rotate",
 		"delete",
 		"extract",
-		"sort",
 		"web",
 		"optimize",
 		"redact",
 		"create":
 
-		if err := view.PDFPlaceholderWorkspace(
-			pdfToolTitle(
+		if err :=
+			view.PDFPlaceholderWorkspace(
+				pdfToolTitle(
+					tool,
+				),
+			).Render(
+				r.Context(),
+				w,
+			); err != nil {
+			s.logError(
+				r,
+				"failed to render PDF placeholder workspace",
+				err,
+				"tool",
 				tool,
-			),
-		).Render(
-			r.Context(),
-			w,
-		); err != nil {
+			)
+
 			http.Error(
 				w,
 				"PDF-Werkzeug konnte nicht geladen werden.",

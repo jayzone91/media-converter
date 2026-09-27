@@ -1,6 +1,9 @@
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
+import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
-let activeTool: string | null = null;
+type PDFTool = "merge" | "sort" | string;
+
+let activeTool: PDFTool | null = null;
 
 export function setupPDFUI(): void {
   const panel = document.querySelector<HTMLElement>('[data-panel="pdf"]');
@@ -79,6 +82,16 @@ function setupWorkspaceEvents(
 
     if (merge) {
       setupPDFMerge(merge);
+
+      return;
+    }
+
+    const sort = workspace.querySelector<HTMLElement>(
+      '[data-pdf-workspace="sort"]',
+    );
+
+    if (sort) {
+      setupPDFSort(sort);
     }
   });
 
@@ -112,8 +125,16 @@ async function closePDFWorkspace(
   grid: HTMLElement,
   workspace: HTMLElement,
 ): Promise<void> {
-  if (activeTool === "merge") {
-    await destroyPDFMerge();
+  switch (activeTool) {
+    case "merge":
+      await destroyPDFMerge();
+
+      break;
+
+    case "sort":
+      await destroyPDFSort();
+
+      break;
   }
 
   activeTool = null;

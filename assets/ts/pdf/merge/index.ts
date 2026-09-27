@@ -1,5 +1,6 @@
 import { downloadBlob } from "../../shared/download.ts";
-import { deletePDFUpload, mergePDFUploads, uploadPDF } from "./api.ts";
+import { deletePDFUpload, isPDFFile, uploadPDF } from "../uploads.ts";
+import { mergePDFUploads } from "./api.ts";
 import { renderMergeDocuments } from "./render.ts";
 import type { DocumentRenderActions, MergeDocument } from "./types.ts";
 
@@ -145,7 +146,7 @@ async function addFiles(files: File[]): Promise<void> {
 
           size: upload.size,
 
-          pageCount: upload.page_count,
+          pageCount: upload.pageCount,
 
           previews: upload.previews,
         });
@@ -176,11 +177,7 @@ function validateFiles(files: File[]): File[] {
   let totalSize = getTotalSize();
 
   for (const file of files) {
-    const validType =
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf");
-
-    if (!validType) {
+    if (!isPDFFile(file)) {
       showError(`${file.name}: Es können nur PDF-Dateien hinzugefügt werden.`);
 
       continue;

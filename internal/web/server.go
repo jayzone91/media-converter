@@ -130,6 +130,11 @@ func (s *Server) routes() {
 		s.handlePDFMerge,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/sort",
+		s.handlePDFSort,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(

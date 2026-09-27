@@ -1,8 +1,15 @@
 import { getDownloadFilename } from "../../shared/download.ts";
-import type { MergeResult } from "./types.ts";
 
-export async function mergePDFUploads(ids: string[]): Promise<MergeResult> {
-  const response = await fetch("/pdf/merge", {
+export interface PDFSortResult {
+  blob: Blob;
+  filename: string;
+}
+
+export async function sortPDFPages(
+  uploadID: string,
+  pages: number[],
+): Promise<PDFSortResult> {
+  const response = await fetch("/pdf/sort", {
     method: "POST",
 
     headers: {
@@ -10,7 +17,9 @@ export async function mergePDFUploads(ids: string[]): Promise<MergeResult> {
     },
 
     body: JSON.stringify({
-      ids,
+      upload_id: uploadID,
+
+      pages,
     }),
   });
 
@@ -18,7 +27,7 @@ export async function mergePDFUploads(ids: string[]): Promise<MergeResult> {
     const message = await response.text();
 
     throw new Error(
-      message.trim() || "PDFs konnten nicht zusammengefügt werden.",
+      message.trim() || "PDF-Seiten konnten nicht sortiert werden.",
     );
   }
 
@@ -27,7 +36,7 @@ export async function mergePDFUploads(ids: string[]): Promise<MergeResult> {
 
     filename: getDownloadFilename(
       response.headers.get("Content-Disposition"),
-      "zusammengefuegt.pdf",
+      "sortiert.pdf",
     ),
   };
 }

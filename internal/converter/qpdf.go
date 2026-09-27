@@ -68,38 +68,63 @@ func (q *QPDF) Merge(
 		output,
 	)
 
-	cmd :=
-		exec.CommandContext(
-			ctx,
-			q.binary,
-			args...,
-		)
+	return q.run(
+		ctx,
+		"merge",
+		args,
+	)
+}
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctxErr :=
-			ctx.Err(); ctxErr != nil {
-			return fmt.Errorf(
-				"qpdf merge failed: %w",
-				ctxErr,
-			)
-		}
-
+func (q *QPDF) Reorder(
+	ctx context.Context,
+	input string,
+	pages []int,
+	output string,
+) error {
+	if len(pages) == 0 {
 		return fmt.Errorf(
-			"qpdf merge failed: %w: %s",
-			err,
-			strings.TrimSpace(
-				stderr.String(),
-			),
+			"at least one PDF page is required",
 		)
 	}
 
-	return nil
+	pageParts := make(
+		[]string,
+		len(pages),
+	)
+
+	for index, page := range pages {
+		if page < 1 {
+			return fmt.Errorf(
+				"invalid PDF page number: %d",
+				page,
+			)
+		}
+
+		pageParts[index] =
+			strconv.Itoa(
+				page,
+			)
+	}
+
+	args := []string{
+		"--warning-exit-0",
+		"--stream-data=preserve",
+		"--empty",
+		"--pages",
+		input,
+		strings.Join(
+			pageParts,
+			",",
+		),
+		"--",
+		output,
+	}
+
+	return q.run(
+		ctx,
+		"reorder",
+		args,
+	)
 }
 
 func (q *QPDF) PageCount(
@@ -174,4 +199,55 @@ func (q *QPDF) PageCount(
 			stderr.String(),
 		),
 	}, nil
+}
+
+func (q *QPDF) run(
+	ctx context.Context,
+	operation string,
+	args []string,
+) error {
+	cmd :=
+		exec.CommandContext(
+			ctx,
+			q.binary,
+			args...,
+		)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctxErr :=
+			ctx.Err(); ctxErr != nil {
+			return fmt.Errorf(
+				"qpdf %s failed: %w",
+				operation,
+				ctxErr,
+			)
+		}
+
+		message :=
+			strings.TrimSpace(
+				stderr.String(),
+			)
+
+		if message == "" {
+			message =
+				strings.TrimSpace(
+					stdout.String(),
+				)
+		}
+
+		return fmt.Errorf(
+			"qpdf %s failed: %w: %s",
+			operation,
+			err,
+			message,
+		)
+	}
+
+	return nil
 }
