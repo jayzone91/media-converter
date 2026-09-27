@@ -24,6 +24,8 @@ type WebPDFOptions struct {
 	Landscape       bool
 	PrintBackground bool
 	Wait            time.Duration
+
+	RequestValidator WebPDFRequestValidator
 }
 
 func NewWebPDF() (*WebPDF, error) {
@@ -61,6 +63,18 @@ func (c *WebPDF) Render(
 
 	if err != nil {
 		return err
+	}
+
+	if options.RequestValidator != nil {
+		if err := options.RequestValidator(
+			ctx,
+			url,
+		); err != nil {
+			return fmt.Errorf(
+				"initial webpage request rejected: %w",
+				err,
+			)
+		}
 	}
 
 	profileDirectory, err :=
@@ -130,12 +144,27 @@ func (c *WebPDF) Render(
 		)
 	defer browserCancel()
 
+	blockedRequests := make(
+		chan error,
+		1,
+	)
+
 	var pdfData []byte
 
-	actions :=
+	actions := []chromedp.Action{
+		setupWebPDFRequestGuard(
+			browserCtx,
+			options.RequestValidator,
+			blockedRequests,
+		),
+	}
+
+	actions = append(
+		actions,
 		webPDFProfileActions(
 			profile,
-		)
+		)...,
+	)
 
 	actions = append(
 		actions,
@@ -216,13 +245,21 @@ func (c *WebPDF) Render(
 		),
 	)
 
-	if err := chromedp.Run(
+	runErr := chromedp.Run(
 		browserCtx,
 		actions...,
-	); err != nil {
+	)
+
+	select {
+	case blockedErr := <-blockedRequests:
+		return blockedErr
+	default:
+	}
+
+	if runErr != nil {
 		return fmt.Errorf(
 			"render webpage: %w",
-			err,
+			runErr,
 		)
 	}
 
@@ -235,7 +272,7 @@ func (c *WebPDF) Render(
 	if err := os.WriteFile(
 		output,
 		pdfData,
-		0600,
+		0o600,
 	); err != nil {
 		return fmt.Errorf(
 			"write webpage PDF: %w",

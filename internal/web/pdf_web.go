@@ -185,6 +185,12 @@ func (s *Server) handlePDFWeb(
 		file.Stat()
 
 	if err != nil {
+		s.logError(
+			r,
+			"failed to stat webpage PDF",
+			err,
+		)
+
 		http.Error(
 			w,
 			"Die erzeugte PDF konnte nicht gelesen werden.",
@@ -433,6 +439,8 @@ func readPDFWebRequest(
 				request.WaitMilliseconds,
 			) *
 				time.Millisecond,
+
+			RequestValidator: validatePDFWebRequest,
 		}
 
 	return request,

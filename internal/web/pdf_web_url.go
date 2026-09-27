@@ -1,16 +1,12 @@
 package web
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
-
-const pdfWebDNSLookupTimeout = 5 * time.Second
 
 func validatePDFWebURL(
 	rawURL string,
@@ -28,8 +24,7 @@ func validatePDFWebURL(
 		)
 
 	if err != nil {
-		return nil,
-			err
+		return nil, err
 	}
 
 	scheme :=
@@ -63,161 +58,6 @@ func validatePDFWebURL(
 		nil
 }
 
-func validatePDFWebTarget(
-	ctx context.Context,
-	parsedURL *url.URL,
-) error {
-	host :=
-		strings.TrimSuffix(
-			strings.ToLower(
-				parsedURL.Hostname(),
-			),
-			".",
-		)
-
-	if host == "localhost" {
-		return fmt.Errorf(
-			"loopback target",
-		)
-	}
-
-	if ip :=
-		net.ParseIP(
-			host,
-		); ip != nil {
-		if ip.IsLoopback() {
-			return fmt.Errorf(
-				"loopback target",
-			)
-		}
-
-		if isLocalServerIP(
-			ip,
-		) {
-			return fmt.Errorf(
-				"server target",
-			)
-		}
-
-		return nil
-	}
-
-	lookupCtx, cancel :=
-		context.WithTimeout(
-			ctx,
-			pdfWebDNSLookupTimeout,
-		)
-	defer cancel()
-
-	addresses, err :=
-		net.DefaultResolver.LookupIPAddr(
-			lookupCtx,
-			host,
-		)
-
-	if err != nil {
-		return fmt.Errorf(
-			"resolve target host: %w",
-			err,
-		)
-	}
-
-	if len(addresses) == 0 {
-		return fmt.Errorf(
-			"target host has no addresses",
-		)
-	}
-
-	for _, address := range addresses {
-		ip :=
-			address.IP
-
-		if ip == nil {
-			continue
-		}
-
-		if ip.IsLoopback() {
-			return fmt.Errorf(
-				"loopback target",
-			)
-		}
-
-		if isLocalServerIP(
-			ip,
-		) {
-			return fmt.Errorf(
-				"server target",
-			)
-		}
-	}
-
-	return nil
-}
-
-func isLocalServerIP(
-	target net.IP,
-) bool {
-	if target == nil {
-		return false
-	}
-
-	addresses, err :=
-		net.InterfaceAddrs()
-
-	if err != nil {
-		return false
-	}
-
-	for _, address := range addresses {
-		ip :=
-			interfaceAddressIP(
-				address,
-			)
-
-		if ip == nil {
-			continue
-		}
-
-		if target.Equal(
-			ip,
-		) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func interfaceAddressIP(
-	address net.Addr,
-) net.IP {
-	switch value :=
-		address.(type) {
-	case *net.IPNet:
-		return value.IP
-
-	case *net.IPAddr:
-		return value.IP
-
-	default:
-		host :=
-			address.String()
-
-		if slash :=
-			strings.IndexByte(
-				host,
-				'/',
-			); slash >= 0 {
-			host =
-				host[:slash]
-		}
-
-		return net.ParseIP(
-			host,
-		)
-	}
-}
-
 func pdfWebTargetError(
 	r *http.Request,
 	parsedURL *url.URL,
@@ -229,13 +69,13 @@ func pdfWebTargetError(
 		)
 
 	if suggestion == "" {
-		return "localhost, Loopback-Adressen und Adressen des Media-Converter-Servers können aus Sicherheitsgründen nicht gerendert werden. " +
-			"Lokale Projekte müssen über die Netzwerk-IP des Geräts erreichbar sein, auf dem das Projekt läuft."
+		return "localhost, Loopback-, Link-Local-, Metadata- und Adressen des Media-Converter-Servers können aus Sicherheitsgründen nicht gerendert werden. " +
+			"Lokale Projekte müssen über eine zulässige Netzwerk-IP des Geräts erreichbar sein, auf dem das Projekt läuft."
 	}
 
 	return fmt.Sprintf(
-		"localhost, Loopback-Adressen und Adressen des Media-Converter-Servers können aus Sicherheitsgründen nicht gerendert werden. "+
-			"Lokale Projekte müssen über die Netzwerk-IP des Geräts erreichbar sein, auf dem das Projekt läuft. "+
+		"localhost, Loopback-, Link-Local-, Metadata- und Adressen des Media-Converter-Servers können aus Sicherheitsgründen nicht gerendert werden. "+
+			"Lokale Projekte müssen über eine zulässige Netzwerk-IP des Geräts erreichbar sein, auf dem das Projekt läuft. "+
 			"Versuche stattdessen: %s",
 		suggestion,
 	)
@@ -393,7 +233,10 @@ func isUsablePDFWebClientIP(
 
 	return !ip.IsLoopback() &&
 		!ip.IsUnspecified() &&
-		!ip.IsMulticast()
+		!ip.IsMulticast() &&
+		!ip.IsLinkLocalUnicast() &&
+		!ip.IsLinkLocalMulticast() &&
+		!isCloudMetadataIP(ip)
 }
 
 func formatPDFWebURLHost(
