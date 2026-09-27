@@ -16,6 +16,8 @@ import {
   updateTextProperties,
 } from "./text.ts";
 
+let previewResizeObserver: ResizeObserver | null = null;
+
 export function setupPDFEdit(workspace: HTMLElement): void {
   editorState.root = workspace;
 
@@ -27,13 +29,19 @@ export function setupPDFEdit(workspace: HTMLElement): void {
     "#pdf-edit-reset-file",
   );
 
-  if (!input || !dropZone || !resetButton) {
+  const preview = workspace.querySelector<HTMLImageElement>(
+    "#pdf-edit-page-preview",
+  );
+
+  if (!input || !dropZone || !resetButton || !preview) {
     return;
   }
 
   if (!setupPDFEditText() || !setupPDFEditSubmit()) {
     return;
   }
+
+  setupPreviewScaling(preview);
 
   input.addEventListener("change", () => {
     const file = input.files?.[0];
@@ -75,6 +83,10 @@ export function setupPDFEdit(workspace: HTMLElement): void {
 }
 
 export async function destroyPDFEdit(): Promise<void> {
+  previewResizeObserver?.disconnect();
+
+  previewResizeObserver = null;
+
   if (editorState.activeUpload) {
     await deletePDFUpload(editorState.activeUpload.id);
   }
@@ -86,6 +98,20 @@ export async function destroyPDFEdit(): Promise<void> {
   editorState.activePage = 0;
 
   editorState.root = null;
+}
+
+function setupPreviewScaling(preview: HTMLImageElement): void {
+  previewResizeObserver?.disconnect();
+
+  previewResizeObserver = new ResizeObserver(() => {
+    renderTextObjects();
+  });
+
+  previewResizeObserver.observe(preview);
+
+  preview.addEventListener("load", () => {
+    renderTextObjects();
+  });
 }
 
 async function selectFile(file: File): Promise<void> {

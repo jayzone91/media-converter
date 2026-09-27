@@ -9,6 +9,9 @@ import {
 
 import { updatePDFEditSubmitState } from "./submit.ts";
 
+const pdfPreviewDPI = 90;
+const pdfPointsPerInch = 72;
+
 export function setupPDFEditText(): boolean {
   const root = editorState.root;
 
@@ -206,7 +209,7 @@ function createTextElement(object: PDFTextObject): HTMLButtonElement {
 
   element.style.top = `${object.y * 100}%`;
 
-  element.style.fontSize = `${object.size}px`;
+  element.style.fontSize = `${previewFontSize(object.size)}px`;
 
   element.style.color = object.color;
 
@@ -234,6 +237,36 @@ function createTextElement(object: PDFTextObject): HTMLButtonElement {
   element.addEventListener("pointercancel", endTextDrag);
 
   return element;
+}
+
+function previewFontSize(points: number): number {
+  const root = editorState.root;
+
+  if (!root) {
+    return points;
+  }
+
+  const preview = root.querySelector<HTMLImageElement>(
+    "#pdf-edit-page-preview",
+  );
+
+  if (!preview) {
+    return points;
+  }
+
+  const naturalWidth = preview.naturalWidth;
+
+  const displayedWidth = preview.getBoundingClientRect().width;
+
+  const previewPixelsPerPoint = pdfPreviewDPI / pdfPointsPerInch;
+
+  if (naturalWidth <= 0 || displayedWidth <= 0) {
+    return points * previewPixelsPerPoint;
+  }
+
+  const displayScale = displayedWidth / naturalWidth;
+
+  return points * previewPixelsPerPoint * displayScale;
 }
 
 function selectTextObject(id: string): void {
@@ -264,8 +297,6 @@ function beginTextDrag(
 
   editorState.selectedTextID = id;
 
-  const overlayRect = overlay.getBoundingClientRect();
-
   const elementRect = element.getBoundingClientRect();
 
   editorState.dragState = {
@@ -279,6 +310,8 @@ function beginTextDrag(
   };
 
   element.setPointerCapture(event.pointerId);
+
+  updateTextProperties();
 }
 
 function moveTextDrag(event: PointerEvent): void {
