@@ -28,7 +28,8 @@ type Server struct {
 	pdf         *converter.PDF
 	qpdf        *converter.QPDF
 
-	uploads *uploadStore
+	uploads    *uploadStore
+	pdfUploads *pdfUploadStore
 
 	conversionSlots chan struct{}
 
@@ -53,6 +54,8 @@ func NewServer(
 		qpdf:        qpdf,
 
 		uploads: newUploadStore(),
+
+		pdfUploads: newPDFUploadStore(),
 
 		conversionSlots: make(
 			chan struct{},
@@ -91,6 +94,21 @@ func (s *Server) routes() {
 	s.mux.HandleFunc(
 		"POST /qr/generate",
 		s.handleQRGenerate,
+	)
+
+	s.mux.HandleFunc(
+		"POST /pdf/uploads",
+		s.handlePDFUpload,
+	)
+
+	s.mux.HandleFunc(
+		"GET /pdf/uploads/{id}/pages/{page}",
+		s.handlePDFPreview,
+	)
+
+	s.mux.HandleFunc(
+		"DELETE /pdf/uploads/{id}",
+		s.handlePDFUploadDelete,
 	)
 
 	s.mux.HandleFunc(
@@ -165,7 +183,7 @@ func (s *Server) Shutdown(
 	ctx context.Context,
 ) error {
 	if s.httpServer == nil {
-		s.uploads.Close()
+		s.closeStores()
 
 		return nil
 	}
@@ -174,17 +192,22 @@ func (s *Server) Shutdown(
 		s.httpServer.
 			Shutdown(ctx)
 
-	s.uploads.Close()
+	s.closeStores()
 
 	return err
 }
 
 func (s *Server) Close() error {
-	s.uploads.Close()
+	s.closeStores()
 
 	if s.httpServer == nil {
 		return nil
 	}
 
 	return s.httpServer.Close()
+}
+
+func (s *Server) closeStores() {
+	s.uploads.Close()
+	s.pdfUploads.Close()
 }
