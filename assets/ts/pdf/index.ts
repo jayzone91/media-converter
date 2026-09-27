@@ -2,6 +2,7 @@ import { destroyPDFCompress, setupPDFCompress } from "./compress/index.ts";
 import { destroyPDFCreate, setupPDFCreate } from "./create/index.ts";
 import { destroyPDFDecrypt, setupPDFDecrypt } from "./decrypt/index.ts";
 import { destroyPDFDelete, setupPDFDelete } from "./delete/index.ts";
+import { destroyPDFEdit, setupPDFEdit } from "./edit/index.ts";
 import { destroyPDFEncrypt, setupPDFEncrypt } from "./encrypt/index.ts";
 import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
@@ -118,6 +119,7 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
     ["delete", setupPDFDelete],
     ["extract", setupPDFExtract],
     ["rotate", setupPDFRotate],
+    ["edit", setupPDFEdit],
     ["encrypt", setupPDFEncrypt],
     ["decrypt", setupPDFDecrypt],
     ["optimize", setupPDFOptimize],
@@ -182,6 +184,10 @@ async function closePDFWorkspace(
 
     case "rotate":
       await destroyPDFRotate();
+      break;
+
+    case "edit":
+      await destroyPDFEdit();
       break;
 
     case "encrypt":

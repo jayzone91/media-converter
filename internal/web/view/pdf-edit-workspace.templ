@@ -1,0 +1,170 @@
+package view
+
+templ PDFEditWorkspace() {
+	<div data-pdf-workspace="edit">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDF bearbeiten
+				</h3>
+				<p>
+					Füge Text, Bilder und Freihandzeichnungen auf bestehenden
+					PDF-Seiten hinzu, ohne die Originalseiten neu zu rendern.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-edit-drop-zone"
+			for="pdf-edit-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-edit-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-edit-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-edit-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-edit-editor"
+			class="pdf-edit-editor"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong id="pdf-edit-filename"></strong>
+					<span id="pdf-edit-meta"></span>
+				</div>
+				<button
+					id="pdf-edit-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-edit-layout">
+				<aside
+					id="pdf-edit-pages"
+					class="pdf-edit-pages"
+					aria-label="PDF-Seiten"
+				></aside>
+				<section class="pdf-edit-work-area">
+					<div class="pdf-edit-toolbar">
+						<button
+							class="pdf-button-secondary"
+							type="button"
+							data-pdf-edit-tool="text"
+							disabled
+						>
+							Text
+						</button>
+						<button
+							class="pdf-button-secondary"
+							type="button"
+							data-pdf-edit-tool="image"
+							disabled
+						>
+							Bild
+						</button>
+						<button
+							class="pdf-button-secondary"
+							type="button"
+							data-pdf-edit-tool="draw"
+							disabled
+						>
+							Freihand
+						</button>
+						<span class="pdf-edit-toolbar-note">
+							Werkzeuge werden im nächsten Schritt aktiviert.
+						</span>
+					</div>
+					<div class="pdf-edit-canvas-shell">
+						<div
+							id="pdf-edit-canvas"
+							class="pdf-edit-canvas"
+						>
+							<img
+								id="pdf-edit-page-preview"
+								class="pdf-edit-page-preview"
+								alt=""
+							/>
+							<div
+								id="pdf-edit-overlay"
+								class="pdf-edit-overlay"
+								aria-label="Bearbeitungsebene"
+							></div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						bearbeitet.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-edit-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDF erstellen
+				</button>
+			</div>
+		</section>
+		<template id="pdf-edit-page-template">
+			<button
+				class="pdf-edit-page"
+				type="button"
+			>
+				<span class="pdf-edit-page-number"></span>
+				<img
+					loading="lazy"
+					decoding="async"
+					alt=""
+				/>
+			</button>
+		</template>
+	</div>
+}

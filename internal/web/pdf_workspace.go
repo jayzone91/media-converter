@@ -56,6 +56,11 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
+	case "edit":
+		if err := view.PDFEditWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
+		}
+
 	case "encrypt":
 		if err := view.PDFEncryptWorkspace().Render(r.Context(), w); err != nil {
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
@@ -81,7 +86,7 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
-	case "edit", "redact":
+	case "redact":
 		if err :=
 			view.PDFPlaceholderWorkspace(
 				pdfToolTitle(
