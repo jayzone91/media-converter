@@ -1,0 +1,236 @@
+@use "../../abstracts/tokens" as *;
+@use "../../abstracts/mixins" as *;
+
+.qr-fields {
+  display: grid;
+
+  gap: $space-3;
+}
+
+.field {
+  display: grid;
+
+  min-width: 0;
+
+  gap: 0.4375rem;
+
+  > span {
+    color: $color-text-muted;
+
+    font-size: $font-size-sm;
+
+    font-weight: $font-weight-semibold;
+  }
+
+  input,
+  select,
+  textarea {
+    @include input;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.field-grid,
+.color-mode,
+.color-row {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field-grid {
+  gap: $space-3;
+}
+
+.color-mode {
+  gap: 0.625rem;
+
+  margin-bottom: $space-4;
+}
+
+.choice-card {
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 0.625rem;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: $color-border-active;
+
+    background: $color-surface;
+  }
+
+  input {
+    width: auto;
+  }
+
+  span {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 0.125rem;
+  }
+
+  strong {
+    font-size: $font-size-md;
+  }
+
+  small {
+    color: $color-text-subtle;
+
+    font-size: $font-size-xs;
+  }
+}
+
+.color-row {
+  gap: $space-3;
+
+  margin-top: $space-3;
+}
+
+.color-field {
+  display: grid;
+
+  gap: 0.4375rem;
+
+  > span {
+    color: $color-text-muted;
+
+    font-size: $font-size-sm;
+
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.color-control {
+  display: flex;
+
+  align-items: center;
+
+  gap: 0.625rem;
+
+  height: 2.875rem;
+
+  padding: 0.3125rem 0.625rem 0.3125rem 0.3125rem;
+
+  border: 1px solid $color-border-strong;
+
+  border-radius: 0.5625rem;
+
+  background: $color-bg-soft;
+
+  input {
+    width: 2.125rem;
+
+    height: 2.125rem;
+
+    padding: 0;
+
+    border: 0;
+
+    background: transparent;
+
+    cursor: pointer;
+  }
+
+  code {
+    color: $color-text-muted;
+
+    font-family: inherit;
+
+    font-size: $font-size-sm;
+  }
+}
+
+.logo-upload {
+  display: flex;
+
+  align-items: center;
+
+  gap: $space-3;
+
+  padding: $space-4;
+
+  border: 1px dashed $color-border-strong;
+
+  border-radius: 0.6875rem;
+
+  background: $color-bg-soft;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    border-color: $color-border-active;
+
+    background: $color-surface;
+  }
+
+  input {
+    display: none;
+  }
+
+  > span:last-of-type {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 0.1875rem;
+  }
+
+  strong {
+    font-size: $font-size-md;
+  }
+
+  small {
+    color: $color-text-subtle;
+
+    font-size: $font-size-xs;
+  }
+}
+
+.logo-upload-icon {
+  @include center;
+
+  width: 2.375rem;
+
+  height: 2.375rem;
+
+  flex: none;
+
+  border: 1px solid $color-border-strong;
+
+  border-radius: 0.5625rem;
+
+  font-size: 1.125rem;
+}
+
+.qr-note {
+  margin: $space-3 0 0;
+
+  color: $color-text-subtle;
+
+  font-size: $font-size-xs;
+
+  line-height: $line-height-normal;
+}

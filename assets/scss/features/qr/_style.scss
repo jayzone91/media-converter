@@ -1,0 +1,159 @@
+@use "../../abstracts/tokens" as *;
+@use "../../abstracts/mixins" as *;
+
+.style-group {
+  + .style-group {
+    margin-top: 1.375rem;
+  }
+}
+
+.style-group-header {
+  display: flex;
+
+  align-items: baseline;
+
+  justify-content: space-between;
+
+  gap: $space-3;
+
+  strong {
+    font-size: $font-size-md;
+  }
+
+  span {
+    color: $color-text-subtle;
+
+    font-size: $font-size-xs;
+  }
+}
+
+.style-options {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: $space-2;
+
+  margin-top: 0.6875rem;
+}
+
+.style-option {
+  @include center;
+
+  width: 3.625rem;
+
+  height: 3.625rem;
+
+  padding: 0;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-surface-bright;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    border: 2px solid $color-accent;
+  }
+}
+
+.module-preview {
+  width: 1.75rem;
+
+  height: 1.75rem;
+
+  background: $color-bg;
+
+  &.module-square {
+    border-radius: 1px;
+  }
+
+  &.module-rounded {
+    border-radius: $space-2;
+  }
+
+  &.module-dots {
+    background: radial-gradient(circle, $color-bg 45%, transparent 48%) 0 0 /
+      0.5625rem 0.5625rem;
+  }
+
+  &.module-diamond {
+    width: 1.4375rem;
+
+    height: 1.4375rem;
+
+    transform: rotate(45deg);
+  }
+
+  &.module-classy {
+    border-radius: 0.5625rem 0.125rem 0.5625rem 0.125rem;
+  }
+}
+
+.corner-preview {
+  position: relative;
+
+  width: 2rem;
+
+  height: 2rem;
+
+  border: 5px solid $color-bg;
+
+  &::after {
+    position: absolute;
+
+    inset: 0.375rem;
+
+    content: "";
+
+    background: $color-bg;
+  }
+
+  &.corner-square {
+    border-radius: 1px;
+  }
+
+  &.corner-rounded {
+    border-radius: $space-2;
+
+    &::after {
+      border-radius: 0.1875rem;
+    }
+  }
+
+  &.corner-extra-rounded {
+    border-radius: $space-3;
+
+    &::after {
+      border-radius: 0.3125rem;
+    }
+  }
+}
+
+.corner-dot-preview {
+  width: 1.625rem;
+
+  height: 1.625rem;
+
+  background: $color-bg;
+
+  &.corner-dot-square {
+    border-radius: 1px;
+  }
+
+  &.corner-dot-round {
+    border-radius: $radius-round;
+  }
+
+  &.corner-dot-rounded {
+    border-radius: 0.4375rem;
+  }
+}
