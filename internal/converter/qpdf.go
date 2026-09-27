@@ -23,6 +23,7 @@ func NewQPDF() (*QPDF, error) {
 		exec.LookPath(
 			"qpdf",
 		)
+
 	if err != nil {
 		return nil, fmt.Errorf(
 			"qpdf not found: %w",
@@ -48,6 +49,7 @@ func (q *QPDF) Merge(
 
 	args := []string{
 		"--warning-exit-0",
+		"--stream-data=preserve",
 		"--empty",
 		"--pages",
 	}
@@ -148,6 +150,7 @@ func (q *QPDF) PageCount(
 		strconv.Atoi(
 			output,
 		)
+
 	if err != nil {
 		return QPDFPageCountResult{},
 			fmt.Errorf(
