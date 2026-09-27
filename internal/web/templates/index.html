@@ -234,229 +234,409 @@
       </section>
 
       <section class="tab-panel" data-panel="qr" hidden>
-        <section class="tool-panel">
+        <section class="tool-panel qr-tool">
           <header class="panel-header">
             <h2>QR Code generieren</h2>
 
-            <p>QR Codes mit eigenem Inhalt, Farben, Logo und Stil erzeugen.</p>
+            <p>
+              Inhalt festlegen und den QR Code anschließend individuell
+              gestalten.
+            </p>
           </header>
 
-          <div class="qr-layout">
-            <div class="qr-config">
-              <div class="qr-type-grid">
-                <button class="qr-type active" type="button" data-qr-type="url">
-                  URL
-                </button>
+          <div class="qr-workspace">
+            <nav class="qr-type-grid" aria-label="QR Code Typ">
+              <button class="qr-type active" type="button" data-qr-type="url">
+                <strong>URL</strong>
+                <span>Webseite öffnen</span>
+              </button>
 
-                <button class="qr-type" type="button" data-qr-type="text">
-                  Text
-                </button>
+              <button class="qr-type" type="button" data-qr-type="text">
+                <strong>Text</strong>
+                <span>Freier Inhalt</span>
+              </button>
 
-                <button class="qr-type" type="button" data-qr-type="phone">
-                  Telefonnummer
-                </button>
+              <button class="qr-type" type="button" data-qr-type="phone">
+                <strong>Telefon</strong>
+                <span>Nummer anrufen</span>
+              </button>
 
-                <button class="qr-type" type="button" data-qr-type="vcard">
-                  vCard
-                </button>
+              <button class="qr-type" type="button" data-qr-type="vcard">
+                <strong>vCard</strong>
+                <span>Kontakt speichern</span>
+              </button>
 
-                <button class="qr-type" type="button" data-qr-type="wifi">
-                  WLAN
-                </button>
+              <button class="qr-type" type="button" data-qr-type="wifi">
+                <strong>WLAN</strong>
+                <span>Netzwerk verbinden</span>
+              </button>
 
-                <button class="qr-type" type="button" data-qr-type="event">
-                  Event
-                </button>
-              </div>
+              <button class="qr-type" type="button" data-qr-type="event">
+                <strong>Event</strong>
+                <span>Termin hinzufügen</span>
+              </button>
+            </nav>
 
-              <div id="qr-fields" class="qr-fields">
-                <label class="field">
-                  <span> URL </span>
+            <div class="qr-designer">
+              <div class="qr-config">
+                <section class="qr-section">
+                  <header class="qr-section-header">
+                    <div>
+                      <span class="section-number">01</span>
+                      <h3>Inhalt</h3>
+                    </div>
 
-                  <input
-                    type="url"
-                    name="qr_url"
-                    placeholder="https://example.com"
-                  />
-                </label>
-              </div>
+                    <p>Welche Informationen soll der QR Code enthalten?</p>
+                  </header>
 
-              <div class="settings-section">
-                <h3>Farben</h3>
+                  <div id="qr-fields" class="qr-fields">
+                    <label class="field">
+                      <span>URL</span>
 
-                <div class="color-row">
-                  <label class="field">
-                    <span> Vordergrund </span>
+                      <input
+                        type="url"
+                        name="qr_url"
+                        placeholder="https://example.com"
+                      />
+                    </label>
+                  </div>
+                </section>
 
-                    <input type="color" id="qr-foreground" value="#000000" />
-                  </label>
+                <section class="qr-section">
+                  <header class="qr-section-header">
+                    <div>
+                      <span class="section-number">02</span>
+                      <h3>Farben</h3>
+                    </div>
 
-                  <label class="field">
-                    <span> Hintergrund </span>
+                    <p>Einfarbig oder mit individuellem Farbverlauf.</p>
+                  </header>
 
-                    <input type="color" id="qr-background" value="#ffffff" />
-                  </label>
-                </div>
+                  <div class="color-mode">
+                    <label class="choice-card">
+                      <input
+                        type="radio"
+                        name="qr_color_mode"
+                        value="solid"
+                        checked
+                      />
 
-                <label class="toggle-row">
-                  <input type="checkbox" id="qr-gradient-enabled" />
+                      <span>
+                        <strong>Einfarbig</strong>
+                        <small>Eine Farbe für alle Module</small>
+                      </span>
+                    </label>
 
-                  <span> Farbverlauf verwenden </span>
-                </label>
+                    <label class="choice-card">
+                      <input
+                        type="radio"
+                        name="qr_color_mode"
+                        value="gradient"
+                        id="qr-gradient-enabled"
+                      />
 
-                <div id="qr-gradient-settings" class="color-row" hidden>
-                  <label class="field">
-                    <span> Farbe 1 </span>
+                      <span>
+                        <strong>Farbverlauf</strong>
+                        <small>Zwei Farben kombinieren</small>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div class="color-row">
+                    <label class="color-field">
+                      <span>Vordergrund</span>
+
+                      <div class="color-control">
+                        <input
+                          type="color"
+                          id="qr-foreground"
+                          value="#000000"
+                        />
+
+                        <code>#000000</code>
+                      </div>
+                    </label>
+
+                    <label class="color-field">
+                      <span>Hintergrund</span>
+
+                      <div class="color-control">
+                        <input
+                          type="color"
+                          id="qr-background"
+                          value="#ffffff"
+                        />
+
+                        <code>#ffffff</code>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div id="qr-gradient-settings" class="color-row" hidden>
+                    <label class="color-field">
+                      <span>Verlauf Start</span>
+
+                      <div class="color-control">
+                        <input
+                          type="color"
+                          id="qr-gradient-start"
+                          value="#000000"
+                        />
+
+                        <code>#000000</code>
+                      </div>
+                    </label>
+
+                    <label class="color-field">
+                      <span>Verlauf Ende</span>
+
+                      <div class="color-control">
+                        <input
+                          type="color"
+                          id="qr-gradient-end"
+                          value="#3b82f6"
+                        />
+
+                        <code>#3b82f6</code>
+                      </div>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="qr-section">
+                  <header class="qr-section-header">
+                    <div>
+                      <span class="section-number">03</span>
+                      <h3>Logo</h3>
+                    </div>
+
+                    <p>Optional ein Logo direkt im QR Code platzieren.</p>
+                  </header>
+
+                  <label class="logo-upload">
+                    <span class="logo-upload-icon">＋</span>
+
+                    <span>
+                      <strong>Logo auswählen</strong>
+                      <small>PNG, JPEG, WEBP oder SVG</small>
+                    </span>
 
                     <input
-                      type="color"
-                      id="qr-gradient-start"
-                      value="#000000"
+                      type="file"
+                      id="qr-logo"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
                     />
                   </label>
 
-                  <label class="field">
-                    <span> Farbe 2 </span>
+                  <p class="qr-note">
+                    Mit Logo wird automatisch eine höhere Fehlerkorrektur
+                    verwendet, damit der QR Code weiterhin zuverlässig scanbar
+                    bleibt.
+                  </p>
+                </section>
 
-                    <input type="color" id="qr-gradient-end" value="#3b82f6" />
-                  </label>
-                </div>
+                <section class="qr-section">
+                  <header class="qr-section-header">
+                    <div>
+                      <span class="section-number">04</span>
+                      <h3>Stil</h3>
+                    </div>
+
+                    <p>Module und Eckelemente individuell gestalten.</p>
+                  </header>
+
+                  <div class="style-group">
+                    <div class="style-group-header">
+                      <strong>QR Code Module</strong>
+                      <span>Form der Datenpunkte</span>
+                    </div>
+
+                    <div class="style-options" data-style-group="dots">
+                      <button
+                        class="style-option active"
+                        type="button"
+                        data-style="square"
+                        title="Quadratisch"
+                      >
+                        <span class="module-preview module-square"></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="rounded"
+                        title="Abgerundet"
+                      >
+                        <span class="module-preview module-rounded"></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="dots"
+                        title="Punkte"
+                      >
+                        <span class="module-preview module-dots"></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="diamond"
+                        title="Diamant"
+                      >
+                        <span class="module-preview module-diamond"></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="classy"
+                        title="Classy"
+                      >
+                        <span class="module-preview module-classy"></span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="style-group">
+                    <div class="style-group-header">
+                      <strong>Eckelemente außen</strong>
+                      <span>Rahmen der drei Positionsmarker</span>
+                    </div>
+
+                    <div
+                      class="style-options"
+                      data-style-group="corners-square"
+                    >
+                      <button
+                        class="style-option active"
+                        type="button"
+                        data-style="square"
+                        title="Quadratisch"
+                      >
+                        <span class="corner-preview corner-square"></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="rounded"
+                        title="Abgerundet"
+                      >
+                        <span class="corner-preview corner-rounded"></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="extra-rounded"
+                        title="Stark abgerundet"
+                      >
+                        <span
+                          class="corner-preview corner-extra-rounded"
+                        ></span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="style-group">
+                    <div class="style-group-header">
+                      <strong>Eckelemente innen</strong>
+                      <span>Innerer Punkt der Positionsmarker</span>
+                    </div>
+
+                    <div class="style-options" data-style-group="corners-dot">
+                      <button
+                        class="style-option active"
+                        type="button"
+                        data-style="square"
+                        title="Quadratisch"
+                      >
+                        <span
+                          class="corner-dot-preview corner-dot-square"
+                        ></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="dot"
+                        title="Rund"
+                      >
+                        <span
+                          class="corner-dot-preview corner-dot-round"
+                        ></span>
+                      </button>
+
+                      <button
+                        class="style-option"
+                        type="button"
+                        data-style="rounded"
+                        title="Abgerundet"
+                      >
+                        <span
+                          class="corner-dot-preview corner-dot-rounded"
+                        ></span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
               </div>
 
-              <div class="settings-section">
-                <h3>Logo</h3>
+              <aside class="qr-preview-panel">
+                <div class="qr-preview-card">
+                  <header>
+                    <div>
+                      <strong>Vorschau</strong>
+                      <span>Live-Vorschau</span>
+                    </div>
 
-                <label class="file-button">
-                  Logo auswählen
+                    <span class="qr-status"> Bereit </span>
+                  </header>
 
-                  <input
-                    type="file"
-                    id="qr-logo"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  />
-                </label>
+                  <div id="qr-preview" class="qr-preview">
+                    <div class="qr-preview-placeholder">
+                      <div class="preview-icon">▦</div>
 
-                <p class="help-text">
-                  Das Logo wird direkt in der Mitte des QR Codes eingebettet.
+                      <strong>QR Code Vorschau</strong>
+
+                      <span> Gib links einen Inhalt ein. </span>
+                    </div>
+                  </div>
+
+                  <div class="qr-info">
+                    <div>
+                      <span>Fehlerkorrektur</span>
+                      <strong id="qr-error-level">L</strong>
+                    </div>
+
+                    <div>
+                      <span>QR Version</span>
+                      <strong id="qr-version">Auto</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="qr-actions">
+                  <button id="qr-generate" class="primary-button" type="button">
+                    QR Code erstellen
+                  </button>
+
+                  <div class="qr-download-actions" hidden>
+                    <button type="button">PNG</button>
+
+                    <button type="button">SVG</button>
+                  </div>
+                </div>
+
+                <p class="qr-preview-help">
+                  Standardcodes ohne Logo oder Spezialdesign verwenden
+                  automatisch Fehlerkorrektur L für einen möglichst kompakten QR
+                  Code.
                 </p>
-              </div>
-
-              <div class="settings-section">
-                <h3>Stil</h3>
-
-                <div class="style-group">
-                  <span class="setting-label"> QR Code Punkte </span>
-
-                  <div class="style-options" data-style-group="dots">
-                    <button
-                      class="style-option active"
-                      type="button"
-                      data-style="square"
-                    >
-                      ■
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="rounded"
-                    >
-                      ●
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="dots"
-                    >
-                      ⠿
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="diamond"
-                    >
-                      ◆
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="classy"
-                    >
-                      ◈
-                    </button>
-                  </div>
-                </div>
-
-                <div class="style-group">
-                  <span class="setting-label"> Eckelemente außen </span>
-
-                  <div class="style-options" data-style-group="corners-square">
-                    <button
-                      class="style-option active"
-                      type="button"
-                      data-style="square"
-                    >
-                      □
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="rounded"
-                    >
-                      ◯
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="extra-rounded"
-                    >
-                      ▢
-                    </button>
-                  </div>
-                </div>
-
-                <div class="style-group">
-                  <span class="setting-label"> Eckelemente innen </span>
-
-                  <div class="style-options" data-style-group="corners-dot">
-                    <button
-                      class="style-option active"
-                      type="button"
-                      data-style="square"
-                    >
-                      ■
-                    </button>
-
-                    <button class="style-option" type="button" data-style="dot">
-                      ●
-                    </button>
-
-                    <button
-                      class="style-option"
-                      type="button"
-                      data-style="rounded"
-                    >
-                      ◉
-                    </button>
-                  </div>
-                </div>
-              </div>
+              </aside>
             </div>
-
-            <aside class="qr-preview-panel">
-              <div id="qr-preview" class="qr-preview">
-                <span> QR Code Vorschau </span>
-              </div>
-
-              <button id="qr-generate" class="primary-button" type="button">
-                QR Code generieren
-              </button>
-            </aside>
           </div>
         </section>
       </section>

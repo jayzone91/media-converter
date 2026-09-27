@@ -240,12 +240,14 @@ function setupQRUI() {
   setupQRTypes();
   setupQRStyles();
 
-  const gradientToggle = document.getElementById("qr-gradient-enabled");
+  const colorModes = document.querySelectorAll('input[name="qr_color_mode"]');
 
   const gradientSettings = document.getElementById("qr-gradient-settings");
 
-  gradientToggle?.addEventListener("change", () => {
-    gradientSettings.hidden = !gradientToggle.checked;
+  colorModes.forEach((mode) => {
+    mode.addEventListener("change", () => {
+      gradientSettings.hidden = mode.value !== "gradient" || !mode.checked;
+    });
   });
 }
 
@@ -376,39 +378,166 @@ function renderQRFields(type) {
 
     case "vcard":
       container.innerHTML = `
-        <div class="field-grid">
-          <label class="field">
-            <span>Vorname</span>
-            <input name="vcard_firstname" />
-          </label>
+    <div class="field-grid">
+      <label class="field">
+        <span>Vorname</span>
 
-          <label class="field">
-            <span>Nachname</span>
-            <input name="vcard_lastname" />
-          </label>
-        </div>
+        <input
+          name="vcard_firstname"
+          autocomplete="given-name"
+        />
+      </label>
 
-        <label class="field">
-          <span>Telefonnummer</span>
-          <input
-            type="tel"
-            name="vcard_phone"
-          />
-        </label>
+      <label class="field">
+        <span>Nachname</span>
 
-        <label class="field">
-          <span>E-Mail</span>
-          <input
-            type="email"
-            name="vcard_email"
-          />
-        </label>
+        <input
+          name="vcard_lastname"
+          autocomplete="family-name"
+        />
+      </label>
+    </div>
 
-        <label class="field">
-          <span>Firma</span>
-          <input name="vcard_company" />
-        </label>
-      `;
+    <div class="field-grid">
+      <label class="field">
+        <span>Firma</span>
+
+        <input
+          name="vcard_company"
+          autocomplete="organization"
+        />
+      </label>
+
+      <label class="field">
+        <span>Position</span>
+
+        <input
+          name="vcard_position"
+          autocomplete="organization-title"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Telefon (Arbeit)</span>
+
+        <input
+          type="tel"
+          name="vcard_phone_work"
+        />
+      </label>
+
+      <label class="field">
+        <span>Telefon (Privat)</span>
+
+        <input
+          type="tel"
+          name="vcard_phone_home"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Mobil (Arbeit)</span>
+
+        <input
+          type="tel"
+          name="vcard_mobile_work"
+        />
+      </label>
+
+      <label class="field">
+        <span>Mobil (Privat)</span>
+
+        <input
+          type="tel"
+          name="vcard_mobile_home"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Fax (Arbeit)</span>
+
+        <input
+          type="tel"
+          name="vcard_fax_work"
+        />
+      </label>
+
+      <label class="field">
+        <span>E-Mail</span>
+
+        <input
+          type="email"
+          name="vcard_email"
+          autocomplete="email"
+        />
+      </label>
+    </div>
+
+    <label class="field">
+      <span>Webseite</span>
+
+      <input
+        type="url"
+        name="vcard_website"
+        placeholder="https://example.com"
+      />
+    </label>
+
+    <label class="field">
+      <span>Straße</span>
+
+      <input
+        name="vcard_street"
+        autocomplete="street-address"
+      />
+    </label>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>PLZ</span>
+
+        <input
+          name="vcard_postal_code"
+          autocomplete="postal-code"
+        />
+      </label>
+
+      <label class="field">
+        <span>Stadt</span>
+
+        <input
+          name="vcard_city"
+          autocomplete="address-level2"
+        />
+      </label>
+    </div>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Bundesland / Region</span>
+
+        <input
+          name="vcard_region"
+          autocomplete="address-level1"
+        />
+      </label>
+
+      <label class="field">
+        <span>Land</span>
+
+        <input
+          name="vcard_country"
+          autocomplete="country-name"
+        />
+      </label>
+    </div>
+  `;
       break;
 
     case "event":
