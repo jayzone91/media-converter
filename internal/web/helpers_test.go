@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -130,13 +131,25 @@ func TestDetectFormatRejectsBinaryMarkdown(
 		},
 	)
 
-	if _, err := detectFormat(
+	_, err := detectFormat(
 		context.Background(),
 		path,
 		nil,
-	); err == nil {
+	)
+
+	if err == nil {
 		t.Fatal(
 			"expected binary Markdown to be rejected",
+		)
+	}
+
+	if !errors.Is(
+		err,
+		errContentMismatch,
+	) {
+		t.Fatalf(
+			"expected content mismatch, got %v",
+			err,
 		)
 	}
 }
@@ -152,13 +165,25 @@ func TestDetectFormatRejectsRTFWithTXTFileExtension(
 		),
 	)
 
-	if _, err := detectFormat(
+	_, err := detectFormat(
 		context.Background(),
 		path,
 		nil,
-	); err == nil {
+	)
+
+	if err == nil {
 		t.Fatal(
 			"expected RTF with .txt extension to be rejected",
+		)
+	}
+
+	if !errors.Is(
+		err,
+		errFormatMismatch,
+	) {
+		t.Fatalf(
+			"expected format mismatch, got %v",
+			err,
 		)
 	}
 }
@@ -174,13 +199,59 @@ func TestDetectFormatRejectsTextWithImageExtension(
 		),
 	)
 
-	if _, err := detectFormat(
+	_, err := detectFormat(
 		context.Background(),
 		path,
 		nil,
-	); err == nil {
+	)
+
+	if err == nil {
 		t.Fatal(
 			"expected plain text with .png extension to be rejected",
+		)
+	}
+
+	if !errors.Is(
+		err,
+		errContentMismatch,
+	) {
+		t.Fatalf(
+			"expected content mismatch, got %v",
+			err,
+		)
+	}
+}
+
+func TestDetectFormatRejectsUnsupportedExtension(
+	t *testing.T,
+) {
+	path := writeDetectionTestFile(
+		t,
+		"document.xyz",
+		[]byte(
+			"Test",
+		),
+	)
+
+	_, err := detectFormat(
+		context.Background(),
+		path,
+		nil,
+	)
+
+	if err == nil {
+		t.Fatal(
+			"expected unsupported extension to be rejected",
+		)
+	}
+
+	if !errors.Is(
+		err,
+		errUnsupportedExtension,
+	) {
+		t.Fatalf(
+			"expected unsupported extension, got %v",
+			err,
 		)
 	}
 }
@@ -212,6 +283,106 @@ func TestDetectFormatRejectsTXTWithMarkdownExtensionMismatch(
 		t.Fatalf(
 			"expected txt, got %s",
 			format.ID,
+		)
+	}
+}
+
+func TestDetectionErrorMessageUnsupportedExtension(
+	t *testing.T,
+) {
+	message := detectionErrorMessage(
+		"document.xyz",
+		errUnsupportedExtension,
+	)
+
+	expected :=
+		`Dateien mit der Endung ".xyz" werden nicht unterstützt.`
+
+	if message != expected {
+		t.Fatalf(
+			"expected %q, got %q",
+			expected,
+			message,
+		)
+	}
+}
+
+func TestDetectionErrorMessageMissingExtension(
+	t *testing.T,
+) {
+	message := detectionErrorMessage(
+		"document",
+		errUnsupportedExtension,
+	)
+
+	expected :=
+		`Die Datei "document" hat keine unterstützte Dateiendung.`
+
+	if message != expected {
+		t.Fatalf(
+			"expected %q, got %q",
+			expected,
+			message,
+		)
+	}
+}
+
+func TestDetectionErrorMessageFormatMismatch(
+	t *testing.T,
+) {
+	message := detectionErrorMessage(
+		"document.txt",
+		errFormatMismatch,
+	)
+
+	expected :=
+		`Dateiendung und tatsächlicher Dateityp von "document.txt" stimmen nicht überein.`
+
+	if message != expected {
+		t.Fatalf(
+			"expected %q, got %q",
+			expected,
+			message,
+		)
+	}
+}
+
+func TestDetectionErrorMessageContentMismatch(
+	t *testing.T,
+) {
+	message := detectionErrorMessage(
+		"document.png",
+		errContentMismatch,
+	)
+
+	expected :=
+		`Der Inhalt von "document.png" entspricht nicht dem angegebenen Dateityp.`
+
+	if message != expected {
+		t.Fatalf(
+			"expected %q, got %q",
+			expected,
+			message,
+		)
+	}
+}
+
+func TestDetectionErrorMessageDetectionFailed(
+	t *testing.T,
+) {
+	message := detectionErrorMessage(
+		"document.mp4",
+		errDetectionFailed,
+	)
+
+	expected :=
+		`Der Dateityp von "document.mp4" konnte nicht erkannt werden oder wird nicht unterstützt.`
+
+	if message != expected {
+		t.Fatalf(
+			"expected %q, got %q",
+			expected,
+			message,
 		)
 	}
 }

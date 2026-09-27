@@ -61,7 +61,7 @@
   - [x] gemischte Eingabeformate ablehnen
   - [x] mehrere Ergebnisse automatisch als ZIP ausgeben
   - [x] Drag-and-Drop mehrerer Medien
-- [ ] verständlichere Fehlermeldung bei nicht unterstützten Dateitypen weiter vereinheitlichen
+- [x] verständlichere Fehlermeldung bei nicht unterstützten Dateitypen weiter vereinheitlichen
 - [x] Dateiendung und tatsächlichen MIME-/Dateityp gegeneinander validieren
 - [x] Ausgabe-Dateinamen konsistent aus dem ursprünglichen Dateinamen ableiten
 

@@ -316,9 +316,9 @@ func (s *Server) handleDetect(
 			renderDetectError(
 				w,
 				r,
-				fmt.Sprintf(
-					"Dateiformat von %q wird nicht unterstützt.",
+				detectionErrorMessage(
 					header.Filename,
+					err,
 				),
 			)
 

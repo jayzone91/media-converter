@@ -23,6 +23,21 @@ const (
 	conversionTimeout          = 30 * time.Minute
 )
 
+var (
+	errUnsupportedExtension = errors.New(
+		"unsupported file extension",
+	)
+	errContentMismatch = errors.New(
+		"file content does not match extension",
+	)
+	errFormatMismatch = errors.New(
+		"detected format does not match extension",
+	)
+	errDetectionFailed = errors.New(
+		"media format could not be detected",
+	)
+)
+
 func parseMultipartForm(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -131,7 +146,8 @@ func detectFormat(
 	if !hasExpected {
 		return media.Format{},
 			fmt.Errorf(
-				"unsupported file extension %q",
+				"%w: %q",
+				errUnsupportedExtension,
 				filepath.Ext(path),
 			)
 	}
@@ -176,22 +192,22 @@ func detectFormat(
 		media.CategoryDocument:
 		return media.Format{},
 			fmt.Errorf(
-				"file content does not match %s",
+				"%w: expected %s",
+				errContentMismatch,
 				expected.ID,
 			)
 
 	case media.CategoryMarkdown:
 		return media.Format{},
 			fmt.Errorf(
-				"file content does not match markdown",
+				"%w: expected markdown",
+				errContentMismatch,
 			)
 	}
 
 	if ffprobe == nil {
 		return media.Format{},
-			errors.New(
-				"media format could not be detected",
-			)
+			errDetectionFailed
 	}
 
 	format, err := ffprobe.Detect(
@@ -199,7 +215,12 @@ func detectFormat(
 		path,
 	)
 	if err != nil {
-		return media.Format{}, err
+		return media.Format{},
+			fmt.Errorf(
+				"%w: %v",
+				errDetectionFailed,
+				err,
+			)
 	}
 
 	return validateDetectedFormat(
@@ -235,15 +256,77 @@ func formatMismatchError(
 
 	if !ok {
 		return fmt.Errorf(
-			"unsupported file extension %q for detected format %s",
+			"%w: extension %q, detected %s",
+			errUnsupportedExtension,
 			filepath.Ext(path),
 			detected.ID,
 		)
 	}
 
 	return fmt.Errorf(
-		"file extension indicates %s but content is %s",
+		"%w: extension indicates %s, content is %s",
+		errFormatMismatch,
 		expected.ID,
 		detected.ID,
 	)
+}
+
+func detectionErrorMessage(
+	filename string,
+	err error,
+) string {
+	switch {
+	case errors.Is(
+		err,
+		errUnsupportedExtension,
+	):
+		extension := filepath.Ext(
+			filename,
+		)
+
+		if extension == "" {
+			return fmt.Sprintf(
+				"Die Datei %q hat keine unterstützte Dateiendung.",
+				filename,
+			)
+		}
+
+		return fmt.Sprintf(
+			"Dateien mit der Endung %q werden nicht unterstützt.",
+			extension,
+		)
+
+	case errors.Is(
+		err,
+		errFormatMismatch,
+	):
+		return fmt.Sprintf(
+			"Dateiendung und tatsächlicher Dateityp von %q stimmen nicht überein.",
+			filename,
+		)
+
+	case errors.Is(
+		err,
+		errContentMismatch,
+	):
+		return fmt.Sprintf(
+			"Der Inhalt von %q entspricht nicht dem angegebenen Dateityp.",
+			filename,
+		)
+
+	case errors.Is(
+		err,
+		errDetectionFailed,
+	):
+		return fmt.Sprintf(
+			"Der Dateityp von %q konnte nicht erkannt werden oder wird nicht unterstützt.",
+			filename,
+		)
+
+	default:
+		return fmt.Sprintf(
+			"Die Datei %q konnte nicht als unterstütztes Format erkannt werden.",
+			filename,
+		)
+	}
 }
