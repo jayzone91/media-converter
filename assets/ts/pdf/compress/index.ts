@@ -1,5 +1,3 @@
-import { downloadBlob } from "../../shared/download.ts";
-
 import {
   deletePDFUpload,
   isPDFFile,
@@ -13,6 +11,19 @@ import {
   type PDFCompressionAnalysis,
   type PDFCompressionMode,
 } from "./api.ts";
+
+import { setupPDFCompressDropZone } from "./drop-zone.ts";
+
+import {
+  clearCompressError,
+  renderCompressUI,
+  showCompressError,
+  updateCompressModeButtons,
+  updateCompressNotice,
+  type PDFCompressUIState,
+} from "./ui.ts";
+
+import { downloadBlob } from "../../shared/download.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
 
@@ -39,23 +50,7 @@ let processing = false;
 export function setupPDFCompress(workspace: HTMLElement): void {
   root = workspace;
 
-  upload = null;
-
-  mode = "balanced";
-
-  analysis = null;
-
-  analysisCache.clear();
-
-  analysisController = null;
-
-  analysisRequestID = 0;
-
-  uploading = false;
-
-  analyzing = false;
-
-  processing = false;
+  resetState();
 
   const input = getElement<HTMLInputElement>("#pdf-compress-file");
 
@@ -79,7 +74,15 @@ export function setupPDFCompress(workspace: HTMLElement): void {
     }
   });
 
-  setupDropZone(dropZone);
+  setupPDFCompressDropZone(
+    dropZone,
+    (file) => {
+      void selectFile(file);
+    },
+    (message) => {
+      showError(message);
+    },
+  );
 
   setupModeButtons();
 
@@ -105,23 +108,31 @@ export async function destroyPDFCompress(): Promise<void> {
 
   root = null;
 
+  resetState();
+
+  if (uploadID) {
+    await deletePDFUpload(uploadID);
+  }
+}
+
+function resetState(): void {
   upload = null;
+
+  mode = "balanced";
 
   analysis = null;
 
   analysisCache.clear();
 
-  mode = "balanced";
+  analysisController = null;
+
+  analysisRequestID = 0;
 
   uploading = false;
 
   analyzing = false;
 
   processing = false;
-
-  if (uploadID) {
-    await deletePDFUpload(uploadID);
-  }
 }
 
 function setupModeButtons(): void {
@@ -143,15 +154,9 @@ function setupModeButtons(): void {
 
       mode = candidate;
 
-      for (const other of buttons) {
-        const selected = other === button;
+      updateCompressModeButtons(root, mode);
 
-        other.classList.toggle("selected", selected);
-
-        other.setAttribute("aria-pressed", selected ? "true" : "false");
-      }
-
-      updateNotice();
+      updateCompressNotice(root, mode);
 
       if (!upload) {
         return;
@@ -166,9 +171,7 @@ function setupModeButtons(): void {
 
         analyzing = false;
 
-        renderAnalysis();
-
-        updateControls();
+        render();
 
         return;
       }
@@ -176,49 +179,6 @@ function setupModeButtons(): void {
       void analyzeCurrentMode();
     });
   }
-}
-
-function setupDropZone(dropZone: HTMLElement): void {
-  const events = ["dragenter", "dragover", "dragleave", "drop"] as const;
-
-  for (const eventName of events) {
-    dropZone.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    });
-  }
-
-  for (const eventName of ["dragenter", "dragover"] as const) {
-    dropZone.addEventListener(eventName, () => {
-      dropZone.classList.add("drag-over");
-    });
-  }
-
-  for (const eventName of ["dragleave", "drop"] as const) {
-    dropZone.addEventListener(eventName, () => {
-      dropZone.classList.remove("drag-over");
-    });
-  }
-
-  dropZone.addEventListener("drop", (event: DragEvent) => {
-    const files = event.dataTransfer?.files;
-
-    if (!files?.length) {
-      return;
-    }
-
-    if (files.length > 1) {
-      showError("Es kann nur eine PDF gleichzeitig komprimiert werden.");
-
-      return;
-    }
-
-    const file = files[0];
-
-    if (file) {
-      void selectFile(file);
-    }
-  });
 }
 
 async function selectFile(file: File): Promise<void> {
@@ -260,7 +220,7 @@ async function selectFile(file: File): Promise<void> {
 
   uploading = true;
 
-  updateControls();
+  render();
 
   const progress = getElement<HTMLElement>("#pdf-compress-upload-progress");
 
@@ -274,8 +234,6 @@ async function selectFile(file: File): Promise<void> {
     upload = await uploadPDF(file);
 
     uploaded = true;
-
-    render();
   } catch (error: unknown) {
     upload = null;
 
@@ -291,7 +249,7 @@ async function selectFile(file: File): Promise<void> {
       progress.hidden = true;
     }
 
-    updateControls();
+    render();
   }
 
   if (uploaded) {
@@ -311,9 +269,7 @@ async function analyzeCurrentMode(): Promise<void> {
 
     analyzing = false;
 
-    renderAnalysis();
-
-    updateControls();
+    render();
 
     return;
   }
@@ -336,9 +292,7 @@ async function analyzeCurrentMode(): Promise<void> {
 
   clearError();
 
-  renderAnalysis();
-
-  updateControls();
+  render();
 
   try {
     const result = await analyzePDFCompression(
@@ -377,9 +331,7 @@ async function analyzeCurrentMode(): Promise<void> {
 
       analysisController = null;
 
-      renderAnalysis();
-
-      updateControls();
+      render();
     }
   }
 }
@@ -421,7 +373,7 @@ async function downloadCompressedPDF(): Promise<void> {
 
   processing = true;
 
-  updateControls();
+  render();
 
   const progress = getElement<HTMLElement>("#pdf-compress-progress");
 
@@ -439,8 +391,6 @@ async function downloadCompressedPDF(): Promise<void> {
     analysis = null;
 
     analysisCache.clear();
-
-    render();
   } catch (error: unknown) {
     showError(
       error instanceof Error
@@ -454,225 +404,49 @@ async function downloadCompressedPDF(): Promise<void> {
       progress.hidden = true;
     }
 
-    updateControls();
+    render();
   }
 }
 
 function render(): void {
-  const editor = getElement<HTMLElement>("#pdf-compress-editor");
-
-  const dropZone = getElement<HTMLElement>("#pdf-compress-drop-zone");
-
-  const filename = getElement<HTMLElement>("#pdf-compress-filename");
-
-  const meta = getElement<HTMLElement>("#pdf-compress-meta");
-
-  if (editor) {
-    editor.hidden = upload === null;
+  if (!root) {
+    return;
   }
 
-  if (dropZone) {
-    dropZone.hidden = upload !== null;
-  }
-
-  if (upload && filename) {
-    filename.textContent = upload.filename;
-  }
-
-  if (upload && meta) {
-    meta.textContent = `${upload.pageCount} Seiten · ${formatBytes(upload.size)}`;
-  }
-
-  updateNotice();
-
-  renderAnalysis();
-
-  updateControls();
+  renderCompressUI(root, currentUIState());
 }
 
-function renderAnalysis(): void {
-  const original = getElement<HTMLElement>("#pdf-compress-original-size");
-
-  const result = getElement<HTMLElement>("#pdf-compress-result-size");
-
-  const savings = getElement<HTMLElement>("#pdf-compress-savings-size");
-
-  const percent = getElement<HTMLElement>("#pdf-compress-savings-percent");
-
-  const status = getElement<HTMLElement>("#pdf-compress-analysis-status");
-
-  if (!original || !result || !savings || !percent || !status) {
-    return;
-  }
-
-  original.textContent = upload ? formatBytes(upload.size) : "—";
-
-  if (analyzing) {
-    result.textContent = "…";
-
-    savings.textContent = "…";
-
-    percent.textContent = "…";
-
-    status.textContent = "Kompression wird berechnet …";
-
-    return;
-  }
-
-  if (!analysis) {
-    result.textContent = "—";
-
-    savings.textContent = "—";
-
-    percent.textContent = "—";
-
-    status.textContent = "Noch nicht berechnet";
-
-    return;
-  }
-
-  result.textContent = formatBytes(analysis.resultSize);
-
-  savings.textContent = formatBytes(analysis.savingsBytes);
-
-  percent.textContent = `${formatPercent(analysis.savingsPercent)} %`;
-
-  status.textContent = analysis.unchanged
-    ? "Mit diesem Preset ist keine weitere Reduktion möglich."
-    : `${formatBytes(analysis.originalSize)} → ${formatBytes(analysis.resultSize)}`;
+function currentUIState(): PDFCompressUIState {
+  return {
+    upload,
+    mode,
+    analysis,
+    uploading,
+    analyzing,
+    processing,
+  };
 }
 
-function updateNotice(): void {
-  const notice = getElement<HTMLElement>("#pdf-compress-notice");
-
-  if (!notice) {
+function showError(message: string): void {
+  if (!root) {
     return;
   }
 
-  const title = notice.querySelector<HTMLElement>("strong");
-
-  const text = notice.querySelector<HTMLElement>("span");
-
-  if (!title || !text) {
-    return;
-  }
-
-  switch (mode) {
-    case "lossless":
-      title.textContent = "Verlustfrei";
-
-      text.textContent =
-        "Keine Änderung an Bildauflösung oder Bildqualität. Die mögliche Ersparnis kann gering sein.";
-
-      break;
-
-    case "balanced":
-      title.textContent = "Ausgewogen";
-
-      text.textContent =
-        "Geeignet für Bildschirmdarstellung, E-Mail und typische Dokumente.";
-
-      break;
-
-    case "strong":
-      title.textContent = "Stark";
-
-      text.textContent =
-        "Für möglichst kleine Dateien. Bilder können sichtbar an Detail verlieren.";
-
-      break;
-  }
+  showCompressError(root, message);
 }
 
-function updateControls(): void {
-  const input = getElement<HTMLInputElement>("#pdf-compress-file");
-
-  const reset = getElement<HTMLButtonElement>("#pdf-compress-reset-file");
-
-  const submit = getElement<HTMLButtonElement>("#pdf-compress-submit");
-
-  const buttons = root?.querySelectorAll<HTMLButtonElement>(
-    "[data-compression-mode]",
-  );
-
-  if (input) {
-    input.disabled = uploading || processing;
+function clearError(): void {
+  if (!root) {
+    return;
   }
 
-  if (reset) {
-    reset.disabled = !upload || uploading || processing;
-  }
-
-  if (submit) {
-    submit.disabled =
-      !upload || !analysis || uploading || analyzing || processing;
-
-    submit.textContent = analysis?.unchanged
-      ? "Original herunterladen"
-      : "Komprimierte PDF herunterladen";
-  }
-
-  buttons?.forEach((button) => {
-    button.disabled = uploading || processing;
-  });
+  clearCompressError(root);
 }
 
 function isCompressionMode(
   value: string | undefined,
 ): value is PDFCompressionMode {
   return value === "lossless" || value === "balanced" || value === "strong";
-}
-
-function showError(message: string): void {
-  const element = getElement<HTMLElement>("#pdf-compress-error");
-
-  if (!element) {
-    return;
-  }
-
-  element.textContent = message;
-
-  element.hidden = false;
-}
-
-function clearError(): void {
-  const element = getElement<HTMLElement>("#pdf-compress-error");
-
-  if (!element) {
-    return;
-  }
-
-  element.textContent = "";
-
-  element.hidden = true;
-}
-
-function formatBytes(bytes: number): string {
-  const units = ["B", "KiB", "MiB", "GiB"] as const;
-
-  if (bytes <= 0) {
-    return "0 B";
-  }
-
-  const index = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
-  );
-
-  const value = bytes / 1024 ** index;
-
-  return `${value.toLocaleString("de-DE", {
-    minimumFractionDigits: index === 0 ? 0 : 1,
-
-    maximumFractionDigits: 1,
-  })} ${units[index] ?? "B"}`;
-}
-
-function formatPercent(value: number): string {
-  return value.toLocaleString("de-DE", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
 }
 
 function getElement<T extends Element>(selector: string): T | null {
