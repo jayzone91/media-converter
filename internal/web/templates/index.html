@@ -5,7 +5,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Media Converter</title>
+    <title>Media Tools</title>
 
     <link rel="stylesheet" href="/static/app.css" />
 
@@ -16,67 +16,449 @@
 
   <body>
     <main class="page">
-      <section class="converter">
-        <header class="converter-header">
-          <span class="eyebrow"> Media Converter </span>
+      <header class="app-header">
+        <span class="eyebrow"> Media Tools </span>
 
-          <h1>Dateien konvertieren.</h1>
+        <h1>Dateien, PDFs und QR Codes.</h1>
 
-          <p>
-            Bilder, Audio, Video, Dokumente und PDF direkt im Browser
-            konvertieren.
-          </p>
-        </header>
+        <p>
+          Medien konvertieren, PDFs bearbeiten und QR Codes direkt im Browser
+          erzeugen.
+        </p>
+      </header>
 
-        <form
-          id="conversion-form"
-          class="conversion-form"
-          action="/convert"
-          method="post"
-          enctype="multipart/form-data"
-        >
-          <label class="drop-zone" for="file">
-            <span class="drop-icon"> ↑ </span>
+      <nav class="tabs" aria-label="Werkzeuge">
+        <button class="tab-button active" type="button" data-tab="converter">
+          Medien konvertieren
+        </button>
 
-            <span class="drop-title"> Datei auswählen </span>
+        <button class="tab-button" type="button" data-tab="pdf">
+          PDF bearbeiten
+        </button>
 
-            <span class="drop-description"> oder hier ablegen </span>
+        <button class="tab-button" type="button" data-tab="qr">
+          QR Code generieren
+        </button>
+      </nav>
 
-            <span class="drop-limit"> Maximal 512 MiB </span>
+      <section class="tab-panel active" data-panel="converter">
+        <section class="tool-panel">
+          <header class="panel-header">
+            <h2>Medien konvertieren</h2>
 
-            <input
-              id="file"
-              class="file-input"
-              type="file"
-              name="file"
-              required
-              hx-post="/detect"
-              hx-trigger="change"
-              hx-target="#conversion-options"
-              hx-swap="innerHTML"
-              hx-encoding="multipart/form-data"
-              hx-include="closest form"
-              hx-indicator="#detect-indicator"
-            />
-          </label>
+            <p>
+              Bilder, Audio, Video, Dokumente und PDF in unterstützte
+              Zielformate konvertieren.
+            </p>
+          </header>
 
-          <div id="detect-indicator" class="indicator htmx-indicator">
-            <span class="small-spinner"></span>
-            Datei wird analysiert …
+          <form
+            id="conversion-form"
+            class="conversion-form"
+            action="/convert"
+            method="post"
+            enctype="multipart/form-data"
+          >
+            <label class="drop-zone" for="file">
+              <span class="drop-icon"> ↑ </span>
+
+              <span class="drop-title"> Datei auswählen </span>
+
+              <span class="drop-description"> oder hier ablegen </span>
+
+              <span class="drop-limit"> Maximal 512 MiB </span>
+
+              <input
+                id="file"
+                class="file-input"
+                type="file"
+                name="file"
+                required
+                hx-post="/detect"
+                hx-trigger="change"
+                hx-target="#conversion-options"
+                hx-swap="innerHTML"
+                hx-encoding="multipart/form-data"
+                hx-include="closest form"
+                hx-indicator="#detect-indicator"
+              />
+            </label>
+
+            <div id="detect-indicator" class="indicator htmx-indicator">
+              <span class="small-spinner"></span>
+
+              Datei wird analysiert …
+            </div>
+
+            <section
+              id="conversion-options"
+              class="conversion-options"
+              aria-live="polite"
+            >
+              <div class="empty-state">
+                Wähle eine Datei aus, um die verfügbaren Zielformate anzuzeigen.
+              </div>
+            </section>
+
+            <div id="conversion-error" class="conversion-error" hidden></div>
+          </form>
+        </section>
+      </section>
+
+      <section class="tab-panel" data-panel="pdf" hidden>
+        <section class="tool-panel">
+          <header class="panel-header">
+            <h2>PDF bearbeiten</h2>
+
+            <p>
+              Dokumente zusammenfügen, aufteilen, optimieren und bearbeiten.
+            </p>
+          </header>
+
+          <div class="tool-grid">
+            <button class="tool-card" type="button" data-pdf-tool="merge">
+              <span class="tool-icon">⇄</span>
+
+              <strong> PDF zusammenfügen </strong>
+
+              <span> Mehrere PDFs zu einer Datei verbinden. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="split">
+              <span class="tool-icon">✂</span>
+
+              <strong> PDF trennen </strong>
+
+              <span> Ein Dokument in mehrere PDFs aufteilen. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="compress">
+              <span class="tool-icon">↓</span>
+
+              <strong> PDF komprimieren </strong>
+
+              <span> Dateigröße reduzieren. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="edit">
+              <span class="tool-icon">✎</span>
+
+              <strong> PDF bearbeiten </strong>
+
+              <span> Inhalte und Seiten bearbeiten. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="encrypt">
+              <span class="tool-icon">⌑</span>
+
+              <strong> PDF verschlüsseln </strong>
+
+              <span> Dokument mit Passwort schützen. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="decrypt">
+              <span class="tool-icon">⌐</span>
+
+              <strong> Passwort entfernen </strong>
+
+              <span> Schutz entfernen, wenn das Passwort bekannt ist. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="rotate">
+              <span class="tool-icon">↻</span>
+
+              <strong> Seiten drehen </strong>
+
+              <span> Einzelne Seiten ausrichten. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="delete">
+              <span class="tool-icon">×</span>
+
+              <strong> Seiten löschen </strong>
+
+              <span> Nicht benötigte Seiten entfernen. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="extract">
+              <span class="tool-icon">↗</span>
+
+              <strong> Seiten extrahieren </strong>
+
+              <span> Gewählte Seiten als neue PDF speichern. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="sort">
+              <span class="tool-icon">≡</span>
+
+              <strong> Seiten sortieren </strong>
+
+              <span> Reihenfolge per Drag & Drop ändern. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="web">
+              <span class="tool-icon">⌘</span>
+
+              <strong> Webseite in PDF </strong>
+
+              <span> URL als PDF rendern. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="optimize">
+              <span class="tool-icon">◇</span>
+
+              <strong> PDF optimieren </strong>
+
+              <span> Bilder, Metadaten und Struktur optimieren. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="redact">
+              <span class="tool-icon">■</span>
+
+              <strong> PDF schwärzen </strong>
+
+              <span> Bereiche dauerhaft unkenntlich machen. </span>
+            </button>
+
+            <button class="tool-card" type="button" data-pdf-tool="create">
+              <span class="tool-icon">＋</span>
+
+              <strong> PDF erstellen </strong>
+
+              <span> PDF aus Bildern und anderen Medien erzeugen. </span>
+            </button>
           </div>
 
-          <section
-            id="conversion-options"
-            class="conversion-options"
-            aria-live="polite"
-          >
-            <div class="empty-state">
-              Wähle eine Datei aus, um die verfügbaren Zielformate anzuzeigen.
-            </div>
-          </section>
+          <div id="pdf-tool-workspace" class="tool-workspace" hidden></div>
+        </section>
+      </section>
 
-          <div id="conversion-error" class="conversion-error" hidden></div>
-        </form>
+      <section class="tab-panel" data-panel="qr" hidden>
+        <section class="tool-panel">
+          <header class="panel-header">
+            <h2>QR Code generieren</h2>
+
+            <p>QR Codes mit eigenem Inhalt, Farben, Logo und Stil erzeugen.</p>
+          </header>
+
+          <div class="qr-layout">
+            <div class="qr-config">
+              <div class="qr-type-grid">
+                <button class="qr-type active" type="button" data-qr-type="url">
+                  URL
+                </button>
+
+                <button class="qr-type" type="button" data-qr-type="text">
+                  Text
+                </button>
+
+                <button class="qr-type" type="button" data-qr-type="phone">
+                  Telefonnummer
+                </button>
+
+                <button class="qr-type" type="button" data-qr-type="vcard">
+                  vCard
+                </button>
+
+                <button class="qr-type" type="button" data-qr-type="wifi">
+                  WLAN
+                </button>
+
+                <button class="qr-type" type="button" data-qr-type="event">
+                  Event
+                </button>
+              </div>
+
+              <div id="qr-fields" class="qr-fields">
+                <label class="field">
+                  <span> URL </span>
+
+                  <input
+                    type="url"
+                    name="qr_url"
+                    placeholder="https://example.com"
+                  />
+                </label>
+              </div>
+
+              <div class="settings-section">
+                <h3>Farben</h3>
+
+                <div class="color-row">
+                  <label class="field">
+                    <span> Vordergrund </span>
+
+                    <input type="color" id="qr-foreground" value="#000000" />
+                  </label>
+
+                  <label class="field">
+                    <span> Hintergrund </span>
+
+                    <input type="color" id="qr-background" value="#ffffff" />
+                  </label>
+                </div>
+
+                <label class="toggle-row">
+                  <input type="checkbox" id="qr-gradient-enabled" />
+
+                  <span> Farbverlauf verwenden </span>
+                </label>
+
+                <div id="qr-gradient-settings" class="color-row" hidden>
+                  <label class="field">
+                    <span> Farbe 1 </span>
+
+                    <input
+                      type="color"
+                      id="qr-gradient-start"
+                      value="#000000"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span> Farbe 2 </span>
+
+                    <input type="color" id="qr-gradient-end" value="#3b82f6" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="settings-section">
+                <h3>Logo</h3>
+
+                <label class="file-button">
+                  Logo auswählen
+
+                  <input
+                    type="file"
+                    id="qr-logo"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  />
+                </label>
+
+                <p class="help-text">
+                  Das Logo wird direkt in der Mitte des QR Codes eingebettet.
+                </p>
+              </div>
+
+              <div class="settings-section">
+                <h3>Stil</h3>
+
+                <div class="style-group">
+                  <span class="setting-label"> QR Code Punkte </span>
+
+                  <div class="style-options" data-style-group="dots">
+                    <button
+                      class="style-option active"
+                      type="button"
+                      data-style="square"
+                    >
+                      ■
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="rounded"
+                    >
+                      ●
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="dots"
+                    >
+                      ⠿
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="diamond"
+                    >
+                      ◆
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="classy"
+                    >
+                      ◈
+                    </button>
+                  </div>
+                </div>
+
+                <div class="style-group">
+                  <span class="setting-label"> Eckelemente außen </span>
+
+                  <div class="style-options" data-style-group="corners-square">
+                    <button
+                      class="style-option active"
+                      type="button"
+                      data-style="square"
+                    >
+                      □
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="rounded"
+                    >
+                      ◯
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="extra-rounded"
+                    >
+                      ▢
+                    </button>
+                  </div>
+                </div>
+
+                <div class="style-group">
+                  <span class="setting-label"> Eckelemente innen </span>
+
+                  <div class="style-options" data-style-group="corners-dot">
+                    <button
+                      class="style-option active"
+                      type="button"
+                      data-style="square"
+                    >
+                      ■
+                    </button>
+
+                    <button class="style-option" type="button" data-style="dot">
+                      ●
+                    </button>
+
+                    <button
+                      class="style-option"
+                      type="button"
+                      data-style="rounded"
+                    >
+                      ◉
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="qr-preview-panel">
+              <div id="qr-preview" class="qr-preview">
+                <span> QR Code Vorschau </span>
+              </div>
+
+              <button id="qr-generate" class="primary-button" type="button">
+                QR Code generieren
+              </button>
+            </aside>
+          </div>
+        </section>
       </section>
 
       <footer class="footer">
@@ -89,7 +471,7 @@
       <div class="conversion-progress">
         <div class="spinner"></div>
 
-        <strong> Datei wird konvertiert </strong>
+        <strong> Datei wird verarbeitet </strong>
 
         <span> Die Verarbeitung kann je nach Dateigröße etwas dauern. </span>
       </div>

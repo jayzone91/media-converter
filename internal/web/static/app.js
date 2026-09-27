@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const options = document.getElementById("conversion-options");
   const overlay = document.getElementById("conversion-overlay");
   const errorBox = document.getElementById("conversion-error");
+  setupTabs();
+  setupToolSelections();
+  setupQRUI();
 
   setupDragAndDrop(dropZone, fileInput, errorBox);
 
@@ -196,4 +199,257 @@ function resetForm(form, fileInput, options) {
       Zielformate anzuzeigen.
     </div>
   `;
+}
+
+function setupTabs() {
+  const buttons = document.querySelectorAll(".tab-button");
+  const panels = document.querySelectorAll(".tab-panel");
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.tab;
+
+      buttons.forEach((candidate) => {
+        candidate.classList.toggle("active", candidate === button);
+      });
+
+      panels.forEach((panel) => {
+        const active = panel.dataset.panel === target;
+
+        panel.classList.toggle("active", active);
+
+        panel.hidden = !active;
+      });
+    });
+  });
+}
+
+function setupToolSelections() {
+  document.querySelectorAll("[data-pdf-tool]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelectorAll("[data-pdf-tool]").forEach((candidate) => {
+        candidate.classList.remove("selected");
+      });
+
+      button.classList.add("selected");
+    });
+  });
+}
+
+function setupQRUI() {
+  setupQRTypes();
+  setupQRStyles();
+
+  const gradientToggle = document.getElementById("qr-gradient-enabled");
+
+  const gradientSettings = document.getElementById("qr-gradient-settings");
+
+  gradientToggle?.addEventListener("change", () => {
+    gradientSettings.hidden = !gradientToggle.checked;
+  });
+}
+
+function setupQRTypes() {
+  const buttons = document.querySelectorAll(".qr-type");
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      buttons.forEach((candidate) => {
+        candidate.classList.toggle("active", candidate === button);
+      });
+
+      renderQRFields(button.dataset.qrType);
+    });
+  });
+}
+
+function setupQRStyles() {
+  document.querySelectorAll("[data-style-group]").forEach((group) => {
+    const options = group.querySelectorAll(".style-option");
+
+    options.forEach((option) => {
+      option.addEventListener("click", () => {
+        options.forEach((candidate) => {
+          candidate.classList.toggle("active", candidate === option);
+        });
+      });
+    });
+  });
+}
+
+function renderQRFields(type) {
+  const container = document.getElementById("qr-fields");
+
+  switch (type) {
+    case "url":
+      container.innerHTML = `
+        <label class="field">
+          <span>URL</span>
+
+          <input
+            type="url"
+            name="qr_url"
+            placeholder="https://example.com"
+          />
+        </label>
+      `;
+      break;
+
+    case "text":
+      container.innerHTML = `
+        <label class="field">
+          <span>Text</span>
+
+          <textarea
+            name="qr_text"
+            rows="5"
+            placeholder="Text eingeben"
+          ></textarea>
+        </label>
+      `;
+      break;
+
+    case "phone":
+      container.innerHTML = `
+        <label class="field">
+          <span>Telefonnummer</span>
+
+          <input
+            type="tel"
+            name="qr_phone"
+            placeholder="+49 ..."
+          />
+        </label>
+      `;
+      break;
+
+    case "wifi":
+      container.innerHTML = `
+        <label class="field">
+          <span>SSID</span>
+
+          <input
+            type="text"
+            name="wifi_ssid"
+          />
+        </label>
+
+        <label class="field">
+          <span>Passwort</span>
+
+          <input
+            type="password"
+            name="wifi_password"
+          />
+        </label>
+
+        <label class="field">
+          <span>Verschlüsselung</span>
+
+          <select name="wifi_encryption">
+            <option value="WPA">
+              WPA / WPA2 / WPA3
+            </option>
+
+            <option value="WEP">
+              WEP
+            </option>
+
+            <option value="nopass">
+              Offen
+            </option>
+          </select>
+        </label>
+
+        <label class="toggle-row">
+          <input
+            type="checkbox"
+            name="wifi_hidden"
+          />
+
+          <span>
+            Verstecktes WLAN
+          </span>
+        </label>
+      `;
+      break;
+
+    case "vcard":
+      container.innerHTML = `
+        <div class="field-grid">
+          <label class="field">
+            <span>Vorname</span>
+            <input name="vcard_firstname" />
+          </label>
+
+          <label class="field">
+            <span>Nachname</span>
+            <input name="vcard_lastname" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Telefonnummer</span>
+          <input
+            type="tel"
+            name="vcard_phone"
+          />
+        </label>
+
+        <label class="field">
+          <span>E-Mail</span>
+          <input
+            type="email"
+            name="vcard_email"
+          />
+        </label>
+
+        <label class="field">
+          <span>Firma</span>
+          <input name="vcard_company" />
+        </label>
+      `;
+      break;
+
+    case "event":
+      container.innerHTML = `
+        <label class="field">
+          <span>Titel</span>
+          <input name="event_title" />
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Beginn</span>
+            <input
+              type="datetime-local"
+              name="event_start"
+            />
+          </label>
+
+          <label class="field">
+            <span>Ende</span>
+            <input
+              type="datetime-local"
+              name="event_end"
+            />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Ort</span>
+          <input name="event_location" />
+        </label>
+
+        <label class="field">
+          <span>Beschreibung</span>
+
+          <textarea
+            name="event_description"
+            rows="4"
+          ></textarea>
+        </label>
+      `;
+      break;
+  }
 }
