@@ -22,175 +22,66 @@ func (s *Server) handlePDFWorkspace(
 
 	switch tool {
 	case "merge":
-		if err :=
-			view.PDFMergeWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFMergeWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "split":
-		if err :=
-			view.PDFSplitWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFSplitWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "compress":
-		if err :=
-			view.PDFCompressWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFCompressWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "sort":
-		if err :=
-			view.PDFSortWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFSortWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "delete":
-		if err :=
-			view.PDFDeleteWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFDeleteWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "extract":
-		if err :=
-			view.PDFExtractWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFExtractWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "rotate":
-		if err :=
-			view.PDFRotateWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFRotateWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "encrypt":
-		if err :=
-			view.PDFEncryptWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFEncryptWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "decrypt":
-		if err :=
-			view.PDFDecryptWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFDecryptWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "optimize":
-		if err :=
-			view.PDFOptimizeWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFOptimizeWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "web":
-		if err :=
-			view.PDFWebWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+		if err := view.PDFWebWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
-	case
-		"edit",
-		"redact",
-		"create":
+	case "create":
+		if err := view.PDFCreateWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
+		}
 
+	case "edit", "redact":
 		if err :=
 			view.PDFPlaceholderWorkspace(
 				pdfToolTitle(

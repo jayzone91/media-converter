@@ -1,0 +1,167 @@
+package view
+
+templ PDFCreateWorkspace() {
+	<div data-pdf-workspace="create">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDF erstellen
+				</h3>
+				<p>
+					Erstelle ein einfaches PDF-Dokument direkt aus Text.
+				</p>
+			</div>
+		</div>
+		<div
+			id="pdf-create-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<section class="pdf-create-editor">
+			<label class="pdf-create-field">
+				<span>
+					Titel
+				</span>
+				<input
+					id="pdf-create-title"
+					type="text"
+					maxlength="200"
+					placeholder="Optionaler Dokumenttitel"
+				/>
+			</label>
+			<label class="pdf-create-field">
+				<span>
+					Inhalt
+				</span>
+				<textarea
+					id="pdf-create-body"
+					maxlength="100000"
+					rows="16"
+					placeholder="Text des Dokuments …"
+				></textarea>
+			</label>
+			<div class="pdf-create-options">
+				<label>
+					<span>
+						Papierformat
+					</span>
+					<select id="pdf-create-paper-size">
+						<option
+							value="a4"
+							selected
+						>
+							A4
+						</option>
+						<option value="letter">
+							Letter
+						</option>
+					</select>
+				</label>
+				<label>
+					<span>
+						Schriftgröße
+					</span>
+					<select id="pdf-create-font-size">
+						<option value="10">
+							10 pt
+						</option>
+						<option
+							value="11"
+							selected
+						>
+							11 pt
+						</option>
+						<option value="12">
+							12 pt
+						</option>
+						<option value="14">
+							14 pt
+						</option>
+						<option value="16">
+							16 pt
+						</option>
+						<option value="18">
+							18 pt
+						</option>
+					</select>
+				</label>
+			</div>
+			<div class="pdf-create-toggles">
+				<label>
+					<input
+						id="pdf-create-landscape"
+						type="checkbox"
+					/>
+					<div>
+						<strong>
+							Querformat
+						</strong>
+						<span>
+							Das Dokument horizontal ausgeben.
+						</span>
+					</div>
+				</label>
+				<label>
+					<input
+						id="pdf-create-date"
+						type="checkbox"
+					/>
+					<div>
+						<strong>
+							Datum einfügen
+						</strong>
+						<span>
+							Das aktuelle Datum unter dem Titel anzeigen.
+						</span>
+					</div>
+				</label>
+			</div>
+			<div class="pdf-create-info">
+				<strong>
+					Sicheres Textdokument
+				</strong>
+				<span>
+					Eingegebener Inhalt wird als Text behandelt.
+					HTML und Skripte werden nicht ausgeführt.
+				</span>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						dokument.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-create-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDF erstellen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-create-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird erstellt …
+				</strong>
+				<span>
+					Das Dokument wird gerendert.
+				</span>
+			</div>
+		</div>
+	</div>
+}

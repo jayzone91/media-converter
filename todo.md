@@ -1,1 +1,2 @@
 - [ ] Medien Konvertieren: .rtf wird nicht als Dokument unterstützt!
+- [ ] Median Konvertieren: Markdown zu Bild, PDF, Website

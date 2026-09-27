@@ -1,23 +1,14 @@
 import { destroyPDFCompress, setupPDFCompress } from "./compress/index.ts";
-
+import { destroyPDFCreate, setupPDFCreate } from "./create/index.ts";
 import { destroyPDFDecrypt, setupPDFDecrypt } from "./decrypt/index.ts";
-
 import { destroyPDFDelete, setupPDFDelete } from "./delete/index.ts";
-
 import { destroyPDFEncrypt, setupPDFEncrypt } from "./encrypt/index.ts";
-
 import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
-
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
-
 import { destroyPDFOptimize, setupPDFOptimize } from "./optimize/index.ts";
-
 import { destroyPDFRotate, setupPDFRotate } from "./rotate/index.ts";
-
 import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
-
 import { destroyPDFSplit, setupPDFSplit } from "./split/index.ts";
-
 import { destroyPDFWeb, setupPDFWeb } from "./web/index.ts";
 
 type PDFTool = string;
@@ -62,9 +53,7 @@ function setupToolSelection(
       }
 
       grid.hidden = true;
-
       workspace.hidden = false;
-
       workspace.replaceChildren();
 
       const loading = document.createElement("div");
@@ -133,6 +122,7 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
     ["decrypt", setupPDFDecrypt],
     ["optimize", setupPDFOptimize],
     ["web", setupPDFWeb],
+    ["create", setupPDFCreate],
   ];
 
   for (const [tool, initialize] of initializers) {
@@ -209,6 +199,10 @@ async function closePDFWorkspace(
     case "web":
       destroyPDFWeb();
       break;
+
+    case "create":
+      destroyPDFCreate();
+      break;
   }
 
   activeTool = null;
@@ -222,7 +216,6 @@ async function closePDFWorkspace(
   workspace.replaceChildren();
 
   workspace.hidden = true;
-
   grid.hidden = false;
 
   panel.scrollIntoView({

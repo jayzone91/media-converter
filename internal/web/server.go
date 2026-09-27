@@ -201,6 +201,11 @@ func (s *Server) routes() {
 		s.handlePDFWeb,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/create",
+		s.handlePDFCreate,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(
