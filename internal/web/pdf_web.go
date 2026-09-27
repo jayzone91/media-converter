@@ -63,10 +63,12 @@ func (s *Server) handlePDFWeb(
 	}
 	defer s.releaseConversionSlot()
 
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-web-pdf-*",
-	)
+	tempDir, err :=
+		os.MkdirTemp(
+			"",
+			"media-converter-web-pdf-*",
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -154,9 +156,11 @@ func (s *Server) handlePDFWeb(
 		return
 	}
 
-	file, err := os.Open(
-		outputPath,
-	)
+	file, err :=
+		os.Open(
+			outputPath,
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -313,6 +317,26 @@ func readPDFWebRequest(
 			false
 	}
 
+	if err :=
+		validatePDFWebTarget(
+			r.Context(),
+			parsedURL,
+		); err != nil {
+		http.Error(
+			w,
+			pdfWebTargetError(
+				r,
+				parsedURL,
+			),
+			http.StatusBadRequest,
+		)
+
+		return request,
+			nil,
+			converter.WebPDFOptions{},
+			false
+	}
+
 	request.PaperSize =
 		strings.ToLower(
 			strings.TrimSpace(
@@ -375,55 +399,4 @@ func readPDFWebRequest(
 		parsedURL,
 		options,
 		true
-}
-
-func validatePDFWebURL(
-	rawURL string,
-) (*url.URL, error) {
-	if rawURL == "" {
-		return nil,
-			fmt.Errorf(
-				"URL is empty",
-			)
-	}
-
-	parsedURL, err :=
-		url.Parse(
-			rawURL,
-		)
-
-	if err != nil {
-		return nil,
-			err
-	}
-
-	scheme :=
-		strings.ToLower(
-			parsedURL.Scheme,
-		)
-
-	if scheme != "http" &&
-		scheme != "https" {
-		return nil,
-			fmt.Errorf(
-				"unsupported URL scheme",
-			)
-	}
-
-	if parsedURL.Host == "" {
-		return nil,
-			fmt.Errorf(
-				"URL has no host",
-			)
-	}
-
-	if parsedURL.User != nil {
-		return nil,
-			fmt.Errorf(
-				"URL credentials are not allowed",
-			)
-	}
-
-	return parsedURL,
-		nil
 }
