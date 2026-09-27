@@ -1,4 +1,9 @@
-import { downloadBlob, getDownloadFilename } from "../shared/download.ts";
+import { downloadURL } from "../shared/download.ts";
+
+interface ConversionResponse {
+  download_url: string;
+  filename: string;
+}
 
 export function setupConverter(): void {
   const form = document.querySelector<HTMLFormElement>("#conversion-form");
@@ -90,14 +95,13 @@ async function handleConversionSubmit(
       throw new Error(message.trim() || "Konvertierung fehlgeschlagen.");
     }
 
-    const blob = await response.blob();
+    const result = (await response.json()) as ConversionResponse;
 
-    const filename = getDownloadFilename(
-      response.headers.get("Content-Disposition"),
-      "converted-file",
-    );
+    if (!result.download_url) {
+      throw new Error("Der Download konnte nicht vorbereitet werden.");
+    }
 
-    downloadBlob(blob, filename);
+    downloadURL(result.download_url);
 
     resetForm(form, fileInput, options);
   } catch (error: unknown) {

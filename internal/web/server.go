@@ -35,6 +35,7 @@ type Server struct {
 
 	uploads    *uploadStore
 	pdfUploads *pdfUploadStore
+	downloads  *downloadStore
 
 	conversionSlots chan struct{}
 
@@ -71,6 +72,7 @@ func NewServer(
 
 		uploads:    newUploadStore(),
 		pdfUploads: newPDFUploadStore(),
+		downloads:  newDownloadStore(),
 
 		conversionSlots: make(
 			chan struct{},
@@ -99,6 +101,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc(
 		"POST /convert",
 		s.handleConvert,
+	)
+
+	s.mux.HandleFunc(
+		"GET /downloads/{id}",
+		s.handleDownload,
 	)
 
 	s.mux.HandleFunc(
@@ -374,6 +381,7 @@ func (s *Server) closeStores() {
 
 	s.uploads.Close()
 	s.pdfUploads.Close()
+	s.downloads.Close()
 
 	s.logger.Debug(
 		"upload stores closed",

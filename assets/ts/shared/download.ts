@@ -40,3 +40,14 @@ export function downloadBlob(blob: Blob, filename: string): void {
     URL.revokeObjectURL(url);
   }, 1000);
 }
+
+export function downloadURL(url: string): void {
+  const link = document.createElement("a");
+
+  link.href = url;
+
+  document.body.appendChild(link);
+
+  link.click();
+  link.remove();
+}

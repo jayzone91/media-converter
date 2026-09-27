@@ -2,12 +2,18 @@ package web
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 )
+
+type conversionDownloadResponse struct {
+	DownloadURL string `json:"download_url"`
+
+	Filename string `json:"filename"`
+}
 
 func (s *Server) convertSingleUpload(
 	w http.ResponseWriter,
@@ -23,14 +29,15 @@ func (s *Server) convertSingleUpload(
 		"output",
 	)
 
-	outputPath, outputName, err := s.convertFile(
-		ctx,
-		upload.Format,
-		target,
-		file.Path,
-		outputDir,
-		file.Filename,
-	)
+	outputPath, outputName, err :=
+		s.convertFile(
+			ctx,
+			upload.Format,
+			target,
+			file.Path,
+			outputDir,
+			file.Filename,
+		)
 
 	if !s.handleConversionError(
 		w,
@@ -44,7 +51,7 @@ func (s *Server) convertSingleUpload(
 		return false
 	}
 
-	return s.serveConvertedFile(
+	return s.prepareConvertedDownload(
 		w,
 		r,
 		outputPath,
@@ -75,14 +82,15 @@ func (s *Server) convertBatchUpload(
 			),
 		)
 
-		outputPath, outputName, err := s.convertFile(
-			ctx,
-			upload.Format,
-			target,
-			file.Path,
-			outputDir,
-			file.Filename,
-		)
+		outputPath, outputName, err :=
+			s.convertFile(
+				ctx,
+				upload.Format,
+				target,
+				file.Path,
+				outputDir,
+				file.Filename,
+			)
 
 		if !s.handleConversionError(
 			w,
@@ -140,7 +148,7 @@ func (s *Server) convertBatchUpload(
 		return false
 	}
 
-	return s.serveConvertedFile(
+	return s.prepareConvertedDownload(
 		w,
 		r,
 		archivePath,
@@ -225,66 +233,69 @@ func (s *Server) handleConversionError(
 	return true
 }
 
-func (s *Server) serveConvertedFile(
+func (s *Server) prepareConvertedDownload(
 	w http.ResponseWriter,
 	r *http.Request,
 	path string,
 	filename string,
 ) bool {
-	outputFile, err := os.Open(path)
+	download, err :=
+		s.downloads.Add(
+			path,
+			filename,
+		)
+
 	if err != nil {
 		s.logError(
 			r,
-			"converted file open failed",
+			"download preparation failed",
 			err,
-			"file",
+			"filename",
 			filename,
 		)
 
 		http.Error(
 			w,
-			"failed to open converted file",
+			"Download konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
 		)
 
 		return false
 	}
-	defer outputFile.Close()
 
-	stat, err := outputFile.Stat()
-	if err != nil {
-		s.logError(
-			r,
-			"converted file stat failed",
-			err,
-			"file",
-			filename,
-		)
+	response :=
+		conversionDownloadResponse{
+			DownloadURL: "/downloads/" +
+				download.ID,
 
-		http.Error(
-			w,
-			"failed to read converted file",
-			http.StatusInternalServerError,
-		)
-
-		return false
-	}
+			Filename: download.Filename,
+		}
 
 	w.Header().Set(
-		"Content-Disposition",
-		fmt.Sprintf(
-			`attachment; filename="%s"`,
-			filepath.Base(filename),
-		),
+		"Content-Type",
+		"application/json; charset=utf-8",
 	)
 
-	http.ServeContent(
-		w,
-		r,
-		filepath.Base(filename),
-		stat.ModTime(),
-		outputFile,
+	w.Header().Set(
+		"Cache-Control",
+		"no-store",
 	)
+
+	if err := json.NewEncoder(
+		w,
+	).Encode(
+		response,
+	); err != nil {
+		s.logError(
+			r,
+			"download response failed",
+			err,
+			"filename",
+			filename,
+		)
+
+		return false
+	}
 
 	return true
 }
