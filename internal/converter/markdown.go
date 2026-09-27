@@ -2,9 +2,12 @@ package converter
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -52,6 +55,7 @@ var markdownHTMLTemplate = template.Must(
 	h5,
 	h6 {
 		line-height: 1.25;
+		page-break-after: avoid;
 	}
 
 	h1 {
@@ -84,6 +88,7 @@ var markdownHTMLTemplate = template.Must(
 		padding: 0.25em 0 0.25em 1em;
 		border-left: 3px solid #d1d5db;
 		color: #4b5563;
+		page-break-inside: avoid;
 	}
 
 	code {
@@ -99,6 +104,7 @@ var markdownHTMLTemplate = template.Must(
 		background: #f3f4f6;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+		page-break-inside: avoid;
 	}
 
 	pre code {
@@ -124,6 +130,14 @@ var markdownHTMLTemplate = template.Must(
 		background: #f3f4f6;
 	}
 
+	thead {
+		display: table-header-group;
+	}
+
+	tr {
+		page-break-inside: avoid;
+	}
+
 	a {
 		color: #2563eb;
 	}
@@ -132,6 +146,16 @@ var markdownHTMLTemplate = template.Must(
 		margin: 2em 0;
 		border: 0;
 		border-top: 1px solid #d1d5db;
+	}
+
+	@media print {
+		body {
+			max-width: none;
+			margin: 0;
+			padding: 0;
+			-webkit-print-color-adjust: exact;
+			print-color-adjust: exact;
+		}
 	}
 </style>
 </head>
@@ -147,9 +171,80 @@ type markdownHTMLDocument struct {
 }
 
 func MarkdownToHTML(inputPath string, outputPath string) error {
+	content, err := renderMarkdownDocument(inputPath)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(
+		outputPath,
+		content,
+		0o600,
+	); err != nil {
+		return fmt.Errorf(
+			"write markdown HTML: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
+func MarkdownToPDF(
+	ctx context.Context,
+	webPDF *WebPDF,
+	inputPath string,
+	outputPath string,
+) error {
+	htmlPath := filepath.Join(
+		filepath.Dir(outputPath),
+		"markdown-render.html",
+	)
+
+	if err := MarkdownToHTML(
+		inputPath,
+		htmlPath,
+	); err != nil {
+		return err
+	}
+
+	defer os.Remove(htmlPath)
+
+	fileURL, err := localFileURL(htmlPath)
+	if err != nil {
+		return err
+	}
+
+	if err := webPDF.Render(
+		ctx,
+		fileURL,
+		outputPath,
+		WebPDFOptions{
+			PaperSize:       "a4",
+			RenderMode:      "desktop",
+			Landscape:       false,
+			PrintBackground: true,
+		},
+	); err != nil {
+		return fmt.Errorf(
+			"render markdown PDF: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
+func renderMarkdownDocument(
+	inputPath string,
+) ([]byte, error) {
 	source, err := os.ReadFile(inputPath)
 	if err != nil {
-		return fmt.Errorf("read markdown: %w", err)
+		return nil,
+			fmt.Errorf(
+				"read markdown: %w",
+				err,
+			)
 	}
 
 	parsed := markdownRenderer.
@@ -158,8 +253,10 @@ func MarkdownToHTML(inputPath string, outputPath string) error {
 			text.NewReader(source),
 		)
 
-	if err := validateMarkdownAST(parsed); err != nil {
-		return err
+	if err := validateMarkdownAST(
+		parsed,
+	); err != nil {
+		return nil, err
 	}
 
 	var rendered bytes.Buffer
@@ -171,7 +268,11 @@ func MarkdownToHTML(inputPath string, outputPath string) error {
 			source,
 			parsed,
 		); err != nil {
-		return fmt.Errorf("render markdown: %w", err)
+		return nil,
+			fmt.Errorf(
+				"render markdown: %w",
+				err,
+			)
 	}
 
 	document := markdownHTMLDocument{
@@ -190,24 +291,14 @@ func MarkdownToHTML(inputPath string, outputPath string) error {
 		&output,
 		document,
 	); err != nil {
-		return fmt.Errorf(
-			"render markdown HTML document: %w",
-			err,
-		)
+		return nil,
+			fmt.Errorf(
+				"render markdown HTML document: %w",
+				err,
+			)
 	}
 
-	if err := os.WriteFile(
-		outputPath,
-		output.Bytes(),
-		0o600,
-	); err != nil {
-		return fmt.Errorf(
-			"write markdown HTML: %w",
-			err,
-		)
-	}
-
-	return nil
+	return output.Bytes(), nil
 }
 
 func validateMarkdownAST(document ast.Node) error {
@@ -258,4 +349,33 @@ func markdownTitle(
 	}
 
 	return "Markdown-Dokument"
+}
+
+func localFileURL(
+	path string,
+) (string, error) {
+	absolutePath, err := filepath.Abs(path)
+	if err != nil {
+		return "",
+			fmt.Errorf(
+				"resolve HTML path: %w",
+				err,
+			)
+	}
+
+	filePath := filepath.ToSlash(
+		absolutePath,
+	)
+
+	if !strings.HasPrefix(
+		filePath,
+		"/",
+	) {
+		filePath = "/" + filePath
+	}
+
+	return (&url.URL{
+		Scheme: "file",
+		Path:   filePath,
+	}).String(), nil
 }

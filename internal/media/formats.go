@@ -264,7 +264,7 @@ var Formats = map[string]Format{
 		ID:         "markdown",
 		MIME:       "text/markdown",
 		Category:   CategoryMarkdown,
-		Targets:    []string{"html"},
+		Targets:    []string{"html", "pdf"},
 		Extensions: []string{".md", ".mdx", ".markdown"},
 	},
 }

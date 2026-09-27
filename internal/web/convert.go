@@ -258,6 +258,14 @@ func (s *Server) handleConvert(
 				outputPath,
 			)
 
+		case "pdf":
+			err = converter.MarkdownToPDF(
+				conversionCtx,
+				s.webPDF,
+				inputPath,
+				outputPath,
+			)
+
 		default:
 			http.Error(
 				w,
