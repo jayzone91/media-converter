@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jayzone91/media-converter/internal/converter"
 	"github.com/jayzone91/media-converter/internal/media"
 )
 
@@ -248,6 +249,23 @@ func (s *Server) handleConvert(
 			inputPath,
 			outputPath,
 		)
+
+	case media.CategoryMarkdown:
+		switch target {
+		case "html":
+			err = converter.MarkdownToHTML(
+				inputPath,
+				outputPath,
+			)
+
+		default:
+			http.Error(
+				w,
+				"unsupported Markdown conversion",
+				http.StatusBadRequest,
+			)
+			return
+		}
 
 	case media.CategoryPDF:
 		switch target {

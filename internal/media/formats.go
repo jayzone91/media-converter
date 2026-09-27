@@ -13,6 +13,7 @@ const (
 	CategoryAudio    Category = "audio"
 	CategoryVideo    Category = "video"
 	CategoryDocument Category = "document"
+	CategoryMarkdown Category = "markdown"
 	CategoryPDF      Category = "pdf"
 )
 
@@ -259,6 +260,13 @@ var Formats = map[string]Format{
 		Targets:    []string{"pdf", "docx", "odt"},
 		Extensions: []string{".txt"},
 	},
+	"markdown": {
+		ID:         "markdown",
+		MIME:       "text/markdown",
+		Category:   CategoryMarkdown,
+		Targets:    []string{"html"},
+		Extensions: []string{".md", ".mdx", ".markdown"},
+	},
 }
 
 func FindByMIME(contentType string) (Format, bool) {
@@ -269,6 +277,19 @@ func FindByMIME(contentType string) (Format, bool) {
 
 	for _, format := range Formats {
 		if format.MIME == mediaType {
+			return format, true
+		}
+	}
+
+	return Format{}, false
+}
+
+func FindMarkdownByExtension(path string) (Format, bool) {
+	extension := strings.ToLower(filepath.Ext(path))
+	format := Formats["markdown"]
+
+	for _, candidate := range format.Extensions {
+		if candidate == extension {
 			return format, true
 		}
 	}

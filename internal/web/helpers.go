@@ -101,6 +101,12 @@ func detectFormat(ctx context.Context, path string, ffprobe *media.FFProbe) (med
 	)
 	defer cancel()
 
+	if format, ok := media.FindMarkdownByExtension(
+		path,
+	); ok {
+		return format, nil
+	}
+
 	detection, err := media.Detect(path)
 	if err == nil {
 		if format, ok := media.FindByMIME(
