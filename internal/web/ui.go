@@ -28,6 +28,12 @@ func (s *Server) handleIndex(
 		r.Context(),
 		w,
 	); err != nil {
+		s.logError(
+			r,
+			"index render failed",
+			err,
+		)
+
 		http.Error(
 			w,
 			"failed to render page",
@@ -41,6 +47,13 @@ func (s *Server) handleDetect(
 	r *http.Request,
 ) {
 	if !parseMultipartForm(w, r) {
+		s.logWarn(
+			r,
+			"detect rejected",
+			"reason",
+			"invalid multipart form",
+		)
+
 		return
 	}
 
@@ -51,6 +64,17 @@ func (s *Server) handleDetect(
 	headers := r.MultipartForm.File["file"]
 
 	if len(headers) == 0 {
+		s.logWarn(
+			r,
+			"detect rejected",
+			"reason",
+			"no files",
+		)
+
+		w.WriteHeader(
+			http.StatusBadRequest,
+		)
+
 		renderDetectError(
 			w,
 			r,
@@ -61,6 +85,21 @@ func (s *Server) handleDetect(
 	}
 
 	if len(headers) > maxBatchFiles {
+		s.logWarn(
+			r,
+			"detect rejected",
+			"reason",
+			"too many files",
+			"files",
+			len(headers),
+			"limit",
+			maxBatchFiles,
+		)
+
+		w.WriteHeader(
+			http.StatusBadRequest,
+		)
+
 		renderDetectError(
 			w,
 			r,
@@ -78,6 +117,16 @@ func (s *Server) handleDetect(
 		"media-converter-upload-*",
 	)
 	if err != nil {
+		s.logError(
+			r,
+			"detect temp directory failed",
+			err,
+		)
+
+		w.WriteHeader(
+			http.StatusInternalServerError,
+		)
+
 		renderDetectError(
 			w,
 			r,
@@ -111,6 +160,17 @@ func (s *Server) handleDetect(
 
 	for index, header := range headers {
 		if !validateFileSize(header) {
+			s.logWarn(
+				r,
+				"detect rejected",
+				"reason",
+				"file too large",
+				"file",
+				header.Filename,
+				"size",
+				header.Size,
+			)
+
 			w.WriteHeader(
 				http.StatusRequestEntityTooLarge,
 			)
@@ -126,6 +186,18 @@ func (s *Server) handleDetect(
 
 		file, err := header.Open()
 		if err != nil {
+			s.logError(
+				r,
+				"detect file open failed",
+				err,
+				"file",
+				header.Filename,
+			)
+
+			w.WriteHeader(
+				http.StatusInternalServerError,
+			)
+
 			renderDetectError(
 				w,
 				r,
@@ -147,7 +219,19 @@ func (s *Server) handleDetect(
 			fileDir,
 			0o700,
 		); err != nil {
-			file.Close()
+			_ = file.Close()
+
+			s.logError(
+				r,
+				"detect file directory failed",
+				err,
+				"file",
+				header.Filename,
+			)
+
+			w.WriteHeader(
+				http.StatusInternalServerError,
+			)
 
 			renderDetectError(
 				w,
@@ -166,7 +250,41 @@ func (s *Server) handleDetect(
 
 		closeErr := file.Close()
 
-		if saveErr != nil || closeErr != nil {
+		if saveErr != nil {
+			s.logError(
+				r,
+				"detect upload save failed",
+				saveErr,
+				"file",
+				header.Filename,
+			)
+
+			w.WriteHeader(
+				http.StatusInternalServerError,
+			)
+
+			renderDetectError(
+				w,
+				r,
+				"Datei konnte nicht gespeichert werden.",
+			)
+
+			return
+		}
+
+		if closeErr != nil {
+			s.logError(
+				r,
+				"detect upload close failed",
+				closeErr,
+				"file",
+				header.Filename,
+			)
+
+			w.WriteHeader(
+				http.StatusInternalServerError,
+			)
+
 			renderDetectError(
 				w,
 				r,
@@ -182,6 +300,19 @@ func (s *Server) handleDetect(
 			s.ffprobe,
 		)
 		if err != nil {
+			s.logWarn(
+				r,
+				"detect unsupported",
+				"file",
+				header.Filename,
+				"error",
+				err,
+			)
+
+			w.WriteHeader(
+				http.StatusUnsupportedMediaType,
+			)
+
 			renderDetectError(
 				w,
 				r,
@@ -197,6 +328,21 @@ func (s *Server) handleDetect(
 		if index == 0 {
 			detectedFormat = format
 		} else if format.ID != detectedFormat.ID {
+			s.logWarn(
+				r,
+				"detect mixed formats",
+				"expected",
+				detectedFormat.ID,
+				"actual",
+				format.ID,
+				"file",
+				header.Filename,
+			)
+
+			w.WriteHeader(
+				http.StatusBadRequest,
+			)
+
 			renderDetectError(
 				w,
 				r,
@@ -226,6 +372,20 @@ func (s *Server) handleDetect(
 		detectedFormat,
 	)
 	if err != nil {
+		s.logError(
+			r,
+			"detect upload store failed",
+			err,
+			"files",
+			len(files),
+			"format",
+			detectedFormat.ID,
+		)
+
+		w.WriteHeader(
+			http.StatusInternalServerError,
+		)
+
 		renderDetectError(
 			w,
 			r,
@@ -258,12 +418,32 @@ func (s *Server) handleDetect(
 			upload.ID,
 		)
 
+		s.logError(
+			r,
+			"detect result render failed",
+			err,
+			"format",
+			detectedFormat.ID,
+			"files",
+			len(files),
+		)
+
 		http.Error(
 			w,
 			"failed to render detection result",
 			http.StatusInternalServerError,
 		)
+
+		return
 	}
+
+	s.logInfo(
+		"detect",
+		"format",
+		detectedFormat.ID,
+		"files",
+		len(files),
+	)
 }
 
 func renderDetectError(

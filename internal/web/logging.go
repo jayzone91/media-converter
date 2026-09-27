@@ -5,6 +5,16 @@ import (
 	"net/http"
 )
 
+func (s *Server) logInfo(
+	message string,
+	attributes ...any,
+) {
+	s.logger.Info(
+		message,
+		attributes...,
+	)
+}
+
 func (s *Server) logError(
 	r *http.Request,
 	message string,
