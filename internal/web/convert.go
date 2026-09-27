@@ -9,158 +9,78 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-
-	"github.com/jayzone91/media-converter/internal/converter"
-	"github.com/jayzone91/media-converter/internal/media"
 )
 
 func (s *Server) handleConvert(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	var (
-		inputPath string
-		baseName  string
-		tempDir   string
-		format    media.Format
-		err       error
-	)
-
 	contentType := r.Header.Get(
 		"Content-Type",
 	)
 
-	if strings.HasPrefix(
+	if !strings.HasPrefix(
 		contentType,
 		"application/x-www-form-urlencoded",
 	) {
-		if err := r.ParseForm(); err != nil {
-			http.Error(
-				w,
-				"invalid form",
-				http.StatusBadRequest,
-			)
-			return
-		}
-
-		uploadID := r.FormValue(
-			"upload_id",
+		http.Error(
+			w,
+			"direct conversion upload is not supported",
+			http.StatusBadRequest,
 		)
 
-		if uploadID == "" {
-			http.Error(
-				w,
-				"missing upload id",
-				http.StatusBadRequest,
-			)
-			return
-		}
+		return
+	}
 
-		upload, ok := s.uploads.Take(
-			uploadID,
-		)
-		if !ok {
-			http.Error(
-				w,
-				"upload expired or not found",
-				http.StatusGone,
-			)
-			return
-		}
-
-		tempDir = upload.Directory
-		inputPath = upload.Path
-		format = upload.Format
-
-		baseName = strings.TrimSuffix(
-			filepath.Base(upload.Filename),
-			filepath.Ext(upload.Filename),
+	if err := r.ParseForm(); err != nil {
+		http.Error(
+			w,
+			"invalid form",
+			http.StatusBadRequest,
 		)
 
-		defer os.RemoveAll(tempDir)
-	} else {
-		if !parseMultipartForm(w, r) {
-			return
-		}
+		return
+	}
 
-		file, header, err := r.FormFile("file")
-		if err != nil {
-			http.Error(
-				w,
-				"missing file",
-				http.StatusBadRequest,
-			)
-			return
-		}
-		defer file.Close()
+	uploadID := r.FormValue(
+		"upload_id",
+	)
 
-		if !validateFileSize(header) {
-			http.Error(
-				w,
-				"upload too large",
-				http.StatusRequestEntityTooLarge,
-			)
-			return
-		}
-
-		tempDir, err = os.MkdirTemp(
-			"",
-			"media-converter-*",
+	if uploadID == "" {
+		http.Error(
+			w,
+			"missing upload id",
+			http.StatusBadRequest,
 		)
-		if err != nil {
-			http.Error(
-				w,
-				"failed to create temp dir",
-				http.StatusInternalServerError,
-			)
-			return
-		}
-		defer os.RemoveAll(tempDir)
 
-		inputPath, err = saveUpload(
-			file,
-			header.Filename,
-			tempDir,
+		return
+	}
+
+	upload, ok := s.uploads.Take(
+		uploadID,
+	)
+	if !ok {
+		http.Error(
+			w,
+			"upload expired or not found",
+			http.StatusGone,
 		)
-		if err != nil {
-			http.Error(
-				w,
-				"failed to save upload",
-				http.StatusInternalServerError,
-			)
-			return
-		}
 
-		format, err = detectFormat(
-			r.Context(),
-			inputPath,
-			s.ffprobe,
+		return
+	}
+
+	defer os.RemoveAll(
+		upload.Directory,
+	)
+
+	if len(upload.Files) == 0 {
+		http.Error(
+			w,
+			"upload contains no files",
+			http.StatusBadRequest,
 		)
-		if err != nil {
-			if errors.Is(
-				err,
-				context.DeadlineExceeded,
-			) {
-				http.Error(
-					w,
-					"media detection timed out",
-					http.StatusGatewayTimeout,
-				)
-				return
-			}
 
-			http.Error(
-				w,
-				"unsupported media type",
-				http.StatusUnsupportedMediaType,
-			)
-			return
-		}
-
-		baseName = strings.TrimSuffix(
-			filepath.Base(header.Filename),
-			filepath.Ext(header.Filename),
-		)
+		return
 	}
 
 	target := strings.ToLower(
@@ -173,11 +93,12 @@ func (s *Server) handleConvert(
 			"missing target format",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
 	if !slices.Contains(
-		format.Targets,
+		upload.Format.Targets,
 		target,
 	) {
 		http.Error(
@@ -185,6 +106,7 @@ func (s *Server) handleConvert(
 			"unsupported conversion",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -206,127 +128,159 @@ func (s *Server) handleConvert(
 	}
 	defer s.releaseConversionSlot()
 
-	outputPath := filepath.Join(
-		tempDir,
-		baseName+"."+target,
-	)
-
 	conversionCtx, cancel := context.WithTimeout(
 		r.Context(),
 		conversionTimeout,
 	)
 	defer cancel()
 
-	switch format.Category {
-	case media.CategoryImage:
-		switch {
-		case format.ID == "gif" &&
-			(target == "mp4" || target == "webm"):
-			err = s.ffmpeg.Convert(
-				conversionCtx,
-				inputPath,
-				outputPath,
-			)
-
-		default:
-			err = s.imageMagick.Convert(
-				conversionCtx,
-				inputPath,
-				outputPath,
-			)
-		}
-
-	case media.CategoryAudio, media.CategoryVideo:
-		err = s.ffmpeg.Convert(
-			conversionCtx,
-			inputPath,
-			outputPath,
-		)
-
-	case media.CategoryDocument:
-		err = s.libreOffice.Convert(
-			conversionCtx,
-			inputPath,
-			outputPath,
-		)
-
-	case media.CategoryMarkdown:
-		switch target {
-		case "html":
-			err = converter.MarkdownToHTML(
-				inputPath,
-				outputPath,
-			)
-
-		case "pdf":
-			err = converter.MarkdownToPDF(
-				conversionCtx,
-				s.webPDF,
-				inputPath,
-				outputPath,
-			)
-
-		case "png", "jpeg", "webp":
-			err = converter.MarkdownToImage(
-				conversionCtx,
-				s.webPDF,
-				s.imageMagick,
-				inputPath,
-				outputPath,
-				target,
-			)
-
-		default:
-			http.Error(
-				w,
-				"unsupported Markdown conversion",
-				http.StatusBadRequest,
-			)
-			return
-		}
-
-	case media.CategoryPDF:
-		switch target {
-		case "docx":
-			err = s.pdf.ConvertToDOCX(
-				conversionCtx,
-				inputPath,
-				outputPath,
-			)
-
-		case "png", "jpeg":
-			outputPath = filepath.Join(
-				tempDir,
-				baseName+"-"+target+".zip",
-			)
-
-			err = s.pdf.ConvertToImages(
-				conversionCtx,
-				inputPath,
-				outputPath,
-				target,
-			)
-
-		default:
-			http.Error(
-				w,
-				"unsupported PDF conversion",
-				http.StatusBadRequest,
-			)
-			return
-		}
-
-	default:
-		http.Error(
+	if len(upload.Files) == 1 {
+		s.convertSingleUpload(
 			w,
-			"converter not implemented for this media type",
-			http.StatusNotImplemented,
+			r,
+			conversionCtx,
+			upload,
+			target,
 		)
+
 		return
 	}
 
+	s.convertBatchUpload(
+		w,
+		r,
+		conversionCtx,
+		upload,
+		target,
+	)
+}
+
+func (s *Server) convertSingleUpload(
+	w http.ResponseWriter,
+	r *http.Request,
+	ctx context.Context,
+	upload storedUpload,
+	target string,
+) {
+	file := upload.Files[0]
+
+	outputDir := filepath.Join(
+		upload.Directory,
+		"output",
+	)
+
+	outputPath, outputName, err := s.convertFile(
+		ctx,
+		upload.Format,
+		target,
+		file.Path,
+		outputDir,
+		file.Filename,
+	)
+
+	if !handleConversionError(
+		w,
+		ctx,
+		err,
+	) {
+		return
+	}
+
+	serveConvertedFile(
+		w,
+		r,
+		outputPath,
+		outputName,
+	)
+}
+
+func (s *Server) convertBatchUpload(
+	w http.ResponseWriter,
+	r *http.Request,
+	ctx context.Context,
+	upload storedUpload,
+	target string,
+) {
+	archiveFiles := make(
+		[]convertedArchiveFile,
+		0,
+		len(upload.Files),
+	)
+
+	for index, file := range upload.Files {
+		outputDir := filepath.Join(
+			upload.Directory,
+			"output",
+			fmt.Sprintf(
+				"%03d",
+				index+1,
+			),
+		)
+
+		outputPath, outputName, err := s.convertFile(
+			ctx,
+			upload.Format,
+			target,
+			file.Path,
+			outputDir,
+			file.Filename,
+		)
+
+		if !handleConversionError(
+			w,
+			ctx,
+			err,
+		) {
+			return
+		}
+
+		archiveFiles = append(
+			archiveFiles,
+			convertedArchiveFile{
+				Path: outputPath,
+				Name: outputName,
+			},
+		)
+	}
+
+	archiveName := fmt.Sprintf(
+		"converted-%s.zip",
+		target,
+	)
+
+	archivePath := filepath.Join(
+		upload.Directory,
+		archiveName,
+	)
+
+	if err := createConversionArchive(
+		archivePath,
+		archiveFiles,
+	); err != nil {
+		http.Error(
+			w,
+			err.Error(),
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+
+	serveConvertedFile(
+		w,
+		r,
+		archivePath,
+		archiveName,
+	)
+}
+
+func handleConversionError(
+	w http.ResponseWriter,
+	ctx context.Context,
+	err error,
+) bool {
 	if errors.Is(
-		conversionCtx.Err(),
+		ctx.Err(),
 		context.DeadlineExceeded,
 	) {
 		http.Error(
@@ -334,14 +288,15 @@ func (s *Server) handleConvert(
 			"conversion timed out",
 			http.StatusGatewayTimeout,
 		)
-		return
+
+		return false
 	}
 
 	if errors.Is(
-		conversionCtx.Err(),
+		ctx.Err(),
 		context.Canceled,
 	) {
-		return
+		return false
 	}
 
 	if err != nil {
@@ -350,16 +305,27 @@ func (s *Server) handleConvert(
 			err.Error(),
 			http.StatusInternalServerError,
 		)
-		return
+
+		return false
 	}
 
-	outputFile, err := os.Open(outputPath)
+	return true
+}
+
+func serveConvertedFile(
+	w http.ResponseWriter,
+	r *http.Request,
+	path string,
+	filename string,
+) {
+	outputFile, err := os.Open(path)
 	if err != nil {
 		http.Error(
 			w,
 			"failed to open converted file",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 	defer outputFile.Close()
@@ -371,6 +337,7 @@ func (s *Server) handleConvert(
 			"failed to read converted file",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -378,14 +345,14 @@ func (s *Server) handleConvert(
 		"Content-Disposition",
 		fmt.Sprintf(
 			`attachment; filename="%s"`,
-			filepath.Base(outputPath),
+			filepath.Base(filename),
 		),
 	)
 
 	http.ServeContent(
 		w,
 		r,
-		filepath.Base(outputPath),
+		filepath.Base(filename),
 		stat.ModTime(),
 		outputFile,
 	)

@@ -16,6 +16,7 @@ import (
 const (
 	maxFileSize          int64 = 512 << 20
 	maxRequestSize             = maxFileSize + (1 << 20)
+	maxBatchFiles              = 20
 	multipartMemoryLimit       = 32 << 20
 	detectionTimeout           = 30 * time.Second
 	conversionTimeout          = 30 * time.Minute

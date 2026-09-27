@@ -1,6 +1,7 @@
 package view
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jayzone91/media-converter/internal/media"
@@ -8,7 +9,7 @@ import (
 
 templ DetectResult(
 	uploadID string,
-	filename string,
+	filenames []string,
 	format media.Format,
 ) {
 	<input
@@ -19,10 +20,18 @@ templ DetectResult(
 	<div class="detected-file">
 		<div>
 			<span class="label">
-				Datei
+				if len(filenames) == 1 {
+					Datei
+				} else {
+					Dateien
+				}
 			</span>
 			<strong class="filename">
-				{ filename }
+				if len(filenames) == 1 {
+					{ filenames[0] }
+				} else {
+					{ fmt.Sprintf("%d Dateien ausgewählt", len(filenames)) }
+				}
 			</strong>
 		</div>
 		<span class="format-badge">
@@ -60,7 +69,11 @@ templ DetectResult(
 		class="convert-button"
 		type="submit"
 	>
-		Konvertieren
+		if len(filenames) == 1 {
+			Konvertieren
+		} else {
+			{ fmt.Sprintf("%d Dateien konvertieren", len(filenames)) }
+		}
 	</button>
 }
 

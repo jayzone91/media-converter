@@ -30,19 +30,21 @@ templ ConverterPanel() {
 						↑
 					</span>
 					<span class="drop-title">
-						Datei auswählen
+						Dateien auswählen
 					</span>
 					<span class="drop-description">
 						oder hier ablegen
 					</span>
 					<span class="drop-limit">
-						Maximal 512 MiB
+						Bis zu 20 Dateien gleichen Typs,
+						insgesamt maximal 512 MiB
 					</span>
 					<input
 						id="file"
 						class="file-input"
 						type="file"
 						name="file"
+						multiple
 						required
 						hx-post="/detect"
 						hx-trigger="change"
@@ -58,7 +60,7 @@ templ ConverterPanel() {
 					class="indicator htmx-indicator"
 				>
 					<span class="small-spinner"></span>
-					Datei wird analysiert …
+					Dateien werden analysiert …
 				</div>
 				<section
 					id="conversion-options"
@@ -66,8 +68,8 @@ templ ConverterPanel() {
 					aria-live="polite"
 				>
 					<div class="empty-state">
-						Wähle eine Datei aus, um die verfügbaren
-						Zielformate anzuzeigen.
+						Wähle eine oder mehrere Dateien gleichen Typs aus,
+						um die verfügbaren Zielformate anzuzeigen.
 					</div>
 				</section>
 				<div

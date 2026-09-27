@@ -153,17 +153,11 @@ function setupDragAndDrop(
       return;
     }
 
-    if (files.length > 1) {
-      errorBox.textContent = "Bitte nur eine Datei gleichzeitig auswählen.";
+    if (files.length > 20) {
+      errorBox.textContent = "Maximal 20 Dateien gleichzeitig.";
 
       errorBox.hidden = false;
 
-      return;
-    }
-
-    const file = files.item(0);
-
-    if (!file) {
       return;
     }
 
@@ -171,7 +165,9 @@ function setupDragAndDrop(
 
     const transfer = new DataTransfer();
 
-    transfer.items.add(file);
+    for (const file of files) {
+      transfer.items.add(file);
+    }
 
     fileInput.files = transfer.files;
 
@@ -211,8 +207,8 @@ function resetForm(
 
   options.innerHTML = `
     <div class="empty-state">
-      Wähle eine Datei aus, um die verfügbaren
-      Zielformate anzuzeigen.
+      Wähle eine oder mehrere Dateien gleichen Typs aus,
+      um die verfügbaren Zielformate anzuzeigen.
     </div>
   `;
 }

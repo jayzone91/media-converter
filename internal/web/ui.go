@@ -2,10 +2,13 @@ package web
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 
+	"github.com/jayzone91/media-converter/internal/media"
 	"github.com/jayzone91/media-converter/internal/web/view"
 )
 
@@ -41,15 +44,13 @@ func (s *Server) handleDetect(
 		return
 	}
 
-	previousUploadID :=
-		r.FormValue(
-			"upload_id",
-		)
+	previousUploadID := r.FormValue(
+		"upload_id",
+	)
 
-	file, header, err :=
-		r.FormFile("file")
+	headers := r.MultipartForm.File["file"]
 
-	if err != nil {
+	if len(headers) == 0 {
 		renderDetectError(
 			w,
 			r,
@@ -59,28 +60,23 @@ func (s *Server) handleDetect(
 		return
 	}
 
-	defer file.Close()
-
-	if !validateFileSize(header) {
-		w.WriteHeader(
-			http.StatusRequestEntityTooLarge,
-		)
-
+	if len(headers) > maxBatchFiles {
 		renderDetectError(
 			w,
 			r,
-			"Die Datei ist größer als 512 MiB.",
+			fmt.Sprintf(
+				"Maximal %d Dateien gleichzeitig.",
+				maxBatchFiles,
+			),
 		)
 
 		return
 	}
 
-	tempDir, err :=
-		os.MkdirTemp(
-			"",
-			"media-converter-upload-*",
-		)
-
+	tempDir, err := os.MkdirTemp(
+		"",
+		"media-converter-upload-*",
+	)
 	if err != nil {
 		renderDetectError(
 			w,
@@ -91,61 +87,145 @@ func (s *Server) handleDetect(
 		return
 	}
 
-	inputPath, err :=
-		saveUpload(
+	cleanup := true
+
+	defer func() {
+		if cleanup {
+			_ = os.RemoveAll(tempDir)
+		}
+	}()
+
+	files := make(
+		[]storedUploadFile,
+		0,
+		len(headers),
+	)
+
+	filenames := make(
+		[]string,
+		0,
+		len(headers),
+	)
+
+	var detectedFormat media.Format
+
+	for index, header := range headers {
+		if !validateFileSize(header) {
+			w.WriteHeader(
+				http.StatusRequestEntityTooLarge,
+			)
+
+			renderDetectError(
+				w,
+				r,
+				"Eine Datei ist größer als 512 MiB.",
+			)
+
+			return
+		}
+
+		file, err := header.Open()
+		if err != nil {
+			renderDetectError(
+				w,
+				r,
+				"Datei konnte nicht geöffnet werden.",
+			)
+
+			return
+		}
+
+		fileDir := filepath.Join(
+			tempDir,
+			fmt.Sprintf(
+				"%03d",
+				index+1,
+			),
+		)
+
+		if err := os.MkdirAll(
+			fileDir,
+			0o700,
+		); err != nil {
+			file.Close()
+
+			renderDetectError(
+				w,
+				r,
+				"Temporäres Verzeichnis konnte nicht erstellt werden.",
+			)
+
+			return
+		}
+
+		inputPath, saveErr := saveUpload(
 			file,
 			header.Filename,
-			tempDir,
+			fileDir,
 		)
 
-	if err != nil {
-		_ = os.RemoveAll(
-			tempDir,
-		)
+		closeErr := file.Close()
 
-		renderDetectError(
-			w,
-			r,
-			"Datei konnte nicht gespeichert werden.",
-		)
+		if saveErr != nil || closeErr != nil {
+			renderDetectError(
+				w,
+				r,
+				"Datei konnte nicht gespeichert werden.",
+			)
 
-		return
-	}
+			return
+		}
 
-	format, err :=
-		detectFormat(
+		format, err := detectFormat(
 			r.Context(),
 			inputPath,
 			s.ffprobe,
 		)
+		if err != nil {
+			renderDetectError(
+				w,
+				r,
+				fmt.Sprintf(
+					"Dateiformat von %q wird nicht unterstützt.",
+					header.Filename,
+				),
+			)
 
-	if err != nil {
-		_ = os.RemoveAll(
-			tempDir,
+			return
+		}
+
+		if index == 0 {
+			detectedFormat = format
+		} else if format.ID != detectedFormat.ID {
+			renderDetectError(
+				w,
+				r,
+				"Alle Dateien müssen denselben Dateityp haben.",
+			)
+
+			return
+		}
+
+		files = append(
+			files,
+			storedUploadFile{
+				Path:     inputPath,
+				Filename: header.Filename,
+			},
 		)
 
-		renderDetectError(
-			w,
-			r,
-			"Dieses Dateiformat wird nicht unterstützt.",
+		filenames = append(
+			filenames,
+			header.Filename,
 		)
-
-		return
 	}
 
-	upload, err :=
-		s.uploads.Add(
-			tempDir,
-			inputPath,
-			header.Filename,
-			format,
-		)
-
+	upload, err := s.uploads.Add(
+		tempDir,
+		files,
+		detectedFormat,
+	)
 	if err != nil {
-		_ = os.RemoveAll(
-			tempDir,
-		)
-
 		renderDetectError(
 			w,
 			r,
@@ -154,6 +234,8 @@ func (s *Server) handleDetect(
 
 		return
 	}
+
+	cleanup = false
 
 	s.uploads.Delete(
 		previousUploadID,
@@ -166,8 +248,8 @@ func (s *Server) handleDetect(
 
 	if err := view.DetectResult(
 		upload.ID,
-		header.Filename,
-		format,
+		filenames,
+		detectedFormat,
 	).Render(
 		r.Context(),
 		w,
@@ -203,11 +285,10 @@ func renderDetectError(
 }
 
 func staticHandler() http.Handler {
-	staticFS, err :=
-		fs.Sub(
-			uiFiles,
-			"static",
-		)
+	staticFS, err := fs.Sub(
+		uiFiles,
+		"static",
+	)
 
 	if err != nil {
 		panic(err)

@@ -15,11 +15,15 @@ const (
 	uploadCleanupInterval = 5 * time.Minute
 )
 
+type storedUploadFile struct {
+	Path     string
+	Filename string
+}
+
 type storedUpload struct {
 	ID        string
 	Directory string
-	Path      string
-	Filename  string
+	Files     []storedUploadFile
 	Format    media.Format
 	CreatedAt time.Time
 }
@@ -46,8 +50,7 @@ func newUploadStore() *uploadStore {
 
 func (s *uploadStore) Add(
 	directory string,
-	path string,
-	filename string,
+	files []storedUploadFile,
 	format media.Format,
 ) (storedUpload, error) {
 	id, err := randomUploadID()
@@ -58,8 +61,7 @@ func (s *uploadStore) Add(
 	upload := storedUpload{
 		ID:        id,
 		Directory: directory,
-		Path:      path,
-		Filename:  filename,
+		Files:     files,
 		Format:    format,
 		CreatedAt: time.Now(),
 	}
