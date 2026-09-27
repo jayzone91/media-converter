@@ -8,7 +8,16 @@ import { destroyPDFRotate, setupPDFRotate } from "./rotate/index.ts";
 
 import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
-type PDFTool = "merge" | "sort" | "delete" | "extract" | "rotate" | string;
+import { destroyPDFSplit, setupPDFSplit } from "./split/index.ts";
+
+type PDFTool =
+  | "merge"
+  | "split"
+  | "sort"
+  | "delete"
+  | "extract"
+  | "rotate"
+  | string;
 
 let activeTool: PDFTool | null = null;
 
@@ -50,6 +59,7 @@ function setupToolSelection(
       }
 
       grid.hidden = true;
+
       workspace.hidden = false;
 
       workspace.replaceChildren();
@@ -114,6 +124,16 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
 
   if (merge) {
     setupPDFMerge(merge);
+
+    return true;
+  }
+
+  const split = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="split"]',
+  );
+
+  if (split) {
+    setupPDFSplit(split);
 
     return true;
   }
@@ -184,6 +204,11 @@ async function closePDFWorkspace(
 
       break;
 
+    case "split":
+      await destroyPDFSplit();
+
+      break;
+
     case "sort":
       await destroyPDFSort();
 
@@ -216,6 +241,7 @@ async function closePDFWorkspace(
   workspace.replaceChildren();
 
   workspace.hidden = true;
+
   grid.hidden = false;
 
   panel.scrollIntoView({

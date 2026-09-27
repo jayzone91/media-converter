@@ -33,6 +33,19 @@ func (s *Server) handlePDFWorkspace(
 			)
 		}
 
+	case "split":
+		if err := view.PDFSplitWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
+				w,
+				r,
+				"split",
+				err,
+			)
+		}
+
 	case "sort":
 		if err := view.PDFSortWorkspace().Render(
 			r.Context(),
@@ -86,7 +99,6 @@ func (s *Server) handlePDFWorkspace(
 		}
 
 	case
-		"split",
 		"compress",
 		"edit",
 		"encrypt",

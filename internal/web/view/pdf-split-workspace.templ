@@ -1,0 +1,168 @@
+package view
+
+templ PDFSplitWorkspace() {
+	<div data-pdf-workspace="split">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDF trennen
+				</h3>
+				<p>
+					Setze Trennpunkte direkt zwischen den Seiten.
+					Die daraus entstehenden PDFs werden gemeinsam als ZIP heruntergeladen.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-split-drop-zone"
+			for="pdf-split-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB · Max. 200 Teildokumente
+			</small>
+			<input
+				id="pdf-split-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-split-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-split-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-split-editor"
+			class="pdf-selection-editor"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong id="pdf-split-filename"></strong>
+					<span id="pdf-split-meta"></span>
+				</div>
+				<button
+					id="pdf-split-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-split-summary">
+				<div>
+					<strong id="pdf-split-document-count">
+						1 Dokument
+					</strong>
+					<span id="pdf-split-ranges">
+						Noch keine Trennpunkte gesetzt
+					</span>
+				</div>
+				<button
+					id="pdf-split-clear"
+					class="pdf-button-secondary"
+					type="button"
+					disabled
+				>
+					Alle Trennpunkte entfernen
+				</button>
+			</div>
+			<div
+				id="pdf-split-pages"
+				class="pdf-page-selector"
+				aria-label="PDF-Trennpunkte festlegen"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						getrennte-pdfs.zip
+					</span>
+				</div>
+				<button
+					id="pdf-split-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDF trennen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-split-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird getrennt …
+				</strong>
+				<span>
+					Die Teildokumente und das ZIP-Archiv werden erstellt.
+				</span>
+			</div>
+		</div>
+		@PDFSplitPageTemplate()
+	</div>
+}
+
+templ PDFSplitPageTemplate() {
+	<template id="pdf-split-page-template">
+		<article class="pdf-split-page">
+			<span class="pdf-split-page-number"></span>
+			<div class="pdf-split-page-preview">
+				<img
+					loading="lazy"
+					decoding="async"
+					alt=""
+				/>
+			</div>
+			<button
+				class="pdf-split-toggle"
+				type="button"
+				aria-pressed="false"
+			>
+				<span aria-hidden="true">
+					✂
+				</span>
+				<span class="pdf-split-toggle-label">
+					Hier trennen
+				</span>
+			</button>
+		</article>
+	</template>
+}

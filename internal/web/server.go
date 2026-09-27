@@ -150,6 +150,11 @@ func (s *Server) routes() {
 		s.handlePDFRotatePages,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/split",
+		s.handlePDFSplit,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(
@@ -190,10 +195,8 @@ func (s *Server) ListenAndServe(
 		Handler: s.mux,
 
 		ReadHeaderTimeout: readHeaderTimeout,
-
-		ReadTimeout: readTimeout,
-
-		IdleTimeout: idleTimeout,
+		ReadTimeout:       readTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
 	err := s.httpServer.ListenAndServe()
