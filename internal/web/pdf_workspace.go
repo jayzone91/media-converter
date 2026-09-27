@@ -10,10 +10,9 @@ func (s *Server) handlePDFWorkspace(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	tool :=
-		r.PathValue(
-			"tool",
-		)
+	tool := r.PathValue(
+		"tool",
+	)
 
 	w.Header().Set(
 		"Content-Type",
@@ -22,62 +21,54 @@ func (s *Server) handlePDFWorkspace(
 
 	switch tool {
 	case "merge":
-		if err :=
-			view.PDFMergeWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.logError(
-				r,
-				"failed to render PDF merge workspace",
-				err,
-			)
-
-			http.Error(
+		if err := view.PDFMergeWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
 				w,
-				"PDF-Werkzeug konnte nicht geladen werden.",
-				http.StatusInternalServerError,
+				r,
+				"merge",
+				err,
 			)
 		}
 
 	case "sort":
-		if err :=
-			view.PDFSortWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.logError(
-				r,
-				"failed to render PDF sort workspace",
-				err,
-			)
-
-			http.Error(
+		if err := view.PDFSortWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
 				w,
-				"PDF-Werkzeug konnte nicht geladen werden.",
-				http.StatusInternalServerError,
+				r,
+				"sort",
+				err,
 			)
 		}
 
 	case "delete":
-		if err :=
-			view.PDFDeleteWorkspace().
-				Render(
-					r.Context(),
-					w,
-				); err != nil {
-			s.logError(
+		if err := view.PDFDeleteWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
+				w,
 				r,
-				"failed to render PDF delete workspace",
+				"delete",
 				err,
 			)
+		}
 
-			http.Error(
+	case "extract":
+		if err := view.PDFExtractWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
 				w,
-				"PDF-Werkzeug konnte nicht geladen werden.",
-				http.StatusInternalServerError,
+				r,
+				"extract",
+				err,
 			)
 		}
 
@@ -88,33 +79,24 @@ func (s *Server) handlePDFWorkspace(
 		"encrypt",
 		"decrypt",
 		"rotate",
-		"extract",
 		"web",
 		"optimize",
 		"redact",
 		"create":
 
-		if err :=
-			view.PDFPlaceholderWorkspace(
-				pdfToolTitle(
-					tool,
-				),
-			).Render(
-				r.Context(),
-				w,
-			); err != nil {
-			s.logError(
-				r,
-				"failed to render PDF placeholder workspace",
-				err,
-				"tool",
+		if err := view.PDFPlaceholderWorkspace(
+			pdfToolTitle(
 				tool,
-			)
-
-			http.Error(
+			),
+		).Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
 				w,
-				"PDF-Werkzeug konnte nicht geladen werden.",
-				http.StatusInternalServerError,
+				r,
+				tool,
+				err,
 			)
 		}
 
@@ -124,6 +106,27 @@ func (s *Server) handlePDFWorkspace(
 			r,
 		)
 	}
+}
+
+func (s *Server) handlePDFWorkspaceRenderError(
+	w http.ResponseWriter,
+	r *http.Request,
+	tool string,
+	err error,
+) {
+	s.logError(
+		r,
+		"failed to render PDF workspace",
+		err,
+		"tool",
+		tool,
+	)
+
+	http.Error(
+		w,
+		"PDF-Werkzeug konnte nicht geladen werden.",
+		http.StatusInternalServerError,
+	)
 }
 
 func pdfToolTitle(

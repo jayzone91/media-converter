@@ -140,6 +140,11 @@ func (s *Server) routes() {
 		s.handlePDFDeletePages,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/extract-pages",
+		s.handlePDFExtractPages,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(
@@ -152,12 +157,10 @@ func (s *Server) routes() {
 func (s *Server) acquireConversionSlot(
 	ctx context.Context,
 ) error {
-	queueCtx, cancel :=
-		context.WithTimeout(
-			ctx,
-			conversionQueueTimeout,
-		)
-
+	queueCtx, cancel := context.WithTimeout(
+		ctx,
+		conversionQueueTimeout,
+	)
 	defer cancel()
 
 	select {
@@ -176,22 +179,19 @@ func (s *Server) releaseConversionSlot() {
 func (s *Server) ListenAndServe(
 	addr string,
 ) error {
-	s.httpServer =
-		&http.Server{
-			Addr: addr,
+	s.httpServer = &http.Server{
+		Addr: addr,
 
-			Handler: s.mux,
+		Handler: s.mux,
 
-			ReadHeaderTimeout: readHeaderTimeout,
+		ReadHeaderTimeout: readHeaderTimeout,
 
-			ReadTimeout: readTimeout,
+		ReadTimeout: readTimeout,
 
-			IdleTimeout: idleTimeout,
-		}
+		IdleTimeout: idleTimeout,
+	}
 
-	err :=
-		s.httpServer.
-			ListenAndServe()
+	err := s.httpServer.ListenAndServe()
 
 	if errors.Is(
 		err,
@@ -212,9 +212,9 @@ func (s *Server) Shutdown(
 		return nil
 	}
 
-	err :=
-		s.httpServer.
-			Shutdown(ctx)
+	err := s.httpServer.Shutdown(
+		ctx,
+	)
 
 	s.closeStores()
 

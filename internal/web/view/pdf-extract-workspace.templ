@@ -1,7 +1,7 @@
 package view
 
-templ PDFDeleteWorkspace() {
-	<div data-pdf-workspace="delete">
+templ PDFExtractWorkspace() {
+	<div data-pdf-workspace="extract">
 		@PDFWorkspaceBackButton()
 		<div class="pdf-workspace-header">
 			<div>
@@ -9,18 +9,18 @@ templ PDFDeleteWorkspace() {
 					PDF
 				</span>
 				<h3>
-					Seiten löschen
+					Seiten extrahieren
 				</h3>
 				<p>
-					Wähle die Seiten aus, die aus der PDF entfernt werden sollen.
-					Mehrere Seiten können einzeln oder mit Umschalt + Klick ausgewählt werden.
+					Wähle die Seiten aus, die in eine neue PDF übernommen werden sollen.
+					Die ursprüngliche Reihenfolge der ausgewählten Seiten bleibt erhalten.
 				</p>
 			</div>
 		</div>
 		<label
 			class="pdf-drop-zone"
-			id="pdf-delete-drop-zone"
-			for="pdf-delete-file"
+			id="pdf-extract-drop-zone"
+			for="pdf-extract-file"
 		>
 			<span class="pdf-drop-icon">
 				↑
@@ -35,19 +35,19 @@ templ PDFDeleteWorkspace() {
 				Max. 512 MiB
 			</small>
 			<input
-				id="pdf-delete-file"
+				id="pdf-extract-file"
 				type="file"
 				accept="application/pdf,.pdf"
 				hidden
 			/>
 		</label>
 		<div
-			id="pdf-delete-error"
+			id="pdf-extract-error"
 			class="pdf-message pdf-message-error"
 			hidden
 		></div>
 		<div
-			id="pdf-delete-upload-progress"
+			id="pdf-extract-upload-progress"
 			class="pdf-progress"
 			hidden
 		>
@@ -62,17 +62,17 @@ templ PDFDeleteWorkspace() {
 			</div>
 		</div>
 		<section
-			id="pdf-delete-editor"
+			id="pdf-extract-editor"
 			class="pdf-selection-editor"
 			hidden
 		>
 			<header class="pdf-selection-header">
 				<div>
-					<strong id="pdf-delete-filename"></strong>
-					<span id="pdf-delete-meta"></span>
+					<strong id="pdf-extract-filename"></strong>
+					<span id="pdf-extract-meta"></span>
 				</div>
 				<button
-					id="pdf-delete-reset-file"
+					id="pdf-extract-reset-file"
 					class="pdf-button-secondary"
 					type="button"
 				>
@@ -84,20 +84,20 @@ templ PDFDeleteWorkspace() {
 					<strong>
 						Seitenauswahl
 					</strong>
-					<span id="pdf-delete-selected-count">
+					<span id="pdf-extract-selected-count">
 						0 Seiten ausgewählt
 					</span>
 				</div>
 				<div class="pdf-selection-actions">
 					<button
-						id="pdf-delete-select-all"
+						id="pdf-extract-select-all"
 						class="pdf-button-secondary"
 						type="button"
 					>
 						Alle auswählen
 					</button>
 					<button
-						id="pdf-delete-clear-selection"
+						id="pdf-extract-clear-selection"
 						class="pdf-button-secondary"
 						type="button"
 						disabled
@@ -107,7 +107,7 @@ templ PDFDeleteWorkspace() {
 				</div>
 			</div>
 			<div
-				id="pdf-delete-pages"
+				id="pdf-extract-pages"
 				class="pdf-page-selector"
 				aria-label="PDF-Seiten auswählen"
 			></div>
@@ -117,21 +117,21 @@ templ PDFDeleteWorkspace() {
 						Ausgabe
 					</strong>
 					<span>
-						seiten-entfernt.pdf
+						extrahiert.pdf
 					</span>
 				</div>
 				<button
-					id="pdf-delete-submit"
+					id="pdf-extract-submit"
 					class="pdf-button-primary"
 					type="button"
 					disabled
 				>
-					Ausgewählte Seiten löschen
+					Ausgewählte Seiten extrahieren
 				</button>
 			</div>
 		</section>
 		<div
-			id="pdf-delete-progress"
+			id="pdf-extract-progress"
 			class="pdf-progress"
 			hidden
 		>
@@ -141,7 +141,7 @@ templ PDFDeleteWorkspace() {
 					PDF wird erstellt …
 				</strong>
 				<span>
-					Die ausgewählten Seiten werden entfernt.
+					Die ausgewählten Seiten werden übernommen.
 				</span>
 			</div>
 		</div>

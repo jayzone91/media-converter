@@ -1,10 +1,12 @@
 import { destroyPDFDelete, setupPDFDelete } from "./delete/index.ts";
 
+import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
+
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
 
 import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
-type PDFTool = "merge" | "sort" | "delete" | string;
+type PDFTool = "merge" | "sort" | "delete" | "extract" | string;
 
 let activeTool: PDFTool | null = null;
 
@@ -46,7 +48,6 @@ function setupToolSelection(
       }
 
       grid.hidden = true;
-
       workspace.hidden = false;
 
       workspace.replaceChildren();
@@ -80,33 +81,11 @@ function setupWorkspaceEvents(
       return;
     }
 
-    const merge = workspace.querySelector<HTMLElement>(
-      '[data-pdf-workspace="merge"]',
-    );
-
-    if (merge) {
-      setupPDFMerge(merge);
-
+    if (initializeWorkspace(workspace)) {
       return;
     }
 
-    const sort = workspace.querySelector<HTMLElement>(
-      '[data-pdf-workspace="sort"]',
-    );
-
-    if (sort) {
-      setupPDFSort(sort);
-
-      return;
-    }
-
-    const deleteWorkspace = workspace.querySelector<HTMLElement>(
-      '[data-pdf-workspace="delete"]',
-    );
-
-    if (deleteWorkspace) {
-      setupPDFDelete(deleteWorkspace);
-    }
+    console.error("PDF workspace could not be initialized.");
   });
 
   workspace.addEventListener("click", (event: MouseEvent) => {
@@ -124,6 +103,54 @@ function setupWorkspaceEvents(
 
     void closePDFWorkspace(panel, grid, workspace);
   });
+}
+
+function initializeWorkspace(workspace: HTMLElement): boolean {
+  const merge = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="merge"]',
+  );
+
+  if (merge) {
+    setupPDFMerge(merge);
+
+    return true;
+  }
+
+  const sort = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="sort"]',
+  );
+
+  if (sort) {
+    setupPDFSort(sort);
+
+    return true;
+  }
+
+  const deleteWorkspace = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="delete"]',
+  );
+
+  if (deleteWorkspace) {
+    setupPDFDelete(deleteWorkspace);
+
+    return true;
+  }
+
+  const extract = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="extract"]',
+  );
+
+  if (extract) {
+    setupPDFExtract(extract);
+
+    return true;
+  }
+
+  const placeholder = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="placeholder"]',
+  );
+
+  return placeholder !== null;
 }
 
 function isWorkspaceSwap(event: Event, workspace: HTMLElement): boolean {
@@ -154,6 +181,11 @@ async function closePDFWorkspace(
       await destroyPDFDelete();
 
       break;
+
+    case "extract":
+      await destroyPDFExtract();
+
+      break;
   }
 
   activeTool = null;
@@ -167,7 +199,6 @@ async function closePDFWorkspace(
   workspace.replaceChildren();
 
   workspace.hidden = true;
-
   grid.hidden = false;
 
   panel.scrollIntoView({
