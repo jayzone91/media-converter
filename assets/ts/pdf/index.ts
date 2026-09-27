@@ -1,4 +1,4 @@
-import { destroyPDFMerge, setupPDFMerge } from "./merge.ts";
+import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
 
 let activeTool: string | null = null;
 
