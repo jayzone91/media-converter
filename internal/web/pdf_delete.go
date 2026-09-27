@@ -29,31 +29,33 @@ func (s *Server) handlePDFDeletePages(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	r.Body =
-		http.MaxBytesReader(
-			w,
-			r.Body,
-			maxPDFDeleteRequestSize,
-		)
+	started := time.Now()
+
+	r.Body = http.MaxBytesReader(
+		w,
+		r.Body,
+		maxPDFDeleteRequestSize,
+	)
 
 	defer r.Body.Close()
 
 	var request pdfDeleteRequest
 
-	decoder :=
-		json.NewDecoder(
-			r.Body,
-		)
+	decoder := json.NewDecoder(
+		r.Body,
+	)
 
 	decoder.DisallowUnknownFields()
 
-	if err :=
-		decoder.Decode(
-			&request,
-		); err != nil {
-		s.logError(
+	if err := decoder.Decode(
+		&request,
+	); err != nil {
+		s.logWarn(
 			r,
-			"failed to decode PDF delete request",
+			"PDF delete rejected",
+			"reason",
+			"invalid request",
+			"error",
 			err,
 		)
 
@@ -67,6 +69,13 @@ func (s *Server) handlePDFDeletePages(
 	}
 
 	if request.UploadID == "" {
+		s.logWarn(
+			r,
+			"PDF delete rejected",
+			"reason",
+			"missing upload id",
+		)
+
 		http.Error(
 			w,
 			"Upload-ID fehlt.",
@@ -76,15 +85,16 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	upload, ok :=
-		s.pdfUploads.Get(
-			request.UploadID,
-		)
+	upload, ok := s.pdfUploads.Get(
+		request.UploadID,
+	)
 
 	if !ok {
 		s.logWarn(
 			r,
-			"PDF page deletion requested for unknown upload",
+			"PDF delete rejected",
+			"reason",
+			"unknown upload",
 			"upload_id",
 			request.UploadID,
 		)
@@ -98,26 +108,23 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	retainedPages, err :=
-		pagesAfterDeletion(
-			request.Pages,
-			upload.PageCount,
-		)
+	retainedPages, err := pagesAfterDeletion(
+		request.Pages,
+		upload.PageCount,
+	)
 
 	if err != nil {
 		s.logWarn(
 			r,
-			"invalid PDF page deletion request",
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"page_count",
-			upload.PageCount,
-			"delete_count",
-			len(request.Pages),
+			"PDF delete rejected",
 			"reason",
 			err.Error(),
+			"filename",
+			upload.Filename,
+			"pages",
+			upload.PageCount,
+			"selected",
+			len(request.Pages),
 		)
 
 		http.Error(
@@ -129,16 +136,13 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	if err :=
-		s.acquireConversionSlot(
-			r.Context(),
-		); err != nil {
+	if err := s.acquireConversionSlot(
+		r.Context(),
+	); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF delete conversion slot",
+			"PDF delete queue failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -154,19 +158,16 @@ func (s *Server) handlePDFDeletePages(
 
 	defer s.releaseConversionSlot()
 
-	tempDir, err :=
-		os.MkdirTemp(
-			"",
-			"media-converter-pdf-delete-*",
-		)
+	tempDir, err := os.MkdirTemp(
+		"",
+		"media-converter-pdf-delete-*",
+	)
 
 	if err != nil {
 		s.logError(
 			r,
-			"failed to create PDF delete temporary directory",
+			"PDF delete temp directory failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -181,13 +182,12 @@ func (s *Server) handlePDFDeletePages(
 	}
 
 	defer func() {
-		if err :=
-			os.RemoveAll(
-				tempDir,
-			); err != nil {
+		if err := os.RemoveAll(
+			tempDir,
+		); err != nil {
 			s.logError(
 				r,
-				"failed to remove PDF delete temporary directory",
+				"PDF delete cleanup failed",
 				err,
 				"directory",
 				tempDir,
@@ -195,47 +195,40 @@ func (s *Server) handlePDFDeletePages(
 		}
 	}()
 
-	outputPath :=
-		filepath.Join(
-			tempDir,
-			"seiten-entfernt.pdf",
-		)
+	outputPath := filepath.Join(
+		tempDir,
+		"seiten-entfernt.pdf",
+	)
 
-	ctx, cancel :=
-		context.WithTimeout(
-			r.Context(),
-			pdfDeleteTimeout,
-		)
+	ctx, cancel := context.WithTimeout(
+		r.Context(),
+		pdfDeleteTimeout,
+	)
 
 	defer cancel()
 
-	if err :=
-		s.qpdf.Reorder(
-			ctx,
-			upload.Path,
-			retainedPages,
-			outputPath,
-		); err != nil {
-		s.logError(
-			r,
-			"PDF page deletion failed",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"size_bytes",
-			upload.Size,
-			"page_count",
-			upload.PageCount,
-			"deleted_pages",
-			len(request.Pages),
-		)
-
+	if err := s.qpdf.Reorder(
+		ctx,
+		upload.Path,
+		retainedPages,
+		outputPath,
+	); err != nil {
 		if errors.Is(
 			ctx.Err(),
 			context.DeadlineExceeded,
 		) {
+			s.logError(
+				r,
+				"PDF delete timed out",
+				ctx.Err(),
+				"filename",
+				upload.Filename,
+				"pages",
+				upload.PageCount,
+				"selected",
+				len(request.Pages),
+			)
+
 			http.Error(
 				w,
 				"Das Erstellen der PDF hat zu lange gedauert.",
@@ -244,6 +237,20 @@ func (s *Server) handlePDFDeletePages(
 
 			return
 		}
+
+		s.logError(
+			r,
+			"PDF delete failed",
+			err,
+			"filename",
+			upload.Filename,
+			"pages",
+			upload.PageCount,
+			"selected",
+			len(request.Pages),
+			"size",
+			upload.Size,
+		)
 
 		http.Error(
 			w,
@@ -254,18 +261,15 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	file, err :=
-		os.Open(
-			outputPath,
-		)
+	file, err := os.Open(
+		outputPath,
+	)
 
 	if err != nil {
 		s.logError(
 			r,
-			"failed to open PDF after page deletion",
+			"PDF delete output open failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -281,16 +285,13 @@ func (s *Server) handlePDFDeletePages(
 
 	defer file.Close()
 
-	info, err :=
-		file.Stat()
+	info, err := file.Stat()
 
 	if err != nil {
 		s.logError(
 			r,
-			"failed to inspect PDF after page deletion",
+			"PDF delete output stat failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
@@ -304,13 +305,12 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": "seiten-entfernt.pdf",
-			},
-		)
+	disposition := mime.FormatMediaType(
+		"attachment",
+		map[string]string{
+			"filename": "seiten-entfernt.pdf",
+		},
+	)
 
 	w.Header().Set(
 		"Content-Type",
@@ -339,43 +339,36 @@ func (s *Server) handlePDFDeletePages(
 		upload.ID,
 	)
 
-	s.logger.Info(
-		"PDF pages deleted",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
-		"original_page_count",
-		upload.PageCount,
-		"deleted_page_count",
-		len(request.Pages),
-		"result_page_count",
-		len(retainedPages),
-		"input_size_bytes",
-		upload.Size,
-		"output_size_bytes",
-		info.Size(),
-	)
-
-	if _, err :=
-		io.Copy(
-			w,
-			file,
-		); err != nil {
+	if _, err := io.Copy(
+		w,
+		file,
+	); err != nil {
 		s.logError(
 			r,
-			"failed to send PDF after page deletion",
+			"PDF delete response failed",
 			err,
 			"filename",
 			upload.Filename,
-			"output_size_bytes",
+			"output_size",
 			info.Size(),
 		)
+
+		return
 	}
+
+	s.logInfo(
+		"PDF delete",
+		"deleted",
+		len(request.Pages),
+		"remaining",
+		len(retainedPages),
+		"input",
+		upload.Size,
+		"output",
+		info.Size(),
+		"duration",
+		time.Since(started),
+	)
 }
 
 func pagesAfterDeletion(
@@ -394,18 +387,16 @@ func pagesAfterDeletion(
 		)
 	}
 
-	if len(deletedPages) >=
-		pageCount {
+	if len(deletedPages) >= pageCount {
 		return nil, fmt.Errorf(
 			"all pages selected",
 		)
 	}
 
-	deleted :=
-		make(
-			[]bool,
-			pageCount+1,
-		)
+	deleted := make(
+		[]bool,
+		pageCount+1,
+	)
 
 	for _, page := range deletedPages {
 		if page < 1 ||
@@ -424,28 +415,24 @@ func pagesAfterDeletion(
 			)
 		}
 
-		deleted[page] =
-			true
+		deleted[page] = true
 	}
 
-	retained :=
-		make(
-			[]int,
-			0,
-			pageCount-
-				len(deletedPages),
-		)
+	retained := make(
+		[]int,
+		0,
+		pageCount-len(deletedPages),
+	)
 
 	for page := 1; page <= pageCount; page++ {
 		if deleted[page] {
 			continue
 		}
 
-		retained =
-			append(
-				retained,
-				page,
-			)
+		retained = append(
+			retained,
+			page,
+		)
 	}
 
 	return retained, nil
