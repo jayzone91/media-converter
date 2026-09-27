@@ -72,13 +72,25 @@ func (s *Server) handlePDFWorkspace(
 			)
 		}
 
+	case "rotate":
+		if err := view.PDFRotateWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(
+				w,
+				r,
+				"rotate",
+				err,
+			)
+		}
+
 	case
 		"split",
 		"compress",
 		"edit",
 		"encrypt",
 		"decrypt",
-		"rotate",
 		"web",
 		"optimize",
 		"redact",

@@ -1,0 +1,118 @@
+@use "../../abstracts/tokens" as *;
+@use "../../abstracts/mixins" as *;
+
+.pdf-rotate-controls {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: $space-4;
+
+  margin-bottom: $space-4;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-surface;
+
+  > div:first-child {
+    min-width: 0;
+
+    strong {
+      display: block;
+
+      color: $color-text-secondary;
+
+      font-size: $font-size-md;
+    }
+
+    span {
+      display: block;
+
+      margin-top: $space-1;
+
+      color: $color-text-subtle;
+
+      font-size: $font-size-sm;
+    }
+  }
+
+  @include mobile {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+}
+
+.pdf-rotate-options {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: $space-2;
+
+  @include mobile {
+    display: grid;
+
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-rotate-option {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: $space-2;
+
+  min-height: 2.5rem;
+
+  padding: $space-2 $space-3;
+
+  border: 1px solid $color-border-strong;
+
+  border-radius: $radius-md;
+
+  background: $color-surface-raised;
+
+  color: $color-text-secondary;
+
+  font: inherit;
+
+  font-size: $font-size-sm;
+
+  font-weight: $font-weight-semibold;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    border-color: $color-border-hover;
+
+    color: $color-text;
+  }
+
+  &.selected {
+    border-color: $color-border-active;
+
+    background: $color-surface-hover;
+
+    color: $color-text;
+
+    box-shadow: 0 0 0 1px $color-border-active;
+  }
+
+  > span {
+    font-size: 1.125rem;
+
+    line-height: 1;
+  }
+}

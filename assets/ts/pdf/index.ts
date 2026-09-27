@@ -4,9 +4,11 @@ import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
 
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
 
+import { destroyPDFRotate, setupPDFRotate } from "./rotate/index.ts";
+
 import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
-type PDFTool = "merge" | "sort" | "delete" | "extract" | string;
+type PDFTool = "merge" | "sort" | "delete" | "extract" | "rotate" | string;
 
 let activeTool: PDFTool | null = null;
 
@@ -146,6 +148,16 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
     return true;
   }
 
+  const rotate = workspace.querySelector<HTMLElement>(
+    '[data-pdf-workspace="rotate"]',
+  );
+
+  if (rotate) {
+    setupPDFRotate(rotate);
+
+    return true;
+  }
+
   const placeholder = workspace.querySelector<HTMLElement>(
     '[data-pdf-workspace="placeholder"]',
   );
@@ -184,6 +196,11 @@ async function closePDFWorkspace(
 
     case "extract":
       await destroyPDFExtract();
+
+      break;
+
+    case "rotate":
+      await destroyPDFRotate();
 
       break;
   }

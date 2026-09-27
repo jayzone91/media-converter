@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -19,11 +20,7 @@ type QPDFPageCountResult struct {
 }
 
 func NewQPDF() (*QPDF, error) {
-	binary, err :=
-		exec.LookPath(
-			"qpdf",
-		)
-
+	binary, err := exec.LookPath("qpdf")
 	if err != nil {
 		return nil, fmt.Errorf(
 			"qpdf not found: %w",
@@ -100,10 +97,9 @@ func (q *QPDF) Reorder(
 			)
 		}
 
-		pageParts[index] =
-			strconv.Itoa(
-				page,
-			)
+		pageParts[index] = strconv.Itoa(
+			page,
+		)
 	}
 
 	args := []string{
@@ -127,18 +123,57 @@ func (q *QPDF) Reorder(
 	)
 }
 
+func (q *QPDF) Rotate(
+	ctx context.Context,
+	input string,
+	pages []int,
+	angle int,
+	output string,
+) error {
+	rotation, err := qpdfRotation(
+		angle,
+	)
+	if err != nil {
+		return err
+	}
+
+	pageRange, err := qpdfPageRange(
+		pages,
+	)
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"--warning-exit-0",
+		"--stream-data=preserve",
+		input,
+		fmt.Sprintf(
+			"--rotate=%s:%s",
+			rotation,
+			pageRange,
+		),
+		output,
+	}
+
+	return q.run(
+		ctx,
+		"rotate",
+		args,
+	)
+}
+
 func (q *QPDF) PageCount(
 	ctx context.Context,
 	input string,
 ) (QPDFPageCountResult, error) {
-	cmd :=
-		exec.CommandContext(
-			ctx,
-			q.binary,
-			"--warning-exit-0",
-			"--show-npages",
-			input,
-		)
+	cmd := exec.CommandContext(
+		ctx,
+		q.binary,
+		"--warning-exit-0",
+		"--show-npages",
+		input,
+	)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -147,8 +182,7 @@ func (q *QPDF) PageCount(
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		if ctxErr :=
-			ctx.Err(); ctxErr != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
 			return QPDFPageCountResult{},
 				fmt.Errorf(
 					"qpdf page count failed: %w",
@@ -166,16 +200,13 @@ func (q *QPDF) PageCount(
 			)
 	}
 
-	output :=
-		strings.TrimSpace(
-			stdout.String(),
-		)
+	output := strings.TrimSpace(
+		stdout.String(),
+	)
 
-	count, err :=
-		strconv.Atoi(
-			output,
-		)
-
+	count, err := strconv.Atoi(
+		output,
+	)
 	if err != nil {
 		return QPDFPageCountResult{},
 			fmt.Errorf(
@@ -206,12 +237,11 @@ func (q *QPDF) run(
 	operation string,
 	args []string,
 ) error {
-	cmd :=
-		exec.CommandContext(
-			ctx,
-			q.binary,
-			args...,
-		)
+	cmd := exec.CommandContext(
+		ctx,
+		q.binary,
+		args...,
+	)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -220,8 +250,7 @@ func (q *QPDF) run(
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		if ctxErr :=
-			ctx.Err(); ctxErr != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
 			return fmt.Errorf(
 				"qpdf %s failed: %w",
 				operation,
@@ -229,16 +258,14 @@ func (q *QPDF) run(
 			)
 		}
 
-		message :=
-			strings.TrimSpace(
-				stderr.String(),
-			)
+		message := strings.TrimSpace(
+			stderr.String(),
+		)
 
 		if message == "" {
-			message =
-				strings.TrimSpace(
-					stdout.String(),
-				)
+			message = strings.TrimSpace(
+				stdout.String(),
+			)
 		}
 
 		return fmt.Errorf(
@@ -250,4 +277,114 @@ func (q *QPDF) run(
 	}
 
 	return nil
+}
+
+func qpdfRotation(
+	angle int,
+) (string, error) {
+	switch angle {
+	case 90:
+		return "+90", nil
+
+	case 180:
+		return "+180", nil
+
+	case 270:
+		return "+270", nil
+
+	default:
+		return "", fmt.Errorf(
+			"unsupported PDF rotation angle: %d",
+			angle,
+		)
+	}
+}
+
+func qpdfPageRange(
+	pages []int,
+) (string, error) {
+	if len(pages) == 0 {
+		return "", fmt.Errorf(
+			"at least one PDF page is required",
+		)
+	}
+
+	sorted := append(
+		[]int(nil),
+		pages...,
+	)
+
+	sort.Ints(
+		sorted,
+	)
+
+	for index, page := range sorted {
+		if page < 1 {
+			return "", fmt.Errorf(
+				"invalid PDF page number: %d",
+				page,
+			)
+		}
+
+		if index > 0 &&
+			page == sorted[index-1] {
+			return "", fmt.Errorf(
+				"duplicate PDF page number: %d",
+				page,
+			)
+		}
+	}
+
+	var ranges []string
+
+	start := sorted[0]
+	end := start
+
+	for _, page := range sorted[1:] {
+		if page == end+1 {
+			end = page
+			continue
+		}
+
+		ranges = append(
+			ranges,
+			formatQPDFRange(
+				start,
+				end,
+			),
+		)
+
+		start = page
+		end = page
+	}
+
+	ranges = append(
+		ranges,
+		formatQPDFRange(
+			start,
+			end,
+		),
+	)
+
+	return strings.Join(
+		ranges,
+		",",
+	), nil
+}
+
+func formatQPDFRange(
+	start int,
+	end int,
+) string {
+	if start == end {
+		return strconv.Itoa(
+			start,
+		)
+	}
+
+	return fmt.Sprintf(
+		"%d-%d",
+		start,
+		end,
+	)
 }

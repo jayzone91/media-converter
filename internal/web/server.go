@@ -145,6 +145,11 @@ func (s *Server) routes() {
 		s.handlePDFExtractPages,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/rotate-pages",
+		s.handlePDFRotatePages,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(

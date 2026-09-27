@@ -1,0 +1,199 @@
+package view
+
+templ PDFRotateWorkspace() {
+	<div data-pdf-workspace="rotate">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					Seiten drehen
+				</h3>
+				<p>
+					Wähle die Seiten aus, die gedreht werden sollen,
+					und lege anschließend die Drehrichtung fest.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-rotate-drop-zone"
+			for="pdf-rotate-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-rotate-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-rotate-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-rotate-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-rotate-editor"
+			class="pdf-selection-editor"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong id="pdf-rotate-filename"></strong>
+					<span id="pdf-rotate-meta"></span>
+				</div>
+				<button
+					id="pdf-rotate-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-selection-toolbar">
+				<div>
+					<strong>
+						Seitenauswahl
+					</strong>
+					<span id="pdf-rotate-selected-count">
+						0 Seiten ausgewählt
+					</span>
+				</div>
+				<div class="pdf-selection-actions">
+					<button
+						id="pdf-rotate-select-all"
+						class="pdf-button-secondary"
+						type="button"
+					>
+						Alle auswählen
+					</button>
+					<button
+						id="pdf-rotate-clear-selection"
+						class="pdf-button-secondary"
+						type="button"
+						disabled
+					>
+						Auswahl aufheben
+					</button>
+				</div>
+			</div>
+			<div class="pdf-rotate-controls">
+				<div>
+					<strong>
+						Drehung
+					</strong>
+					<span>
+						Relativ zur aktuellen Ausrichtung
+					</span>
+				</div>
+				<div
+					class="pdf-rotate-options"
+					role="group"
+					aria-label="Drehwinkel"
+				>
+					<button
+						class="pdf-rotate-option"
+						type="button"
+						data-pdf-rotate-angle="270"
+						aria-pressed="false"
+					>
+						<span aria-hidden="true">
+							↶
+						</span>
+						90° links
+					</button>
+					<button
+						class="pdf-rotate-option"
+						type="button"
+						data-pdf-rotate-angle="180"
+						aria-pressed="false"
+					>
+						<span aria-hidden="true">
+							↻
+						</span>
+						180°
+					</button>
+					<button
+						class="pdf-rotate-option selected"
+						type="button"
+						data-pdf-rotate-angle="90"
+						aria-pressed="true"
+					>
+						<span aria-hidden="true">
+							↷
+						</span>
+						90° rechts
+					</button>
+				</div>
+			</div>
+			<div
+				id="pdf-rotate-pages"
+				class="pdf-page-selector"
+				aria-label="PDF-Seiten auswählen"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						gedreht.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-rotate-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					Ausgewählte Seiten drehen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-rotate-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird erstellt …
+				</strong>
+				<span>
+					Die ausgewählten Seiten werden gedreht.
+				</span>
+			</div>
+		</div>
+		@PDFSelectablePageTemplate()
+	</div>
+}
