@@ -95,11 +95,19 @@ func (s *Server) convertFile(
 		)
 
 	case media.CategoryDocument:
-		err = s.libreOffice.Convert(
-			ctx,
-			inputPath,
-			outputPath,
-		)
+		if format.ID == "txt" &&
+			target == "html" {
+			err = converter.TextToHTML(
+				inputPath,
+				outputPath,
+			)
+		} else {
+			err = s.libreOffice.Convert(
+				ctx,
+				inputPath,
+				outputPath,
+			)
+		}
 
 	case media.CategoryMarkdown:
 		switch target {

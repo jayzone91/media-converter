@@ -257,7 +257,7 @@ var Formats = map[string]Format{
 		ID:         "txt",
 		MIME:       "text/plain",
 		Category:   CategoryDocument,
-		Targets:    []string{"pdf", "docx", "odt"},
+		Targets:    []string{"pdf", "docx", "odt", "html"},
 		Extensions: []string{".txt"},
 	},
 	"markdown": {

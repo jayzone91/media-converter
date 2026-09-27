@@ -46,6 +46,19 @@ func (s *Server) validateConversionInput(
 		}
 
 	case media.CategoryDocument:
+		if format.ID == "txt" {
+			if err := media.ValidateTextFile(
+				path,
+			); err != nil {
+				return fmt.Errorf(
+					"invalid txt document: %w",
+					err,
+				)
+			}
+
+			return nil
+		}
+
 		if isArchiveDocument(
 			format.ID,
 		) {

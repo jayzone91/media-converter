@@ -1,9 +1,12 @@
 package web
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/jayzone91/media-converter/internal/media"
 )
 
 func TestValidateSVGFile(
@@ -78,6 +81,75 @@ func TestValidateSVGFileRejectsEmptyFile(
 	); err == nil {
 		t.Fatal(
 			"expected empty SVG to be rejected",
+		)
+	}
+}
+
+func TestValidateConversionInputAcceptsUTF8Text(
+	t *testing.T,
+) {
+	path := filepath.Join(
+		t.TempDir(),
+		"valid.txt",
+	)
+
+	if err := os.WriteFile(
+		path,
+		[]byte("Hallo Welt äöü"),
+		0o600,
+	); err != nil {
+		t.Fatalf(
+			"write text file: %v",
+			err,
+		)
+	}
+
+	server := &Server{}
+
+	if err := server.validateConversionInput(
+		context.Background(),
+		media.Formats["txt"],
+		path,
+	); err != nil {
+		t.Fatalf(
+			"validate text file: %v",
+			err,
+		)
+	}
+}
+
+func TestValidateConversionInputRejectsInvalidText(
+	t *testing.T,
+) {
+	path := filepath.Join(
+		t.TempDir(),
+		"invalid.txt",
+	)
+
+	if err := os.WriteFile(
+		path,
+		[]byte{
+			0xff,
+			0xff,
+			0xff,
+		},
+		0o600,
+	); err != nil {
+		t.Fatalf(
+			"write text file: %v",
+			err,
+		)
+	}
+
+	server := &Server{}
+
+	if err := server.validateConversionInput(
+		context.Background(),
+		media.Formats["txt"],
+		path,
+	); err == nil {
+		t.Fatal(
+			"expected invalid text file to be rejected",
 		)
 	}
 }

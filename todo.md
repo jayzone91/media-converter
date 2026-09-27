@@ -13,11 +13,11 @@
 
 - [x] `.txt` als Dokument erkennen und unterstützen
   - [x] MIME-/Dateityp-Erkennung ergänzen
-  - [ ] Zeichencodierung explizit validieren / absichern
+  - [x] Zeichencodierung explizit validieren / absichern
   - [x] TXT → PDF
   - [x] TXT → DOCX
   - [x] TXT → ODT
-  - [ ] optional TXT → HTML
+  - [x] optional TXT → HTML
 
 ### Markdown
 
