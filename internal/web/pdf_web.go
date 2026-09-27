@@ -30,6 +30,8 @@ type pdfWebRequest struct {
 
 	PaperSize string `json:"paper_size"`
 
+	RenderMode string `json:"render_mode"`
+
 	Landscape bool `json:"landscape"`
 
 	PrintBackground bool `json:"print_background"`
@@ -144,6 +146,8 @@ func (s *Server) handlePDFWeb(
 			parsedURL.Hostname(),
 			"paper_size",
 			request.PaperSize,
+			"render_mode",
+			request.RenderMode,
 			"landscape",
 			request.Landscape,
 		)
@@ -230,6 +234,8 @@ func (s *Server) handlePDFWeb(
 		parsedURL.Hostname(),
 		"paper_size",
 		request.PaperSize,
+		"render_mode",
+		request.RenderMode,
 		"landscape",
 		request.Landscape,
 		"print_background",
@@ -364,6 +370,38 @@ func readPDFWebRequest(
 			false
 	}
 
+	request.RenderMode =
+		strings.ToLower(
+			strings.TrimSpace(
+				request.RenderMode,
+			),
+		)
+
+	if request.RenderMode == "" {
+		request.RenderMode =
+			"desktop"
+	}
+
+	switch request.RenderMode {
+	case
+		"desktop",
+		"tablet",
+		"mobile",
+		"print":
+
+	default:
+		http.Error(
+			w,
+			"Ungültige Darstellungsart.",
+			http.StatusBadRequest,
+		)
+
+		return request,
+			nil,
+			converter.WebPDFOptions{},
+			false
+	}
+
 	if request.WaitMilliseconds < 0 ||
 		time.Duration(
 			request.WaitMilliseconds,
@@ -384,6 +422,8 @@ func readPDFWebRequest(
 	options :=
 		converter.WebPDFOptions{
 			PaperSize: request.PaperSize,
+
+			RenderMode: request.RenderMode,
 
 			Landscape: request.Landscape,
 

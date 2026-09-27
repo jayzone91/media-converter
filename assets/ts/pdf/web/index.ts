@@ -1,6 +1,10 @@
 import { downloadBlob } from "../../shared/download.ts";
 
-import { createWebPDF, type PDFWebPaperSize } from "./api.ts";
+import {
+  createWebPDF,
+  type PDFWebPaperSize,
+  type PDFWebRenderMode,
+} from "./api.ts";
 
 let root: HTMLElement | null = null;
 
@@ -57,7 +61,9 @@ async function createPDF(): Promise<void> {
 
   const background = getElement<HTMLInputElement>("#pdf-web-background");
 
-  if (!url || !paper || !wait || !landscape || !background) {
+  const renderMode = getSelectedRenderMode();
+
+  if (!url || !paper || !wait || !landscape || !background || !renderMode) {
     return;
   }
 
@@ -107,6 +113,8 @@ async function createPDF(): Promise<void> {
 
       paperSize,
 
+      renderMode,
+
       landscape: landscape.checked,
 
       printBackground: background.checked,
@@ -150,6 +158,18 @@ function updateControls(): void {
   }
 }
 
+function getSelectedRenderMode(): PDFWebRenderMode | null {
+  const selected = root?.querySelector<HTMLInputElement>(
+    'input[name="pdf-web-render-mode"]:checked',
+  );
+
+  if (!selected) {
+    return null;
+  }
+
+  return readRenderMode(selected.value);
+}
+
 function isValidURL(value: string): boolean {
   try {
     const parsed = new URL(value);
@@ -172,6 +192,25 @@ function readPaperSize(value: string): PDFWebPaperSize | null {
 
     case "letter":
       return "letter";
+
+    default:
+      return null;
+  }
+}
+
+function readRenderMode(value: string): PDFWebRenderMode | null {
+  switch (value) {
+    case "desktop":
+      return "desktop";
+
+    case "tablet":
+      return "tablet";
+
+    case "mobile":
+      return "mobile";
+
+    case "print":
+      return "print";
 
     default:
       return null;

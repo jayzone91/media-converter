@@ -20,6 +20,7 @@ type WebPDF struct {
 
 type WebPDFOptions struct {
 	PaperSize       string
+	RenderMode      string
 	Landscape       bool
 	PrintBackground bool
 	Wait            time.Duration
@@ -44,9 +45,18 @@ func (c *WebPDF) Render(
 	output string,
 	options WebPDFOptions,
 ) error {
-	width, height, err :=
+	paperWidth, paperHeight, err :=
 		webPDFPaperDimensions(
 			options.PaperSize,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	profile, err :=
+		webPDFRenderProfileFor(
+			options.RenderMode,
 		)
 
 	if err != nil {
@@ -87,7 +97,7 @@ func (c *WebPDF) Render(
 			),
 			chromedp.WindowSize(
 				1440,
-				1080,
+				1366,
 			),
 			chromedp.Flag(
 				"disable-gpu",
@@ -123,11 +133,16 @@ func (c *WebPDF) Render(
 	var pdfData []byte
 
 	actions :=
-		[]chromedp.Action{
-			chromedp.Navigate(
-				url,
-			),
-		}
+		webPDFProfileActions(
+			profile,
+		)
+
+	actions = append(
+		actions,
+		chromedp.Navigate(
+			url,
+		),
+	)
 
 	if options.Wait > 0 {
 		actions = append(
@@ -137,6 +152,14 @@ func (c *WebPDF) Render(
 			),
 		)
 	}
+
+	scale :=
+		webPDFPrintScale(
+			profile,
+			paperWidth,
+			paperHeight,
+			options.Landscape,
+		)
 
 	actions = append(
 		actions,
@@ -154,22 +177,25 @@ func (c *WebPDF) Render(
 							options.PrintBackground,
 						).
 						WithPaperWidth(
-							width,
+							paperWidth,
 						).
 						WithPaperHeight(
-							height,
+							paperHeight,
 						).
 						WithMarginTop(
-							0.39,
+							webPDFMarginInches,
 						).
 						WithMarginBottom(
-							0.39,
+							webPDFMarginInches,
 						).
 						WithMarginLeft(
-							0.39,
+							webPDFMarginInches,
 						).
 						WithMarginRight(
-							0.39,
+							webPDFMarginInches,
+						).
+						WithScale(
+							scale,
 						).
 						WithPreferCSSPageSize(
 							false,

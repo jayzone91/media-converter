@@ -2,10 +2,14 @@ import { getDownloadFilename } from "../../shared/download.ts";
 
 export type PDFWebPaperSize = "a4" | "letter";
 
+export type PDFWebRenderMode = "desktop" | "tablet" | "mobile" | "print";
+
 export interface PDFWebOptions {
   url: string;
 
   paperSize: PDFWebPaperSize;
+
+  renderMode: PDFWebRenderMode;
 
   landscape: boolean;
 
@@ -33,6 +37,8 @@ export async function createWebPDF(
       url: options.url,
 
       paper_size: options.paperSize,
+
+      render_mode: options.renderMode,
 
       landscape: options.landscape,
 

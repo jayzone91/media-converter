@@ -35,6 +35,91 @@ templ PDFWebWorkspace() {
 					placeholder="https://example.com"
 				/>
 			</label>
+			<div class="pdf-web-section">
+				<div class="pdf-web-section-heading">
+					<strong>
+						Darstellung
+					</strong>
+					<span>
+						Bestimmt den Browser-Viewport und die verwendeten CSS-Media-Regeln.
+					</span>
+				</div>
+				<div class="pdf-web-render-modes">
+					<label class="pdf-web-render-mode">
+						<input
+							type="radio"
+							name="pdf-web-render-mode"
+							value="desktop"
+							checked
+						/>
+						<div>
+							<strong>
+								Desktop
+							</strong>
+							<span>
+								1440 × 1080
+							</span>
+							<small>
+								Desktop-Layout mit Bildschirm-CSS.
+							</small>
+						</div>
+					</label>
+					<label class="pdf-web-render-mode">
+						<input
+							type="radio"
+							name="pdf-web-render-mode"
+							value="tablet"
+						/>
+						<div>
+							<strong>
+								Tablet
+							</strong>
+							<span>
+								1024 × 1366
+							</span>
+							<small>
+								Responsive Tablet-Ansicht.
+							</small>
+						</div>
+					</label>
+					<label class="pdf-web-render-mode">
+						<input
+							type="radio"
+							name="pdf-web-render-mode"
+							value="mobile"
+						/>
+						<div>
+							<strong>
+								Mobil
+							</strong>
+							<span>
+								390 × 844
+							</span>
+							<small>
+								Responsive Smartphone-Ansicht.
+							</small>
+						</div>
+					</label>
+					<label class="pdf-web-render-mode">
+						<input
+							type="radio"
+							name="pdf-web-render-mode"
+							value="print"
+						/>
+						<div>
+							<strong>
+								Druckansicht
+							</strong>
+							<span>
+								CSS-Medientyp: print
+							</span>
+							<small>
+								Verwendet die Druckdarstellung der Webseite.
+							</small>
+						</div>
+					</label>
+				</div>
+			</div>
 			<div class="pdf-web-options">
 				<label>
 					<span>
@@ -89,7 +174,7 @@ templ PDFWebWorkspace() {
 							Querformat
 						</strong>
 						<span>
-							Seiten horizontal ausgeben.
+							PDF-Seiten horizontal ausgeben.
 						</span>
 					</div>
 				</label>
@@ -111,11 +196,12 @@ templ PDFWebWorkspace() {
 			</div>
 			<div class="pdf-web-info">
 				<strong>
-					Browser-Rendering
+					Desktop ist Standard
 				</strong>
 				<span>
-					JavaScript und CSS werden vor der PDF-Erstellung in Chromium ausgeführt.
-					Die zusätzliche Wartezeit hilft bei dynamisch nachgeladenen Inhalten.
+					Desktop, Tablet und Mobil verwenden Bildschirm-CSS und behalten
+					den gewählten Responsive-Viewport beim PDF-Export bei.
+					Die Druckansicht verwendet dagegen gezielt Print-CSS.
 				</span>
 			</div>
 			<div class="pdf-action-row">
@@ -148,7 +234,8 @@ templ PDFWebWorkspace() {
 					Webseite wird gerendert …
 				</strong>
 				<span>
-					Chromium lädt die Seite und erstellt anschließend die PDF.
+					Chromium lädt die Seite im gewählten Viewport
+					und erstellt anschließend die PDF.
 				</span>
 			</div>
 		</div>

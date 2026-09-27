@@ -51,6 +51,130 @@
   }
 }
 
+.pdf-web-section {
+  margin-top: $space-4;
+}
+
+.pdf-web-section-heading {
+  margin-bottom: $space-3;
+
+  strong {
+    display: block;
+
+    color: $color-text;
+
+    font-size: $font-size-sm;
+
+    font-weight: $font-weight-semibold;
+  }
+
+  span {
+    display: block;
+
+    margin-top: $space-1;
+
+    color: $color-text-subtle;
+
+    font-size: $font-size-xs;
+  }
+}
+
+.pdf-web-render-modes {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: $space-3;
+
+  @include tablet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-web-render-mode {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: $space-3;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-surface;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    border-color: $color-border-hover;
+
+    background: $color-surface-raised;
+  }
+
+  &:has(input:checked) {
+    border-color: $color-border-active;
+
+    background: $color-surface-raised;
+
+    box-shadow: 0 0 0 1px $color-border-active;
+  }
+
+  input {
+    flex: none;
+
+    width: 1rem;
+
+    height: 1rem;
+
+    margin-top: 0.15rem;
+  }
+
+  div {
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+
+    color: $color-text;
+
+    font-size: $font-size-sm;
+  }
+
+  span {
+    display: block;
+
+    margin-top: $space-1;
+
+    color: $color-text-secondary;
+
+    font-size: $font-size-xs;
+
+    font-weight: $font-weight-semibold;
+  }
+
+  small {
+    display: block;
+
+    margin-top: $space-1;
+
+    color: $color-text-subtle;
+
+    font-size: $font-size-xs;
+
+    line-height: $line-height-normal;
+  }
+}
+
 .pdf-web-options {
   display: grid;
 
@@ -186,6 +310,8 @@
     color: $color-text-subtle;
 
     font-size: $font-size-sm;
+
+    line-height: $line-height-normal;
   }
 
   @include mobile {
