@@ -10,6 +10,8 @@ import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
 
 import { destroyPDFMerge, setupPDFMerge } from "./merge/index.ts";
 
+import { destroyPDFOptimize, setupPDFOptimize } from "./optimize/index.ts";
+
 import { destroyPDFRotate, setupPDFRotate } from "./rotate/index.ts";
 
 import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
@@ -127,6 +129,7 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
     ["rotate", setupPDFRotate],
     ["encrypt", setupPDFEncrypt],
     ["decrypt", setupPDFDecrypt],
+    ["optimize", setupPDFOptimize],
   ];
 
   for (const [tool, initialize] of initializers) {
@@ -194,6 +197,10 @@ async function closePDFWorkspace(
 
     case "decrypt":
       await destroyPDFDecrypt();
+      break;
+
+    case "optimize":
+      await destroyPDFOptimize();
       break;
   }
 

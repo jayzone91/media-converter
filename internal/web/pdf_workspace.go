@@ -92,10 +92,17 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
+	case "optimize":
+		if err := view.PDFOptimizeWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
+		}
+
 	case
 		"edit",
 		"web",
-		"optimize",
 		"redact",
 		"create":
 

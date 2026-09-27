@@ -1,0 +1,183 @@
+package view
+
+templ PDFOptimizeWorkspace() {
+	<div data-pdf-workspace="optimize">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDF optimieren
+				</h3>
+				<p>
+					Optimiere die interne PDF-Struktur ohne Änderung
+					von Bildauflösung oder Bildqualität.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-optimize-drop-zone"
+			for="pdf-optimize-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-optimize-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-optimize-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-optimize-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-optimize-editor"
+			class="pdf-optimize-editor"
+			hidden
+		>
+			<header class="pdf-optimize-header">
+				<div>
+					<strong id="pdf-optimize-filename"></strong>
+					<span id="pdf-optimize-meta"></span>
+				</div>
+				<button
+					id="pdf-optimize-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<label class="pdf-optimize-web-option">
+				<input
+					id="pdf-optimize-linearize"
+					type="checkbox"
+				/>
+				<div>
+					<strong>
+						Fast Web View aktivieren
+					</strong>
+					<span>
+						Linearisiert die PDF, damit erste Seiten bei HTTP-Übertragung
+						früher dargestellt werden können.
+					</span>
+				</div>
+			</label>
+			<div class="pdf-optimize-info">
+				<strong>
+					Verlustfrei
+				</strong>
+				<span>
+					Bilder, Schriften und sichtbare Inhalte werden nicht neu berechnet.
+					Optimiert werden ausschließlich interne PDF-Strukturen und Streams.
+				</span>
+			</div>
+			<div class="pdf-optimize-analysis">
+				<div class="pdf-optimize-analysis-grid">
+					<div class="pdf-optimize-stat">
+						<span>
+							Original
+						</span>
+						<strong id="pdf-optimize-original-size">
+							—
+						</strong>
+					</div>
+					<div class="pdf-optimize-stat">
+						<span>
+							Optimiert
+						</span>
+						<strong id="pdf-optimize-result-size">
+							—
+						</strong>
+					</div>
+					<div class="pdf-optimize-stat">
+						<span>
+							Größenänderung
+						</span>
+						<strong id="pdf-optimize-delta-size">
+							—
+						</strong>
+					</div>
+					<div class="pdf-optimize-stat pdf-optimize-stat-highlight">
+						<span>
+							Änderung
+						</span>
+						<strong id="pdf-optimize-delta-percent">
+							—
+						</strong>
+					</div>
+				</div>
+				<div
+					id="pdf-optimize-analysis-status"
+					class="pdf-optimize-analysis-status"
+				>
+					Noch nicht berechnet
+				</div>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span id="pdf-optimize-output-name">
+						optimiert.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-optimize-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					Optimierte PDF herunterladen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-optimize-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird bereitgestellt …
+				</strong>
+				<span>
+					Das bereits optimierte Ergebnis wird heruntergeladen.
+				</span>
+			</div>
+		</div>
+	</div>
+}

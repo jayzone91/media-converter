@@ -183,6 +183,16 @@ func (s *Server) routes() {
 		s.handlePDFDecrypt,
 	)
 
+	s.mux.HandleFunc(
+		"POST /pdf/optimize/analyze",
+		s.handlePDFOptimizeAnalyze,
+	)
+
+	s.mux.HandleFunc(
+		"POST /pdf/optimize",
+		s.handlePDFOptimize,
+	)
+
 	s.mux.Handle(
 		"GET /static/",
 		http.StripPrefix(
