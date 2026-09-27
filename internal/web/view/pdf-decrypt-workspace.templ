@@ -1,0 +1,127 @@
+package view
+
+templ PDFDecryptWorkspace() {
+	<div data-pdf-workspace="decrypt">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">PDF</span>
+				<h3>
+					Passwort entfernen
+				</h3>
+				<p>
+					Entferne den Passwortschutz einer PDF,
+					wenn dir das aktuelle Passwort bekannt ist.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-decrypt-drop-zone"
+			for="pdf-decrypt-file"
+		>
+			<span class="pdf-drop-icon">↑</span>
+			<strong>
+				Geschützte PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-decrypt-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-decrypt-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<section
+			id="pdf-decrypt-editor"
+			class="pdf-security-editor"
+			hidden
+		>
+			<header class="pdf-security-header">
+				<div>
+					<strong id="pdf-decrypt-filename"></strong>
+					<span id="pdf-decrypt-meta"></span>
+				</div>
+				<button
+					id="pdf-decrypt-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-security-form">
+				<label>
+					<span>
+						Aktuelles Passwort
+					</span>
+					<input
+						id="pdf-decrypt-password"
+						type="password"
+						autocomplete="current-password"
+						maxlength="256"
+					/>
+				</label>
+				<label class="pdf-security-show-password">
+					<input
+						id="pdf-decrypt-show-password"
+						type="checkbox"
+					/>
+					<span>
+						Passwort anzeigen
+					</span>
+				</label>
+			</div>
+			<div class="pdf-security-info">
+				<strong>
+					Hinweis
+				</strong>
+				<span>
+					Bei PDFs ohne Öffnungspasswort kann das Feld leer bleiben.
+				</span>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						ohne-passwort.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-decrypt-submit"
+					class="pdf-button-primary"
+					type="button"
+				>
+					Passwort entfernen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-decrypt-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					Passwort wird entfernt …
+				</strong>
+				<span>
+					Die PDF wird ohne Verschlüsselung neu gespeichert.
+				</span>
+			</div>
+		</div>
+	</div>
+}

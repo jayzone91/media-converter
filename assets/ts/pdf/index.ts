@@ -1,6 +1,10 @@
 import { destroyPDFCompress, setupPDFCompress } from "./compress/index.ts";
 
+import { destroyPDFDecrypt, setupPDFDecrypt } from "./decrypt/index.ts";
+
 import { destroyPDFDelete, setupPDFDelete } from "./delete/index.ts";
+
+import { destroyPDFEncrypt, setupPDFEncrypt } from "./encrypt/index.ts";
 
 import { destroyPDFExtract, setupPDFExtract } from "./extract/index.ts";
 
@@ -12,15 +16,7 @@ import { destroyPDFSort, setupPDFSort } from "./sort/index.ts";
 
 import { destroyPDFSplit, setupPDFSplit } from "./split/index.ts";
 
-type PDFTool =
-  | "merge"
-  | "split"
-  | "compress"
-  | "sort"
-  | "delete"
-  | "extract"
-  | "rotate"
-  | string;
+type PDFTool = string;
 
 let activeTool: PDFTool | null = null;
 
@@ -129,6 +125,8 @@ function initializeWorkspace(workspace: HTMLElement): boolean {
     ["delete", setupPDFDelete],
     ["extract", setupPDFExtract],
     ["rotate", setupPDFRotate],
+    ["encrypt", setupPDFEncrypt],
+    ["decrypt", setupPDFDecrypt],
   ];
 
   for (const [tool, initialize] of initializers) {
@@ -188,6 +186,14 @@ async function closePDFWorkspace(
 
     case "rotate":
       await destroyPDFRotate();
+      break;
+
+    case "encrypt":
+      await destroyPDFEncrypt();
+      break;
+
+    case "decrypt":
+      await destroyPDFDecrypt();
       break;
   }
 

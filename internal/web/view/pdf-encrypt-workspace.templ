@@ -1,0 +1,140 @@
+package view
+
+templ PDFEncryptWorkspace() {
+	<div data-pdf-workspace="encrypt">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">PDF</span>
+				<h3>
+					PDF verschlüsseln
+				</h3>
+				<p>
+					Schütze die PDF mit einem Passwort.
+					Die Datei wird mit AES-256 verschlüsselt.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-encrypt-drop-zone"
+			for="pdf-encrypt-file"
+		>
+			<span class="pdf-drop-icon">↑</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-encrypt-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-encrypt-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<section
+			id="pdf-encrypt-editor"
+			class="pdf-security-editor"
+			hidden
+		>
+			<header class="pdf-security-header">
+				<div>
+					<strong id="pdf-encrypt-filename"></strong>
+					<span id="pdf-encrypt-meta"></span>
+				</div>
+				<button
+					id="pdf-encrypt-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-security-form">
+				<label>
+					<span>
+						Passwort
+					</span>
+					<input
+						id="pdf-encrypt-password"
+						type="password"
+						autocomplete="new-password"
+						maxlength="256"
+					/>
+				</label>
+				<label>
+					<span>
+						Passwort wiederholen
+					</span>
+					<input
+						id="pdf-encrypt-password-confirm"
+						type="password"
+						autocomplete="new-password"
+						maxlength="256"
+					/>
+				</label>
+				<label class="pdf-security-show-password">
+					<input
+						id="pdf-encrypt-show-password"
+						type="checkbox"
+					/>
+					<span>
+						Passwort anzeigen
+					</span>
+				</label>
+			</div>
+			<div class="pdf-security-info">
+				<strong>
+					AES-256
+				</strong>
+				<span>
+					Das Passwort wird nur für die Verarbeitung dieser PDF verwendet
+					und nicht dauerhaft gespeichert.
+				</span>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						verschluesselt.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-encrypt-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDF verschlüsseln
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-encrypt-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird verschlüsselt …
+				</strong>
+				<span>
+					Die AES-256-Verschlüsselung wird angewendet.
+				</span>
+			</div>
+		</div>
+	</div>
+}

@@ -25,12 +25,7 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "split":
@@ -38,12 +33,7 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "compress":
@@ -51,12 +41,7 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "sort":
@@ -64,12 +49,7 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "delete":
@@ -77,12 +57,7 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "extract":
@@ -90,12 +65,7 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case "rotate":
@@ -103,18 +73,27 @@ func (s *Server) handlePDFWorkspace(
 			r.Context(),
 			w,
 		); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
+		}
+
+	case "encrypt":
+		if err := view.PDFEncryptWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
+		}
+
+	case "decrypt":
+		if err := view.PDFDecryptWorkspace().Render(
+			r.Context(),
+			w,
+		); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
 	case
 		"edit",
-		"encrypt",
-		"decrypt",
 		"web",
 		"optimize",
 		"redact",

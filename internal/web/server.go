@@ -119,6 +119,11 @@ func (s *Server) routes() {
 	)
 
 	s.mux.HandleFunc(
+		"POST /pdf/uploads/raw",
+		s.handlePDFRawUpload,
+	)
+
+	s.mux.HandleFunc(
 		"GET /pdf/uploads/{id}/pages/{page}",
 		s.handlePDFPreview,
 	)
@@ -166,6 +171,16 @@ func (s *Server) routes() {
 	s.mux.HandleFunc(
 		"POST /pdf/compress",
 		s.handlePDFCompress,
+	)
+
+	s.mux.HandleFunc(
+		"POST /pdf/encrypt",
+		s.handlePDFEncrypt,
+	)
+
+	s.mux.HandleFunc(
+		"POST /pdf/decrypt",
+		s.handlePDFDecrypt,
 	)
 
 	s.mux.Handle(

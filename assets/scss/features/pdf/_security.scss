@@ -1,0 +1,172 @@
+@use "../../abstracts/tokens" as *;
+@use "../../abstracts/mixins" as *;
+
+.pdf-security-editor {
+  margin-top: $space-5;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pdf-security-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: $space-4;
+
+  margin-bottom: $space-4;
+
+  > div {
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+
+    color: $color-text;
+
+    font-size: $font-size-lg;
+
+    @include truncate;
+  }
+
+  span {
+    display: block;
+
+    margin-top: $space-1;
+
+    color: $color-text-subtle;
+
+    font-size: $font-size-sm;
+  }
+
+  @include mobile {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+}
+
+.pdf-security-form {
+  display: grid;
+
+  gap: $space-3;
+
+  padding: $space-4;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-surface;
+
+  > label:not(.pdf-security-show-password) {
+    display: grid;
+
+    gap: $space-2;
+
+    > span {
+      color: $color-text-secondary;
+
+      font-size: $font-size-sm;
+
+      font-weight: $font-weight-semibold;
+    }
+
+    input {
+      width: 100%;
+
+      box-sizing: border-box;
+
+      min-height: 2.75rem;
+
+      padding: $space-2 $space-3;
+
+      border: 1px solid $color-border-strong;
+
+      border-radius: $radius-md;
+
+      background: $color-bg-soft;
+
+      color: $color-text;
+
+      font: inherit;
+
+      &:focus {
+        border-color: $color-border-active;
+
+        outline: none;
+
+        box-shadow: 0 0 0 1px $color-border-active;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+      }
+    }
+  }
+}
+
+.pdf-security-show-password {
+  display: inline-flex;
+
+  width: fit-content;
+
+  align-items: center;
+
+  gap: $space-2;
+
+  color: $color-text-subtle;
+
+  font-size: $font-size-sm;
+
+  cursor: pointer;
+
+  input {
+    width: 1rem;
+
+    height: 1rem;
+  }
+}
+
+.pdf-security-info {
+  display: flex;
+
+  align-items: baseline;
+
+  gap: $space-2;
+
+  margin-top: $space-3;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+
+  border-radius: $radius-md;
+
+  background: $color-bg-soft;
+
+  strong {
+    flex: none;
+
+    color: $color-text-secondary;
+
+    font-size: $font-size-sm;
+  }
+
+  span {
+    color: $color-text-subtle;
+
+    font-size: $font-size-sm;
+  }
+
+  @include mobile {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+}
