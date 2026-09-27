@@ -4,6 +4,7 @@ package web
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -21,6 +22,8 @@ const (
 )
 
 type Server struct {
+	logger *slog.Logger
+
 	imageMagick *converter.ImageMagick
 	ffmpeg      *converter.FFmpeg
 	ffprobe     *media.FFProbe
@@ -38,6 +41,7 @@ type Server struct {
 }
 
 func NewServer(
+	logger *slog.Logger,
 	imageMagick *converter.ImageMagick,
 	ffmpeg *converter.FFmpeg,
 	ffprobe *media.FFProbe,
@@ -45,7 +49,13 @@ func NewServer(
 	pdf *converter.PDF,
 	qpdf *converter.QPDF,
 ) *Server {
+	if logger == nil {
+		logger = defaultLogger()
+	}
+
 	server := &Server{
+		logger: logger,
+
 		imageMagick: imageMagick,
 		ffmpeg:      ffmpeg,
 		ffprobe:     ffprobe,
@@ -53,8 +63,7 @@ func NewServer(
 		pdf:         pdf,
 		qpdf:        qpdf,
 
-		uploads: newUploadStore(),
-
+		uploads:    newUploadStore(),
 		pdfUploads: newPDFUploadStore(),
 
 		conversionSlots: make(
@@ -94,6 +103,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc(
 		"POST /qr/generate",
 		s.handleQRGenerate,
+	)
+
+	s.mux.HandleFunc(
+		"GET /pdf/tools/{tool}",
+		s.handlePDFWorkspace,
 	)
 
 	s.mux.HandleFunc(

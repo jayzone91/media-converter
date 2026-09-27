@@ -1,29 +1,46 @@
 package web
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
 
 type storedPDFUpload struct {
-	ID           string
-	Directory    string
-	Path         string
-	Filename     string
-	Size         int64
-	PreviewPaths []string
-	CreatedAt    time.Time
+	ID string
+
+	Directory string
+
+	Path string
+
+	PreviewDirectory string
+
+	Filename string
+
+	Size int64
+
+	PageCount int
+
+	CreatedAt time.Time
 }
 
-func (u storedPDFUpload) PageCount() int {
-	return len(
-		u.PreviewPaths,
+func (u storedPDFUpload) PreviewPath(
+	page int,
+) string {
+	return filepath.Join(
+		u.PreviewDirectory,
+		fmt.Sprintf(
+			"page-%04d.jpg",
+			page,
+		),
 	)
 }
 
 type pdfUploadStore struct {
-	mu      sync.Mutex
+	mu sync.Mutex
+
 	uploads map[string]storedPDFUpload
 
 	stop chan struct{}
@@ -55,9 +72,10 @@ func newPDFUploadStore() *pdfUploadStore {
 func (s *pdfUploadStore) Add(
 	directory string,
 	path string,
+	previewDirectory string,
 	filename string,
 	size int64,
-	previewPaths []string,
+	pageCount int,
 ) (storedPDFUpload, error) {
 	id, err := randomUploadID()
 	if err != nil {
@@ -65,16 +83,19 @@ func (s *pdfUploadStore) Add(
 	}
 
 	upload := storedPDFUpload{
-		ID:        id,
-		Directory: directory,
-		Path:      path,
-		Filename:  filename,
-		Size:      size,
+		ID: id,
 
-		PreviewPaths: append(
-			[]string(nil),
-			previewPaths...,
-		),
+		Directory: directory,
+
+		Path: path,
+
+		PreviewDirectory: previewDirectory,
+
+		Filename: filename,
+
+		Size: size,
+
+		PageCount: pageCount,
 
 		CreatedAt: time.Now(),
 	}
@@ -97,7 +118,8 @@ func (s *pdfUploadStore) Get(
 
 	s.mu.Lock()
 
-	upload, ok := s.uploads[id]
+	upload, ok :=
+		s.uploads[id]
 
 	if !ok {
 		s.mu.Unlock()
@@ -124,11 +146,6 @@ func (s *pdfUploadStore) Get(
 
 	s.mu.Unlock()
 
-	upload.PreviewPaths = append(
-		[]string(nil),
-		upload.PreviewPaths...,
-	)
-
 	return upload, true
 }
 
@@ -141,7 +158,8 @@ func (s *pdfUploadStore) Delete(
 
 	s.mu.Lock()
 
-	upload, ok := s.uploads[id]
+	upload, ok :=
+		s.uploads[id]
 
 	if ok {
 		delete(

@@ -124,11 +124,16 @@ templ PDFPanel() {
 	</section>
 }
 
-templ PDFToolCard(tool PDFTool) {
+templ PDFToolCard(
+	tool PDFTool,
+) {
 	<button
 		class="tool-card"
 		type="button"
 		data-pdf-tool={ tool.ID }
+		hx-get={ "/pdf/tools/" + tool.ID }
+		hx-target="#pdf-tool-workspace"
+		hx-swap="innerHTML"
 	>
 		<span class="tool-icon">
 			{ tool.Icon }

@@ -19,7 +19,9 @@ import (
 const (
 	pdfUploadRequestOverhead int64 = 1 << 20
 
-	pdfPreviewTimeout = 10 * time.Minute
+	pdfMetadataTimeout = 30 * time.Second
+
+	pdfPreviewTimeout = 2 * time.Minute
 )
 
 type pdfUploadResponse struct {
@@ -103,10 +105,12 @@ func (s *Server) handlePDFUpload(
 		return
 	}
 
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-pdf-*",
-	)
+	tempDir, err :=
+		os.MkdirTemp(
+			"",
+			"media-converter-pdf-*",
+		)
+
 	if err != nil {
 		http.Error(
 			w,
@@ -127,15 +131,18 @@ func (s *Server) handlePDFUpload(
 		}
 	}()
 
-	inputPath := filepath.Join(
-		tempDir,
-		"input.pdf",
-	)
+	inputPath :=
+		filepath.Join(
+			tempDir,
+			"input.pdf",
+		)
 
-	size, err := savePDFUpload(
-		file,
-		inputPath,
-	)
+	size, err :=
+		savePDFUpload(
+			file,
+			inputPath,
+		)
+
 	if err != nil {
 		http.Error(
 			w,
@@ -158,38 +165,19 @@ func (s *Server) handlePDFUpload(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
-		http.Error(
-			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+	ctx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			pdfMetadataTimeout,
 		)
 
-		return
-	}
-
-	defer s.releaseConversionSlot()
-
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		pdfPreviewTimeout,
-	)
-
-	defer cancel()
-
-	previewDir := filepath.Join(
-		tempDir,
-		"previews",
-	)
-
-	previewPaths, err :=
-		s.pdf.RenderPreviews(
+	pageCount, err :=
+		s.qpdf.PageCount(
 			ctx,
 			inputPath,
-			previewDir,
 		)
+
+	cancel()
 
 	if err != nil {
 		if errors.Is(
@@ -198,7 +186,7 @@ func (s *Server) handlePDFUpload(
 		) {
 			http.Error(
 				w,
-				"Die PDF-Vorschau konnte nicht rechtzeitig erstellt werden.",
+				"Die PDF konnte nicht rechtzeitig analysiert werden.",
 				http.StatusGatewayTimeout,
 			)
 
@@ -207,8 +195,27 @@ func (s *Server) handlePDFUpload(
 
 		http.Error(
 			w,
-			"Die PDF konnte nicht gelesen oder dargestellt werden.",
+			"Die PDF konnte nicht gelesen werden.",
 			http.StatusBadRequest,
+		)
+
+		return
+	}
+
+	previewDirectory :=
+		filepath.Join(
+			tempDir,
+			"previews",
+		)
+
+	if err := os.MkdirAll(
+		previewDirectory,
+		0700,
+	); err != nil {
+		http.Error(
+			w,
+			"Vorschau-Verzeichnis konnte nicht erstellt werden.",
+			http.StatusInternalServerError,
 		)
 
 		return
@@ -218,9 +225,10 @@ func (s *Server) handlePDFUpload(
 		s.pdfUploads.Add(
 			tempDir,
 			inputPath,
+			previewDirectory,
 			header.Filename,
 			size,
-			previewPaths,
+			pageCount,
 		)
 
 	if err != nil {
@@ -237,7 +245,7 @@ func (s *Server) handlePDFUpload(
 
 	previews := make(
 		[]string,
-		upload.PageCount(),
+		pageCount,
 	)
 
 	for index := range previews {
@@ -249,17 +257,18 @@ func (s *Server) handlePDFUpload(
 			)
 	}
 
-	response := pdfUploadResponse{
-		ID: upload.ID,
+	response :=
+		pdfUploadResponse{
+			ID: upload.ID,
 
-		Filename: upload.Filename,
+			Filename: upload.Filename,
 
-		Size: upload.Size,
+			Size: upload.Size,
 
-		PageCount: upload.PageCount(),
+			PageCount: upload.PageCount,
 
-		Previews: previews,
-	}
+			Previews: previews,
+		}
 
 	w.Header().Set(
 		"Content-Type",
@@ -288,15 +297,17 @@ func (s *Server) handlePDFPreview(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	id := r.PathValue(
-		"id",
-	)
-
-	page, err := strconv.Atoi(
+	id :=
 		r.PathValue(
-			"page",
-		),
-	)
+			"id",
+		)
+
+	page, err :=
+		strconv.Atoi(
+			r.PathValue(
+				"page",
+			),
+		)
 
 	if err != nil ||
 		page < 1 {
@@ -323,7 +334,7 @@ func (s *Server) handlePDFPreview(
 	}
 
 	if page >
-		len(upload.PreviewPaths) {
+		upload.PageCount {
 		http.NotFound(
 			w,
 			r,
@@ -333,7 +344,40 @@ func (s *Server) handlePDFPreview(
 	}
 
 	previewPath :=
-		upload.PreviewPaths[page-1]
+		upload.PreviewPath(
+			page,
+		)
+
+	if _, err := os.Stat(
+		previewPath,
+	); errors.Is(
+		err,
+		os.ErrNotExist,
+	) {
+		if err :=
+			s.renderPDFPreview(
+				r,
+				upload,
+				page,
+				previewPath,
+			); err != nil {
+			http.Error(
+				w,
+				"PDF-Vorschau konnte nicht erstellt werden.",
+				http.StatusInternalServerError,
+			)
+
+			return
+		}
+	} else if err != nil {
+		http.Error(
+			w,
+			"PDF-Vorschau konnte nicht gelesen werden.",
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
 
 	w.Header().Set(
 		"Content-Type",
@@ -352,13 +396,45 @@ func (s *Server) handlePDFPreview(
 	)
 }
 
+func (s *Server) renderPDFPreview(
+	r *http.Request,
+	upload storedPDFUpload,
+	page int,
+	outputPath string,
+) error {
+	if err :=
+		s.acquireConversionSlot(
+			r.Context(),
+		); err != nil {
+		return err
+	}
+
+	defer s.releaseConversionSlot()
+
+	ctx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			pdfPreviewTimeout,
+		)
+
+	defer cancel()
+
+	return s.pdf.RenderPreviewPage(
+		ctx,
+		upload.Path,
+		outputPath,
+		page,
+	)
+}
+
 func (s *Server) handlePDFUploadDelete(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	id := r.PathValue(
-		"id",
-	)
+	id :=
+		r.PathValue(
+			"id",
+		)
 
 	if id == "" {
 		http.NotFound(
@@ -439,10 +515,11 @@ func savePDFUpload(
 		return 0, err
 	}
 
-	limited := io.LimitReader(
-		source,
-		maxFileSize+1,
-	)
+	limited :=
+		io.LimitReader(
+			source,
+			maxFileSize+1,
+		)
 
 	written, copyErr :=
 		io.Copy(
@@ -474,9 +551,11 @@ func savePDFUpload(
 func validatePDFSignature(
 	path string,
 ) error {
-	file, err := os.Open(
-		path,
-	)
+	file, err :=
+		os.Open(
+			path,
+		)
+
 	if err != nil {
 		return err
 	}
@@ -488,9 +567,10 @@ func validatePDFSignature(
 		1024,
 	)
 
-	n, err := file.Read(
-		buffer,
-	)
+	n, err :=
+		file.Read(
+			buffer,
+		)
 
 	if err != nil &&
 		!errors.Is(

@@ -1,0 +1,232 @@
+package view
+
+templ PDFMergeWorkspace() {
+	<div data-pdf-workspace="merge">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDFs zusammenfügen
+				</h3>
+				<p>
+					Wähle mindestens zwei PDF-Dateien.
+					Die Reihenfolge der Dokumente kann anschließend
+					per Drag & Drop oder mit den Pfeiltasten geändert werden.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-merge-drop-zone"
+			for="pdf-merge-files"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDFs auswählen
+			</strong>
+			<span>
+				oder mehrere Dateien hier ablegen
+			</span>
+			<small>
+				Max. 50 Dateien · 512 MiB pro Datei · 1 GiB gesamt
+			</small>
+			<input
+				id="pdf-merge-files"
+				type="file"
+				accept="application/pdf,.pdf"
+				multiple
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-merge-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span id="pdf-upload-progress-text">
+					Upload und Seitenvorschau werden erstellt.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-merge-selection"
+			class="pdf-selection"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong>
+						Reihenfolge
+					</strong>
+					<span id="pdf-merge-count">
+						0 Dateien
+					</span>
+				</div>
+				<button
+					id="pdf-merge-clear"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Alle entfernen
+				</button>
+			</header>
+			<div
+				id="pdf-merge-list"
+				class="pdf-file-list"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Ausgabe
+					</strong>
+					<span>
+						zusammengefuegt.pdf
+					</span>
+				</div>
+				<button
+					id="pdf-merge-submit"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDFs zusammenfügen
+				</button>
+			</div>
+		</section>
+		<div
+			id="pdf-merge-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDFs werden zusammengefügt …
+				</strong>
+				<span>
+					Bitte diese Seite geöffnet lassen.
+				</span>
+			</div>
+		</div>
+		@PDFMergeDocumentTemplate()
+		@PDFMergePageTemplate()
+	</div>
+}
+
+templ PDFMergeDocumentTemplate() {
+	<template id="pdf-merge-document-template">
+		<article
+			class="pdf-file-item"
+			draggable="true"
+		>
+			<div class="pdf-file-header">
+				<span
+					class="pdf-file-drag"
+					title="Dokument verschieben"
+					aria-hidden="true"
+				>
+					⠿
+				</span>
+				<span class="pdf-file-index"></span>
+				<div class="pdf-file-info">
+					<strong class="pdf-file-name"></strong>
+					<span class="pdf-file-meta"></span>
+				</div>
+				<div class="pdf-file-actions">
+					<button
+						type="button"
+						data-action="move-up"
+						title="Nach oben"
+						aria-label="Dokument nach oben verschieben"
+					>
+						↑
+					</button>
+					<button
+						type="button"
+						data-action="move-down"
+						title="Nach unten"
+						aria-label="Dokument nach unten verschieben"
+					>
+						↓
+					</button>
+					<button
+						type="button"
+						data-action="remove"
+						title="Entfernen"
+						aria-label="Dokument entfernen"
+					>
+						×
+					</button>
+				</div>
+			</div>
+			<div
+				class="pdf-page-strip"
+				tabindex="0"
+				aria-label="Seitenvorschau"
+			></div>
+		</article>
+	</template>
+}
+
+templ PDFMergePageTemplate() {
+	<template id="pdf-merge-page-template">
+		<figure class="pdf-page-preview">
+			<div class="pdf-page-image">
+				<img
+					loading="lazy"
+					decoding="async"
+					alt=""
+				/>
+			</div>
+			<figcaption></figcaption>
+		</figure>
+	</template>
+}
+
+templ PDFPlaceholderWorkspace(
+	title string,
+) {
+	<div data-pdf-workspace="placeholder">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-tool-placeholder">
+			<strong>
+				{ title }
+			</strong>
+			<span>
+				Dieses Werkzeug bauen wir als Nächstes.
+			</span>
+		</div>
+	</div>
+}
+
+templ PDFWorkspaceBackButton() {
+	<div class="pdf-workspace-navigation">
+		<button
+			class="pdf-back-button"
+			type="button"
+			data-pdf-back
+		>
+			<span aria-hidden="true">
+				←
+			</span>
+			<span>
+				Zurück zu PDF-Werkzeugen
+			</span>
+		</button>
+	</div>
+}

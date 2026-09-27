@@ -2,15 +2,14 @@ package web
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"mime"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -19,10 +18,14 @@ const (
 
 	maxPDFMergeTotalSize int64 = 1024 << 20
 
-	pdfMergeRequestOverhead int64 = 16 << 20
+	maxPDFMergeRequestSize int64 = 64 << 10
 
 	pdfMergeTimeout = 30 * time.Minute
 )
+
+type pdfMergeRequest struct {
+	IDs []string `json:"ids"`
+}
 
 func (s *Server) handlePDFMerge(
 	w http.ResponseWriter,
@@ -31,45 +34,32 @@ func (s *Server) handlePDFMerge(
 	r.Body = http.MaxBytesReader(
 		w,
 		r.Body,
-		maxPDFMergeTotalSize+
-			pdfMergeRequestOverhead,
+		maxPDFMergeRequestSize,
 	)
 
-	if err := r.ParseMultipartForm(
-		multipartMemoryLimit,
+	defer r.Body.Close()
+
+	var request pdfMergeRequest
+
+	decoder := json.NewDecoder(
+		r.Body,
+	)
+
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(
+		&request,
 	); err != nil {
-		var maxBytesError *http.MaxBytesError
-
-		if errors.As(
-			err,
-			&maxBytesError,
-		) {
-			http.Error(
-				w,
-				"Die hochgeladenen PDFs sind zusammen zu groß.",
-				http.StatusRequestEntityTooLarge,
-			)
-
-			return
-		}
-
 		http.Error(
 			w,
-			"Ungültiger Upload.",
+			"Ungültige Merge-Anfrage.",
 			http.StatusBadRequest,
 		)
 
 		return
 	}
 
-	if r.MultipartForm != nil {
-		defer r.MultipartForm.RemoveAll()
-	}
-
-	headers :=
-		r.MultipartForm.File["files"]
-
-	if len(headers) < 2 {
+	if len(request.IDs) < 2 {
 		http.Error(
 			w,
 			"Bitte mindestens zwei PDF-Dateien auswählen.",
@@ -79,7 +69,8 @@ func (s *Server) handlePDFMerge(
 		return
 	}
 
-	if len(headers) > maxPDFMergeFiles {
+	if len(request.IDs) >
+		maxPDFMergeFiles {
 		http.Error(
 			w,
 			fmt.Sprintf(
@@ -91,6 +82,90 @@ func (s *Server) handlePDFMerge(
 
 		return
 	}
+
+	inputPaths := make(
+		[]string,
+		0,
+		len(request.IDs),
+	)
+
+	seen := make(
+		map[string]struct{},
+		len(request.IDs),
+	)
+
+	var totalSize int64
+
+	for _, id := range request.IDs {
+		if id == "" {
+			http.Error(
+				w,
+				"Ungültige PDF-ID.",
+				http.StatusBadRequest,
+			)
+
+			return
+		}
+
+		if _, exists := seen[id]; exists {
+			http.Error(
+				w,
+				"Eine PDF wurde mehrfach angegeben.",
+				http.StatusBadRequest,
+			)
+
+			return
+		}
+
+		seen[id] = struct{}{}
+
+		upload, ok :=
+			s.pdfUploads.Get(
+				id,
+			)
+
+		if !ok {
+			http.Error(
+				w,
+				"Eine PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
+				http.StatusGone,
+			)
+
+			return
+		}
+
+		totalSize += upload.Size
+
+		if totalSize >
+			maxPDFMergeTotalSize {
+			http.Error(
+				w,
+				"Die PDFs dürfen zusammen maximal 1 GiB groß sein.",
+				http.StatusRequestEntityTooLarge,
+			)
+
+			return
+		}
+
+		inputPaths = append(
+			inputPaths,
+			upload.Path,
+		)
+	}
+
+	if err := s.acquireConversionSlot(
+		r.Context(),
+	); err != nil {
+		http.Error(
+			w,
+			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
+			http.StatusServiceUnavailable,
+		)
+
+		return
+	}
+
+	defer s.releaseConversionSlot()
 
 	tempDir, err := os.MkdirTemp(
 		"",
@@ -105,97 +180,28 @@ func (s *Server) handlePDFMerge(
 
 		return
 	}
-	defer os.RemoveAll(tempDir)
 
-	inputPaths := make(
-		[]string,
-		0,
-		len(headers),
+	defer os.RemoveAll(
+		tempDir,
 	)
 
-	var totalSize int64
+	ctx, cancel := context.WithTimeout(
+		r.Context(),
+		pdfMergeTimeout,
+	)
 
-	for index, header := range headers {
-		if err := validatePDFMergeFile(
-			header,
-		); err != nil {
-			http.Error(
-				w,
-				err.Error(),
-				http.StatusBadRequest,
-			)
-
-			return
-		}
-
-		totalSize += header.Size
-
-		if totalSize >
-			maxPDFMergeTotalSize {
-			http.Error(
-				w,
-				"Die PDFs dürfen zusammen maximal 1 GiB groß sein.",
-				http.StatusRequestEntityTooLarge,
-			)
-
-			return
-		}
-
-		path, err :=
-			savePDFMergeUpload(
-				header,
-				tempDir,
-				index,
-			)
-		if err != nil {
-			http.Error(
-				w,
-				"Eine PDF-Datei konnte nicht gespeichert werden.",
-				http.StatusInternalServerError,
-			)
-
-			return
-		}
-
-		inputPaths = append(
-			inputPaths,
-			path,
-		)
-	}
-
-	if err :=
-		s.acquireConversionSlot(
-			r.Context(),
-		); err != nil {
-		http.Error(
-			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
-		)
-
-		return
-	}
-	defer s.releaseConversionSlot()
-
-	ctx, cancel :=
-		context.WithTimeout(
-			r.Context(),
-			pdfMergeTimeout,
-		)
 	defer cancel()
 
-	outputPath :=
-		filepath.Join(
-			tempDir,
-			"zusammengefuegt.pdf",
-		)
+	outputPath := filepath.Join(
+		tempDir,
+		"zusammengefuegt.pdf",
+	)
 
-	if err :=
-		s.qpdf.Merge(
-			ctx,
-			inputPaths,
-			outputPath,
-		); err != nil {
+	if err := s.qpdf.Merge(
+		ctx,
+		inputPaths,
+		outputPath,
+	); err != nil {
 		if errors.Is(
 			ctx.Err(),
 			context.DeadlineExceeded,
@@ -218,8 +224,9 @@ func (s *Server) handlePDFMerge(
 		return
 	}
 
-	file, err :=
-		os.Open(outputPath)
+	file, err := os.Open(
+		outputPath,
+	)
 	if err != nil {
 		http.Error(
 			w,
@@ -229,6 +236,7 @@ func (s *Server) handlePDFMerge(
 
 		return
 	}
+
 	defer file.Close()
 
 	info, err := file.Stat()
@@ -240,6 +248,19 @@ func (s *Server) handlePDFMerge(
 		)
 
 		return
+	}
+
+	/*
+		Der Merge ist abgeschlossen. Die Quelldateien
+		werden nicht mehr benötigt.
+
+		Das Ergebnis liegt unabhängig davon im eigenen
+		temporären Merge-Verzeichnis.
+	*/
+	for _, id := range request.IDs {
+		s.pdfUploads.Delete(
+			id,
+		)
 	}
 
 	disposition :=
@@ -268,104 +289,15 @@ func (s *Server) handlePDFMerge(
 		),
 	)
 
-	if _, err :=
-		io.Copy(
-			w,
-			file,
-		); err != nil {
+	w.Header().Set(
+		"Cache-Control",
+		"no-store",
+	)
+
+	if _, err := io.Copy(
+		w,
+		file,
+	); err != nil {
 		return
 	}
-}
-
-func validatePDFMergeFile(
-	header *multipart.FileHeader,
-) error {
-	if header.Size <= 0 {
-		return fmt.Errorf(
-			"Eine der PDF-Dateien ist leer.",
-		)
-	}
-
-	if header.Size >
-		maxFileSize {
-		return fmt.Errorf(
-			"Eine einzelne PDF darf maximal 512 MiB groß sein.",
-		)
-	}
-
-	extension :=
-		strings.ToLower(
-			filepath.Ext(
-				header.Filename,
-			),
-		)
-
-	if extension != ".pdf" {
-		return fmt.Errorf(
-			"Es können nur PDF-Dateien zusammengefügt werden.",
-		)
-	}
-
-	return nil
-}
-
-func savePDFMergeUpload(
-	header *multipart.FileHeader,
-	tempDir string,
-	index int,
-) (string, error) {
-	source, err :=
-		header.Open()
-	if err != nil {
-		return "", err
-	}
-	defer source.Close()
-
-	path :=
-		filepath.Join(
-			tempDir,
-			fmt.Sprintf(
-				"%03d.pdf",
-				index,
-			),
-		)
-
-	destination, err :=
-		os.Create(path)
-	if err != nil {
-		return "", err
-	}
-
-	limited :=
-		io.LimitReader(
-			source,
-			maxFileSize+1,
-		)
-
-	written, copyErr :=
-		io.Copy(
-			destination,
-			limited,
-		)
-
-	closeErr :=
-		destination.Close()
-
-	if copyErr != nil {
-		return "", copyErr
-	}
-
-	if closeErr != nil {
-		return "", closeErr
-	}
-
-	if written > maxFileSize {
-		_ = os.Remove(path)
-
-		return "", fmt.Errorf(
-			"file exceeds maximum size",
-		)
-	}
-
-	return path, nil
 }

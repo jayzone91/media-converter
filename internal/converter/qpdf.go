@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strconv"
+	"strings"
 )
 
 type QPDF struct {
@@ -70,4 +72,47 @@ func (q *QPDF) Merge(
 	}
 
 	return nil
+}
+
+func (q *QPDF) PageCount(
+	ctx context.Context,
+	input string,
+) (int, error) {
+	cmd := exec.CommandContext(
+		ctx,
+		q.binary,
+		"--show-npages",
+		input,
+	)
+
+	result, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf(
+			"qpdf page count failed: %w: %s",
+			err,
+			strings.TrimSpace(
+				string(result),
+			),
+		)
+	}
+
+	count, err := strconv.Atoi(
+		strings.TrimSpace(
+			string(result),
+		),
+	)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"invalid qpdf page count: %w",
+			err,
+		)
+	}
+
+	if count < 1 {
+		return 0, fmt.Errorf(
+			"PDF contains no pages",
+		)
+	}
+
+	return count, nil
 }

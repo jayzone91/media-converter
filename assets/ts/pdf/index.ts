@@ -1,91 +1,119 @@
-import { renderPDFMerge, resetPDFMerge } from "./merge.ts";
+import { destroyPDFMerge, setupPDFMerge } from "./merge.ts";
 
-type PDFTool =
-  | "merge"
-  | "split"
-  | "compress"
-  | "edit"
-  | "encrypt"
-  | "decrypt"
-  | "rotate"
-  | "delete"
-  | "extract"
-  | "sort"
-  | "web"
-  | "optimize"
-  | "redact"
-  | "create";
-
-let activeTool: PDFTool | null = null;
+let activeTool: string | null = null;
 
 export function setupPDFUI(): void {
   const panel = document.querySelector<HTMLElement>('[data-panel="pdf"]');
 
-  if (!panel) {
+  const grid = panel?.querySelector<HTMLElement>(".tool-grid");
+
+  const workspace = document.querySelector<HTMLElement>("#pdf-tool-workspace");
+
+  if (!panel || !grid || !workspace) {
     return;
   }
 
+  setupToolSelection(panel, grid, workspace);
+
+  setupWorkspaceEvents(panel, grid, workspace);
+}
+
+function setupToolSelection(
+  panel: HTMLElement,
+  grid: HTMLElement,
+  workspace: HTMLElement,
+): void {
   const buttons = panel.querySelectorAll<HTMLButtonElement>("[data-pdf-tool]");
 
   for (const button of buttons) {
     button.addEventListener("click", () => {
-      const tool = parsePDFTool(button.dataset.pdfTool);
+      const tool = button.dataset.pdfTool;
 
       if (!tool) {
         return;
       }
 
-      openPDFTool(tool);
+      activeTool = tool;
+
+      for (const candidate of buttons) {
+        candidate.classList.toggle("selected", candidate === button);
+      }
+
+      grid.hidden = true;
+      workspace.hidden = false;
+
+      workspace.replaceChildren();
+
+      const loading = document.createElement("div");
+
+      loading.className = "pdf-workspace-loading";
+
+      const spinner = document.createElement("span");
+
+      spinner.className = "small-spinner";
+
+      const text = document.createElement("span");
+
+      text.textContent = "Werkzeug wird geladen …";
+
+      loading.append(spinner, text);
+
+      workspace.append(loading);
     });
   }
 }
 
-function openPDFTool(tool: PDFTool): void {
-  const panel = document.querySelector<HTMLElement>('[data-panel="pdf"]');
+function setupWorkspaceEvents(
+  panel: HTMLElement,
+  grid: HTMLElement,
+  workspace: HTMLElement,
+): void {
+  document.body.addEventListener("htmx:afterSwap", (event: Event) => {
+    if (!isWorkspaceSwap(event, workspace)) {
+      return;
+    }
 
-  const grid = panel?.querySelector<HTMLElement>(".tool-grid");
+    const merge = workspace.querySelector<HTMLElement>(
+      '[data-pdf-workspace="merge"]',
+    );
 
-  const workspace = document.querySelector<HTMLElement>("#pdf-tool-workspace");
+    if (merge) {
+      setupPDFMerge(merge);
+    }
+  });
 
-  if (!panel || !grid || !workspace) {
-    return;
-  }
+  workspace.addEventListener("click", (event: MouseEvent) => {
+    const target = event.target;
 
-  activeTool = tool;
+    if (!(target instanceof Element)) {
+      return;
+    }
 
-  panel
-    .querySelectorAll<HTMLButtonElement>("[data-pdf-tool]")
-    .forEach((button) => {
-      button.classList.toggle("selected", button.dataset.pdfTool === tool);
-    });
+    const back = target.closest<HTMLElement>("[data-pdf-back]");
 
-  grid.hidden = true;
-  workspace.hidden = false;
+    if (!back) {
+      return;
+    }
 
-  switch (tool) {
-    case "merge":
-      renderPDFMerge(workspace, closePDFTool);
-
-      break;
-
-    default:
-      renderComingSoon(workspace, tool);
-  }
+    void closePDFWorkspace(panel, grid, workspace);
+  });
 }
 
-function closePDFTool(): void {
-  const panel = document.querySelector<HTMLElement>('[data-panel="pdf"]');
+function isWorkspaceSwap(event: Event, workspace: HTMLElement): boolean {
+  const customEvent = event as CustomEvent<{
+    target?: Element;
+  }>;
 
-  const grid = panel?.querySelector<HTMLElement>(".tool-grid");
+  return customEvent.detail?.target === workspace;
+}
 
-  const workspace = document.querySelector<HTMLElement>("#pdf-tool-workspace");
-
-  if (!panel || !grid || !workspace) {
-    return;
-  }
-
+async function closePDFWorkspace(
+  panel: HTMLElement,
+  grid: HTMLElement,
+  workspace: HTMLElement,
+): Promise<void> {
   if (activeTool === "merge") {
-    resetPDFMerge();
+    await destroyPDFMerge();
   }
 
   activeTool = null;
@@ -97,117 +125,12 @@ function closePDFTool(): void {
     });
 
   workspace.replaceChildren();
-  workspace.hidden = true;
 
+  workspace.hidden = true;
   grid.hidden = false;
 
   panel.scrollIntoView({
     behavior: "smooth",
     block: "start",
   });
-}
-
-function renderComingSoon(workspace: HTMLElement, tool: PDFTool): void {
-  workspace.innerHTML = `
-    ${renderBackButton()}
-
-    <div class="pdf-tool-placeholder">
-      <strong>
-        ${escapeHTML(getPDFToolName(tool))}
-      </strong>
-
-      <span>
-        Dieses Werkzeug bauen wir als Nächstes.
-      </span>
-    </div>
-  `;
-
-  const button = workspace.querySelector<HTMLButtonElement>("#pdf-tool-back");
-
-  button?.addEventListener("click", closePDFTool);
-}
-
-function renderBackButton(): string {
-  return `
-    <div class="pdf-workspace-navigation">
-      <button
-        id="pdf-tool-back"
-        class="pdf-back-button"
-        type="button"
-      >
-        <span aria-hidden="true">
-          ←
-        </span>
-
-        <span>
-          Zurück zu PDF-Werkzeugen
-        </span>
-      </button>
-    </div>
-  `;
-}
-
-function parsePDFTool(value: string | undefined): PDFTool | null {
-  switch (value) {
-    case "merge":
-    case "split":
-    case "compress":
-    case "edit":
-    case "encrypt":
-    case "decrypt":
-    case "rotate":
-    case "delete":
-    case "extract":
-    case "sort":
-    case "web":
-    case "optimize":
-    case "redact":
-    case "create":
-      return value;
-
-    default:
-      return null;
-  }
-}
-
-function getPDFToolName(tool: PDFTool): string {
-  const names: Record<PDFTool, string> = {
-    merge: "PDF zusammenfügen",
-
-    split: "PDF trennen",
-
-    compress: "PDF komprimieren",
-
-    edit: "PDF bearbeiten",
-
-    encrypt: "PDF verschlüsseln",
-
-    decrypt: "Passwort entfernen",
-
-    rotate: "Seiten drehen",
-
-    delete: "Seiten löschen",
-
-    extract: "Seiten extrahieren",
-
-    sort: "Seiten sortieren",
-
-    web: "Webseite in PDF",
-
-    optimize: "PDF optimieren",
-
-    redact: "PDF schwärzen",
-
-    create: "PDF erstellen",
-  };
-
-  return names[tool];
-}
-
-function escapeHTML(value: string): string {
-  const element = document.createElement("div");
-
-  element.textContent = value;
-
-  return element.innerHTML;
 }

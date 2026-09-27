@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,46 +17,102 @@ import (
 const shutdownTimeout = 2 * time.Minute
 
 func main() {
+	logger := slog.New(
+		slog.NewTextHandler(
+			os.Stdout,
+			&slog.HandlerOptions{
+				Level: slog.LevelInfo,
+			},
+		),
+	)
+
+	slog.SetDefault(
+		logger,
+	)
+
 	imageMagick, err :=
 		converter.NewImageMagick()
+
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(
+			"failed to initialize ImageMagick",
+			"error",
+			err,
+		)
+
+		os.Exit(1)
 	}
 
 	ffmpeg, err :=
 		converter.NewFFmpeg()
+
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(
+			"failed to initialize FFmpeg",
+			"error",
+			err,
+		)
+
+		os.Exit(1)
 	}
 
 	ffprobe, err :=
 		media.NewFFProbe()
+
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(
+			"failed to initialize ffprobe",
+			"error",
+			err,
+		)
+
+		os.Exit(1)
 	}
 
 	libreOffice, err :=
 		converter.NewLibreOffice()
+
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(
+			"failed to initialize LibreOffice",
+			"error",
+			err,
+		)
+
+		os.Exit(1)
 	}
 
 	pdf, err :=
 		converter.NewPDF(
 			libreOffice,
 		)
+
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(
+			"failed to initialize PDF converter",
+			"error",
+			err,
+		)
+
+		os.Exit(1)
 	}
 
 	qpdf, err :=
 		converter.NewQPDF()
+
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(
+			"failed to initialize qpdf",
+			"error",
+			err,
+		)
+
+		os.Exit(1)
 	}
 
 	server :=
 		web.NewServer(
+			logger,
 			imageMagick,
 			ffmpeg,
 			ffprobe,
@@ -71,6 +127,7 @@ func main() {
 			os.Interrupt,
 			syscall.SIGTERM,
 		)
+
 	defer stop()
 
 	serverError :=
@@ -80,8 +137,10 @@ func main() {
 		)
 
 	go func() {
-		log.Println(
-			"listening on :8080",
+		logger.Info(
+			"server listening",
+			"address",
+			":8080",
 		)
 
 		serverError <- server.ListenAndServe(
@@ -92,12 +151,18 @@ func main() {
 	select {
 	case err := <-serverError:
 		if err != nil {
-			log.Fatal(err)
+			logger.Error(
+				"server stopped unexpectedly",
+				"error",
+				err,
+			)
+
+			os.Exit(1)
 		}
 
 	case <-signalCtx.Done():
-		log.Println(
-			"shutting down",
+		logger.Info(
+			"server shutting down",
 		)
 
 		shutdownCtx, cancel :=
@@ -105,6 +170,7 @@ func main() {
 				context.Background(),
 				shutdownTimeout,
 			)
+
 		defer cancel()
 
 		if err :=
@@ -115,22 +181,24 @@ func main() {
 				err,
 				context.DeadlineExceeded,
 			) {
-				log.Printf(
-					"graceful shutdown failed: %v",
+				logger.Error(
+					"graceful shutdown failed",
+					"error",
 					err,
 				)
 			}
 
 			if err :=
 				server.Close(); err != nil {
-				log.Printf(
-					"forced shutdown failed: %v",
+				logger.Error(
+					"forced shutdown failed",
+					"error",
 					err,
 				)
 			}
 		}
 
-		log.Println(
+		logger.Info(
 			"server stopped",
 		)
 	}
