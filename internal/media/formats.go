@@ -244,6 +244,13 @@ var Formats = map[string]Format{
 		Targets:    []string{"pdf", "pptx"},
 		Extensions: []string{".odp"},
 	},
+	"rtf": {
+		ID:         "rtf",
+		MIME:       "application/rtf",
+		Category:   CategoryDocument,
+		Targets:    []string{"pdf", "docx", "odt"},
+		Extensions: []string{".rtf"},
+	},
 }
 
 func FindByMIME(mime string) (Format, bool) {
