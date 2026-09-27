@@ -4,61 +4,66 @@
 
 ### Dokumente
 
-- [ ] `.rtf` als Dokument erkennen und unterstützen
-  - [ ] MIME-/Dateityp-Erkennung ergänzen
-  - [ ] Konvertierung über LibreOffice
-  - [ ] sinnvolle Zielformate definieren
-  - [ ] PDF-Ausgabe testen
-  - [ ] DOCX-/ODT-Ausgabe testen
+- [x] `.rtf` als Dokument erkennen und unterstützen
+  - [x] MIME-/Dateityp-Erkennung ergänzen
+  - [x] Konvertierung über LibreOffice
+  - [x] sinnvolle Zielformate definieren
+  - [x] PDF-Ausgabe testen
+  - [x] DOCX-/ODT-Ausgabe testen
 
-- [ ] `.txt` als Dokument erkennen und unterstützen
-  - [ ] MIME-/Dateityp-Erkennung ergänzen
-  - [ ] Zeichencodierung sauber behandeln
-  - [ ] TXT → PDF
-  - [ ] TXT → DOCX
-  - [ ] TXT → ODT
+- [x] `.txt` als Dokument erkennen und unterstützen
+  - [x] MIME-/Dateityp-Erkennung ergänzen
+  - [ ] Zeichencodierung explizit validieren / absichern
+  - [x] TXT → PDF
+  - [x] TXT → DOCX
+  - [x] TXT → ODT
   - [ ] optional TXT → HTML
 
 ### Markdown
 
-- [ ] Markdown als Eingabeformat der Medien-Konvertierung unterstützen
-  - [ ] `.md`, `.mdx` und `.markdown` erkennen
-  - [ ] sichere Markdown-Verarbeitung über Goldmark
-  - [ ] Raw HTML nicht ausführen
-  - [ ] externe Ressourcen kontrollieren
+- [x] Markdown als Eingabeformat der Medien-Konvertierung unterstützen
+  - [x] `.md`, `.mdx` und `.markdown` erkennen
+  - [x] sichere Markdown-Verarbeitung über Goldmark
+  - [x] Raw HTML nicht ausführen
+  - [x] externe Ressourcen kontrollieren / Markdown-Bilder blockieren
 
-- [ ] Markdown → PDF
-  - [ ] Markdown → HTML
-  - [ ] HTML über Chromium als PDF rendern
-  - [ ] Tabellen
-  - [ ] Task Lists
-  - [ ] Codeblöcke
-  - [ ] Blockquotes
-  - [ ] Links
-  - [ ] Seitenumbrüche / Druck-CSS
+- [x] Markdown → PDF
+  - [x] Markdown → HTML
+  - [x] HTML über Chromium als PDF rendern
+  - [x] Tabellen
+  - [x] Task Lists
+  - [x] Codeblöcke
+  - [x] Blockquotes
+  - [x] Links
+  - [x] Seitenumbrüche / Druck-CSS
 
-- [ ] Markdown → Bild
-  - [ ] Markdown über Chromium rendern
-  - [ ] PNG
-  - [ ] JPEG
-  - [ ] WEBP
-  - [ ] automatische Höhe anhand des Inhalts
-  - [ ] maximale Renderhöhe definieren
-  - [ ] sehr lange Dokumente sinnvoll behandeln
+- [x] Markdown → Bild
+  - [x] Markdown über Chromium rendern
+  - [x] PNG
+  - [x] JPEG
+  - [x] WEBP
+  - [x] automatische Höhe anhand des Inhalts
+  - [x] maximale Renderhöhe definieren
+  - [x] sehr lange Dokumente kontrolliert ablehnen
 
-- [ ] Markdown → Website
-  - [ ] vollständige HTML-Datei erzeugen
-  - [ ] eingebettetes CSS
-  - [ ] keine extern erforderlichen Assets
-  - [ ] optional Dokumenttitel aus erster H1 übernehmen
+- [x] Markdown → Website
+  - [x] vollständige HTML-Datei erzeugen
+  - [x] eingebettetes CSS
+  - [x] keine extern erforderlichen Assets
+  - [x] Dokumenttitel aus erster H1 übernehmen
 
 ### Medien-Konverter UX
 
 - [ ] Unterstützte Eingabeformate vollständig in der UI anzeigen
-- [ ] Unterstützte Zielformate abhängig vom erkannten Eingabeformat anzeigen
-- [ ] verständlichere Fehlermeldung bei nicht unterstützten Dateitypen
+- [x] Unterstützte Zielformate abhängig vom erkannten Eingabeformat anzeigen
+- [x] Batch-Konvertierung mehrerer Dateien gleichen Typs
+  - [x] maximal 20 Dateien gleichzeitig
+  - [x] gemischte Eingabeformate ablehnen
+  - [x] mehrere Ergebnisse automatisch als ZIP ausgeben
+  - [x] Drag-and-Drop mehrerer Medien
+- [ ] verständlichere Fehlermeldung bei nicht unterstützten Dateitypen weiter vereinheitlichen
 - [ ] Dateiendung und tatsächlichen MIME-/Dateityp gegeneinander validieren
-- [ ] Ausgabe-Dateinamen konsistent aus dem ursprünglichen Dateinamen ableiten
+- [x] Ausgabe-Dateinamen konsistent aus dem ursprünglichen Dateinamen ableiten
 
 
 ## 2. PDF-Werkzeuge
@@ -129,8 +134,8 @@
   - [ ] Tabellen über Seitenumbrüche testen
   - [ ] lange Codeblöcke testen
   - [ ] sehr lange URLs / Wörter testen
-  - [ ] Markdown-Bilder weiterhin blockieren
-  - [ ] Raw HTML weiterhin nicht ausführen
+  - [x] Markdown-Bilder weiterhin blockieren
+  - [x] Raw HTML weiterhin nicht ausführen
 
 
 ## 3. Sicherheit
@@ -222,11 +227,12 @@
 
 - [ ] Fehlerantworten vereinheitlichen
 - [ ] strukturierte Fehlercodes für Frontend einführen
-- [ ] technische Details nur serverseitig loggen
-- [ ] Benutzer bekommt kurze verständliche Fehlermeldung
+- [x] technische Details nur serverseitig loggen
+- [x] Benutzer bekommt kurze verständliche Fehlermeldung bei Medien-Konvertierungen
+- [ ] Fehlertexte aller PDF-Werkzeuge vereinheitlichen
 - [ ] Timeout-Fehler einheitlich behandeln
 - [ ] Queue-Timeout einheitlich behandeln
-- [ ] Client-Abbruch nicht als Serverfehler loggen
+- [x] Client-Abbruch im zentralen Request-Logging nicht als Serverfehler behandeln
 
 - [ ] Fehler externer Programme vereinheitlichen
   - [ ] FFmpeg
@@ -241,19 +247,38 @@
 
 ## 8. Logging und Observability
 
-- [ ] Conversion-Logs vereinheitlichen
-- [ ] keine vertraulichen Inhalte loggen
-- [ ] keine Passwörter loggen
-- [ ] keine vollständigen URLs mit Tokens/Query-Strings loggen
-- [ ] Dateiinhalt niemals loggen
+- [x] zentrale HTTP-Request-Logs
+  - [x] Method
+  - [x] Path
+  - [x] Status
+  - [x] Dauer
+  - [x] WARN/ERROR mit erweitertem Diagnosekontext
 
-- [ ] sinnvolle Werte loggen
-  - [ ] Dateityp
-  - [ ] Eingabegröße
-  - [ ] Ausgabegröße
-  - [ ] Conversion-Typ
-  - [ ] Erfolg / Fehler
-  - [ ] Timeout
+- [x] INFO-Logs kompakt einzeilig darstellen
+  - [x] technische Felder bei Aktionslogs ausblenden
+  - [x] maximal sechs Felder pro INFO-Aktionslog
+  - [x] lange Feldnamen für INFO kürzen
+  - [x] WARN und ERROR weiterhin ausführlich darstellen
+
+- [x] Conversion-/Aktionslogs vereinheitlichen
+  - [x] Medienerkennung loggen
+  - [x] Medien-Konvertierungen loggen
+  - [x] QR-Erstellung loggen
+  - [x] vorhandene PDF-Aktionslogs zentral kompakt darstellen
+
+- [ ] Logging auf vertrauliche Daten vollständig auditieren
+  - [ ] keine vertraulichen Inhalte loggen
+  - [ ] keine Passwörter loggen
+  - [ ] keine vollständigen URLs mit Tokens/Query-Strings loggen
+  - [x] Dateiinhalt niemals loggen
+
+- [ ] sinnvolle Werte in allen Werkzeugen vollständig vereinheitlichen
+  - [x] Dateityp / Quellformat
+  - [ ] Eingabegröße überall
+  - [ ] Ausgabegröße überall
+  - [x] Conversion-Typ / Zielformat
+  - [x] Erfolg / Fehler
+  - [x] Timeout
 
 - [ ] optional einfache interne Statusseite
   - [ ] aktive Conversions
@@ -305,6 +330,14 @@
   - [ ] verbotene Bilder
   - [ ] gefährliche Links
 
+- [ ] Tests für Batch-Konvertierung
+  - [ ] mehrere Dateien gleichen Typs
+  - [ ] gemischte Formate ablehnen
+  - [ ] maximal 20 Dateien
+  - [ ] doppelte Dateinamen im ZIP
+  - [ ] Einzeldatei weiterhin ohne ZIP
+  - [ ] Abbruch bei Fehler einer Batch-Datei
+
 - [ ] Tests für Web-PDF-Sicherheit
   - [ ] localhost
   - [ ] `127.0.0.1`
@@ -324,8 +357,9 @@
 ### Frontend
 
 - [ ] TypeScript-Tests für Format-/Input-Validierung
+- [x] Multi-File-Drag-and-Drop testen
 - [ ] Upload-Abbruch testen
-- [ ] Wechsel zwischen PDF-Werkzeugen testen
+- [x] Wechsel zwischen PDF-Werkzeugen testen
 - [ ] mehrfaches Öffnen/Schließen der Workspaces testen
 - [ ] parallele Requests testen
 
@@ -357,14 +391,16 @@
 
 ## 12. Code-Qualität
 
-- [ ] 500-LOC-Limit weiterhin einhalten
-- [ ] große Dateien frühzeitig aufteilen
+- [x] 500-LOC-Limit automatisiert über `cmd/checkloc` / `just check` durchsetzen
+- [x] `convert.go` in kleinere Verantwortlichkeiten aufteilen
+- [ ] weitere große Dateien frühzeitig aufteilen
 - [ ] doppelte PDF-Frontend-Logik reduzieren
 - [ ] doppelte Selection-Logik reduzieren
 - [ ] gemeinsame Request-/Response-Helfer prüfen
 - [ ] gemeinsame Streaming-Helfer für Downloads erstellen
 - [ ] gemeinsame Temp-Directory-Helfer prüfen
 - [ ] gemeinsame Timeout-/Conversion-Slot-Behandlung prüfen
+- [ ] Markdown-Rendering zwischen Medien-Konverter und PDF-Erstellung weiter deduplizieren
 
 - [ ] ungenutzten Code regelmäßig mit `gopls` / Compiler bereinigen
 - [ ] `go vet` in `just check` prüfen/integrieren
@@ -398,9 +434,9 @@
 
 ## 14. Später / optionale Erweiterungen
 
-- [ ] Batch-Konvertierung mehrerer Dateien
-- [ ] mehrere Ergebnisse als ZIP herunterladen
-- [ ] Drag-and-Drop mehrerer Medien
+- [x] Batch-Konvertierung mehrerer Dateien gleichen Typs
+- [x] mehrere Ergebnisse als ZIP herunterladen
+- [x] Drag-and-Drop mehrerer Medien
 - [ ] Conversion-Presets
 - [ ] zuletzt verwendete Optionen lokal im Browser merken
 - [ ] Bild-Metadaten entfernen
