@@ -1,5 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
-
+import { downloadURL } from "../../shared/download.ts";
 import {
   deletePDFUpload,
   isPDFFile,
@@ -282,7 +281,7 @@ async function createPDF(): Promise<void> {
 
     const result = await rotatePDFPages(upload.id, rotations);
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     upload = null;
 

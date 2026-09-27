@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -69,6 +66,7 @@ func (s *Server) handlePDFCreate(
 			"Das PDF-Dokument konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -80,8 +78,10 @@ func (s *Server) handlePDFCreate(
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
 			http.StatusServiceUnavailable,
 		)
+
 		return
 	}
+
 	defer s.releaseConversionSlot()
 
 	tempDir, err :=
@@ -102,6 +102,7 @@ func (s *Server) handlePDFCreate(
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -158,6 +159,7 @@ func (s *Server) handlePDFCreate(
 				"Die PDF-Erstellung hat zu lange gedauert.",
 				http.StatusGatewayTimeout,
 			)
+
 			return
 		}
 
@@ -185,10 +187,12 @@ func (s *Server) handlePDFCreate(
 			"Das PDF-Dokument konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	s.writeCreatedPDF(
+	writeCreatedPDF(
+		s,
 		w,
 		r,
 		outputPath,
@@ -299,29 +303,17 @@ func readPDFCreateRequest(
 		true
 }
 
-func (s *Server) writeCreatedPDF(
+func writeCreatedPDF(
+	s *Server,
 	w http.ResponseWriter,
 	r *http.Request,
 	path string,
 	request pdfCreateRequest,
 ) {
-	file, err :=
-		os.Open(
+	outputSize, err :=
+		downloadFileSize(
 			path,
 		)
-
-	if err != nil {
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	info, err :=
-		file.Stat()
 
 	if err != nil {
 		http.Error(
@@ -329,70 +321,28 @@ func (s *Server) writeCreatedPDF(
 			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": "dokument.pdf",
-			},
-		)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	if _, err := io.Copy(
+	if !s.prepareDownloadResponse(
 		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send created PDF",
-			err,
-		)
-
+		r,
+		path,
+		"dokument.pdf",
+	) {
 		return
 	}
 
-	s.logger.Info(
+	s.logInfo(
 		"PDF document created",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
 		"paper_size",
 		request.PaperSize,
 		"landscape",
 		request.Landscape,
-		"font_size",
-		request.FontSize,
-		"include_date",
-		request.IncludeDate,
 		"markdown",
 		request.Markdown,
-		"output_size_bytes",
-		info.Size(),
+		"output",
+		outputSize,
 	)
 }

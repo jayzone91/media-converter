@@ -1,3 +1,5 @@
+import type { DownloadResult } from "../../shared/download.ts";
+
 export interface PDFUploadResponse {
   id: string;
   filename: string;
@@ -14,10 +16,7 @@ export interface MergeDocument {
   previews: string[];
 }
 
-export interface MergeResult {
-  blob: Blob;
-  filename: string;
-}
+export type MergeResult = DownloadResult;
 
 export interface DocumentRenderActions {
   moveUp: (id: string) => void;

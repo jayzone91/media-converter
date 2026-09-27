@@ -1,33 +1,19 @@
-import { getDownloadFilename } from "../../shared/download.ts";
-import type { MergeResult } from "./types.ts";
+import { requestDownload, type DownloadResult } from "../../shared/download.ts";
 
-export async function mergePDFUploads(ids: string[]): Promise<MergeResult> {
-  const response = await fetch("/pdf/merge", {
-    method: "POST",
+export async function mergePDFUploads(ids: string[]): Promise<DownloadResult> {
+  return requestDownload(
+    "/pdf/merge",
+    {
+      method: "POST",
 
-    headers: {
-      "Content-Type": "application/json",
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        ids,
+      }),
     },
-
-    body: JSON.stringify({
-      ids,
-    }),
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-
-    throw new Error(
-      message.trim() || "PDFs konnten nicht zusammengefügt werden.",
-    );
-  }
-
-  return {
-    blob: await response.blob(),
-
-    filename: getDownloadFilename(
-      response.headers.get("Content-Disposition"),
-      "zusammengefuegt.pdf",
-    ),
-  };
+    "PDFs konnten nicht zusammengefügt werden.",
+  );
 }

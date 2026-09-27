@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -249,33 +247,10 @@ func (s *Server) handlePDFSort(
 		return
 	}
 
-	file, err :=
-		os.Open(
+	outputSize, err :=
+		downloadFileSize(
 			outputPath,
 		)
-
-	if err != nil {
-		s.logError(
-			r,
-			"PDF sort output open failed",
-			err,
-			"filename",
-			upload.Filename,
-		)
-
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-
-		return
-	}
-
-	defer file.Close()
-
-	info, err :=
-		file.Stat()
 
 	if err != nil {
 		s.logError(
@@ -295,58 +270,18 @@ func (s *Server) handlePDFSort(
 		return
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": "sortiert.pdf",
-			},
-		)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
+	if !s.prepareDownloadResponse(
+		w,
+		r,
+		outputPath,
+		"sortiert.pdf",
+	) {
+		return
+	}
 
 	s.pdfUploads.Delete(
 		upload.ID,
 	)
-
-	if _, err :=
-		io.Copy(
-			w,
-			file,
-		); err != nil {
-		s.logError(
-			r,
-			"PDF sort response failed",
-			err,
-			"filename",
-			upload.Filename,
-			"output_size",
-			info.Size(),
-		)
-
-		return
-	}
 
 	s.logInfo(
 		"PDF sort",
@@ -355,7 +290,7 @@ func (s *Server) handlePDFSort(
 		"input",
 		upload.Size,
 		"output",
-		info.Size(),
+		outputSize,
 		"duration",
 		time.Since(started),
 	)

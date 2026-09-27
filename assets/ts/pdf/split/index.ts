@@ -1,5 +1,3 @@
-import { downloadBlob } from "../../shared/download.ts";
-
 import {
   deletePDFUpload,
   isPDFFile,
@@ -12,6 +10,7 @@ import { createPDFSplitGrid, type PDFSplitGrid } from "./grid.ts";
 import { splitPDF } from "./api.ts";
 
 import type { PDFSplitSegment } from "./types.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
 
@@ -294,7 +293,7 @@ async function createSplit(): Promise<void> {
   try {
     const result = await splitPDF(upload.id, splitPoints);
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     upload = null;
 

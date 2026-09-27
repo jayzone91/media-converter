@@ -1,4 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 import { deletePDFUpload, isPDFFile, uploadPDF } from "../uploads.ts";
 import { mergePDFUploads } from "./api.ts";
 import { renderMergeDocuments } from "./render.ts";
@@ -347,7 +347,7 @@ async function mergeDocuments(): Promise<void> {
       documents.map((document) => document.id),
     );
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     documents = [];
 

@@ -1,4 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 import { deletePDFUpload } from "../uploads.ts";
 
@@ -173,7 +173,7 @@ async function decryptCurrentPDF(): Promise<void> {
   try {
     const result = await decryptPDF(upload.id, password.value);
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     upload = null;
 

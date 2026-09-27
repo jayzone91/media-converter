@@ -2,18 +2,11 @@ package web
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 )
-
-type conversionDownloadResponse struct {
-	DownloadURL string `json:"download_url"`
-
-	Filename string `json:"filename"`
-}
 
 func (s *Server) convertSingleUpload(
 	w http.ResponseWriter,
@@ -51,7 +44,7 @@ func (s *Server) convertSingleUpload(
 		return false
 	}
 
-	return s.prepareConvertedDownload(
+	return s.prepareDownloadResponse(
 		w,
 		r,
 		outputPath,
@@ -148,7 +141,7 @@ func (s *Server) convertBatchUpload(
 		return false
 	}
 
-	return s.prepareConvertedDownload(
+	return s.prepareDownloadResponse(
 		w,
 		r,
 		archivePath,
@@ -225,73 +218,6 @@ func (s *Server) handleConversionError(
 			w,
 			"conversion failed",
 			http.StatusInternalServerError,
-		)
-
-		return false
-	}
-
-	return true
-}
-
-func (s *Server) prepareConvertedDownload(
-	w http.ResponseWriter,
-	r *http.Request,
-	path string,
-	filename string,
-) bool {
-	download, err :=
-		s.downloads.Add(
-			path,
-			filename,
-		)
-
-	if err != nil {
-		s.logError(
-			r,
-			"download preparation failed",
-			err,
-			"filename",
-			filename,
-		)
-
-		http.Error(
-			w,
-			"Download konnte nicht vorbereitet werden.",
-			http.StatusInternalServerError,
-		)
-
-		return false
-	}
-
-	response :=
-		conversionDownloadResponse{
-			DownloadURL: "/downloads/" +
-				download.ID,
-
-			Filename: download.Filename,
-		}
-
-	w.Header().Set(
-		"Content-Type",
-		"application/json; charset=utf-8",
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	if err := json.NewEncoder(
-		w,
-	).Encode(
-		response,
-	); err != nil {
-		s.logError(
-			r,
-			"download response failed",
-			err,
-			"filename",
-			filename,
 		)
 
 		return false

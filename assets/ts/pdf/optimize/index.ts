@@ -1,4 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 import {
   deletePDFUpload,
@@ -374,7 +374,7 @@ async function downloadOptimizedPDF(): Promise<void> {
   try {
     const result = await optimizePDF(upload.id, linearize);
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     upload = null;
 

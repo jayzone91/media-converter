@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -61,8 +58,10 @@ func (s *Server) handlePDFWeb(
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
 			http.StatusServiceUnavailable,
 		)
+
 		return
 	}
+
 	defer s.releaseConversionSlot()
 
 	tempDir, err :=
@@ -83,6 +82,7 @@ func (s *Server) handlePDFWeb(
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -111,6 +111,7 @@ func (s *Server) handlePDFWeb(
 			r.Context(),
 			pdfWebTimeout,
 		)
+
 	defer cancel()
 
 	if err := s.webPDF.Render(
@@ -128,6 +129,7 @@ func (s *Server) handlePDFWeb(
 				"Die Webseite konnte nicht rechtzeitig geladen werden.",
 				http.StatusGatewayTimeout,
 			)
+
 			return
 		}
 
@@ -157,32 +159,14 @@ func (s *Server) handlePDFWeb(
 			"Die Webseite konnte nicht als PDF erstellt werden.",
 			http.StatusBadGateway,
 		)
+
 		return
 	}
 
-	file, err :=
-		os.Open(
+	outputSize, err :=
+		downloadFileSize(
 			outputPath,
 		)
-
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open webpage PDF",
-			err,
-		)
-
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	info, err :=
-		file.Stat()
 
 	if err != nil {
 		s.logError(
@@ -196,74 +180,30 @@ func (s *Server) handlePDFWeb(
 			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": "webseite.pdf",
-			},
-		)
+	if !s.prepareDownloadResponse(
+		w,
+		r,
+		outputPath,
+		"webseite.pdf",
+	) {
+		return
+	}
 
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	s.logger.Info(
+	s.logInfo(
 		"webpage PDF created",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
 		"host",
 		parsedURL.Hostname(),
 		"paper_size",
 		request.PaperSize,
 		"render_mode",
 		request.RenderMode,
-		"landscape",
-		request.Landscape,
-		"print_background",
-		request.PrintBackground,
-		"wait_ms",
-		request.WaitMilliseconds,
-		"output_size_bytes",
-		info.Size(),
+		"output",
+		outputSize,
 	)
-
-	if _, err := io.Copy(
-		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send webpage PDF",
-			err,
-			"host",
-			parsedURL.Hostname(),
-		)
-	}
 }
 
 func readPDFWebRequest(

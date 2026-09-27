@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,6 +28,8 @@ func (s *Server) handlePDFSplit(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	started := time.Now()
+
 	r.Body = http.MaxBytesReader(
 		w,
 		r.Body,
@@ -58,6 +58,7 @@ func (s *Server) handlePDFSplit(
 			"Ungültige Anfrage.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -67,6 +68,7 @@ func (s *Server) handlePDFSplit(
 			"Upload-ID fehlt.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -77,12 +79,14 @@ func (s *Server) handlePDFSplit(
 			"Es können maximal 200 Teildokumente erzeugt werden.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
 	upload, ok := s.pdfUploads.Get(
 		request.UploadID,
 	)
+
 	if !ok {
 		s.logWarn(
 			r,
@@ -96,6 +100,7 @@ func (s *Server) handlePDFSplit(
 			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
 		)
+
 		return
 	}
 
@@ -103,6 +108,7 @@ func (s *Server) handlePDFSplit(
 		upload.PageCount,
 		request.SplitAfter,
 	)
+
 	if err != nil {
 		s.logWarn(
 			r,
@@ -124,6 +130,7 @@ func (s *Server) handlePDFSplit(
 			"Die Trennpunkte sind ungültig.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -145,6 +152,7 @@ func (s *Server) handlePDFSplit(
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
 			http.StatusServiceUnavailable,
 		)
+
 		return
 	}
 
@@ -154,6 +162,7 @@ func (s *Server) handlePDFSplit(
 		"",
 		"media-converter-pdf-split-*",
 	)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -170,6 +179,7 @@ func (s *Server) handlePDFSplit(
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -240,6 +250,7 @@ func (s *Server) handlePDFSplit(
 					"Das Trennen der PDF hat zu lange gedauert.",
 					http.StatusGatewayTimeout,
 				)
+
 				return
 			}
 
@@ -248,6 +259,7 @@ func (s *Server) handlePDFSplit(
 				"Die PDF konnte nicht getrennt werden.",
 				http.StatusInternalServerError,
 			)
+
 			return
 		}
 
@@ -284,29 +296,15 @@ func (s *Server) handlePDFSplit(
 			"ZIP-Datei konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	file, err := os.Open(
-		archivePath,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open PDF split archive",
-			err,
+	outputSize, err :=
+		downloadFileSize(
+			archivePath,
 		)
 
-		http.Error(
-			w,
-			"ZIP-Datei konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
 	if err != nil {
 		s.logError(
 			r,
@@ -319,72 +317,34 @@ func (s *Server) handlePDFSplit(
 			"ZIP-Datei konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	disposition := mime.FormatMediaType(
-		"attachment",
-		map[string]string{
-			"filename": "getrennte-pdfs.zip",
-		},
-	)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/zip",
-	)
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
+	if !s.prepareDownloadResponse(
+		w,
+		r,
+		archivePath,
+		"getrennte-pdfs.zip",
+	) {
+		return
+	}
 
 	s.pdfUploads.Delete(
 		upload.ID,
 	)
 
-	s.logger.Info(
-		"PDF split completed",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
-		"page_count",
+	s.logInfo(
+		"PDF split",
+		"pages",
 		upload.PageCount,
-		"part_count",
+		"parts",
 		len(ranges),
-		"input_size_bytes",
+		"input",
 		upload.Size,
-		"output_size_bytes",
-		info.Size(),
+		"output",
+		outputSize,
+		"duration",
+		time.Since(started),
 	)
-
-	if _, err := io.Copy(
-		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send PDF split archive",
-			err,
-			"filename",
-			upload.Filename,
-			"output_size_bytes",
-			info.Size(),
-		)
-	}
 }

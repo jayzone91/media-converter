@@ -1,5 +1,3 @@
-import { downloadBlob } from "../../shared/download.ts";
-
 import {
   deletePDFUpload,
   isPDFFile,
@@ -13,6 +11,7 @@ import {
 } from "../shared/selection-grid.ts";
 
 import { deletePDFPages } from "./api.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
 
@@ -304,7 +303,7 @@ async function createPDF(): Promise<void> {
   try {
     const result = await deletePDFPages(upload.id, selectedPages);
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     /*
      * Das Backend entfernt den

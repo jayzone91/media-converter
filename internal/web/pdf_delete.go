@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -261,31 +259,10 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	file, err := os.Open(
-		outputPath,
-	)
-
-	if err != nil {
-		s.logError(
-			r,
-			"PDF delete output open failed",
-			err,
-			"filename",
-			upload.Filename,
+	outputSize, err :=
+		downloadFileSize(
+			outputPath,
 		)
-
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-
-		return
-	}
-
-	defer file.Close()
-
-	info, err := file.Stat()
 
 	if err != nil {
 		s.logError(
@@ -305,56 +282,18 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	disposition := mime.FormatMediaType(
-		"attachment",
-		map[string]string{
-			"filename": "seiten-entfernt.pdf",
-		},
-	)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
+	if !s.prepareDownloadResponse(
+		w,
+		r,
+		outputPath,
+		"seiten-entfernt.pdf",
+	) {
+		return
+	}
 
 	s.pdfUploads.Delete(
 		upload.ID,
 	)
-
-	if _, err := io.Copy(
-		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"PDF delete response failed",
-			err,
-			"filename",
-			upload.Filename,
-			"output_size",
-			info.Size(),
-		)
-
-		return
-	}
 
 	s.logInfo(
 		"PDF delete",
@@ -365,7 +304,7 @@ func (s *Server) handlePDFDeletePages(
 		"input",
 		upload.Size,
 		"output",
-		info.Size(),
+		outputSize,
 		"duration",
 		time.Since(started),
 	)

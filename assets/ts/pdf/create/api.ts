@@ -1,4 +1,4 @@
-import { getDownloadFilename } from "../../shared/download.ts";
+import { requestDownload, type DownloadResult } from "../../shared/download.ts";
 
 export type PDFCreatePaperSize = "a4" | "letter";
 
@@ -12,46 +12,30 @@ export interface PDFCreateOptions {
   markdown: boolean;
 }
 
-export interface PDFCreateResult {
-  blob: Blob;
-  filename: string;
-}
+export type PDFCreateResult = DownloadResult;
 
 export async function createPDFDocument(
   options: PDFCreateOptions,
 ): Promise<PDFCreateResult> {
-  const response = await fetch("/pdf/create", {
-    method: "POST",
+  return requestDownload(
+    "/pdf/create",
+    {
+      method: "POST",
 
-    headers: {
-      "Content-Type": "application/json",
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        title: options.title,
+        body: options.body,
+        paper_size: options.paperSize,
+        landscape: options.landscape,
+        font_size: options.fontSize,
+        include_date: options.includeDate,
+        markdown: options.markdown,
+      }),
     },
-
-    body: JSON.stringify({
-      title: options.title,
-      body: options.body,
-      paper_size: options.paperSize,
-      landscape: options.landscape,
-      font_size: options.fontSize,
-      include_date: options.includeDate,
-      markdown: options.markdown,
-    }),
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-
-    throw new Error(
-      message.trim() || "Das PDF-Dokument konnte nicht erstellt werden.",
-    );
-  }
-
-  return {
-    blob: await response.blob(),
-
-    filename: getDownloadFilename(
-      response.headers.get("Content-Disposition"),
-      "dokument.pdf",
-    ),
-  };
+    "Das PDF-Dokument konnte nicht erstellt werden.",
+  );
 }

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -28,6 +26,8 @@ func (s *Server) handlePDFExtractPages(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	started := time.Now()
+
 	r.Body = http.MaxBytesReader(
 		w,
 		r.Body,
@@ -44,7 +44,9 @@ func (s *Server) handlePDFExtractPages(
 
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(
+		&request,
+	); err != nil {
 		s.logError(
 			r,
 			"failed to decode PDF extract request",
@@ -56,6 +58,7 @@ func (s *Server) handlePDFExtractPages(
 			"Ungültige Anfrage.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -65,12 +68,14 @@ func (s *Server) handlePDFExtractPages(
 			"Upload-ID fehlt.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
 	upload, ok := s.pdfUploads.Get(
 		request.UploadID,
 	)
+
 	if !ok {
 		s.logWarn(
 			r,
@@ -84,6 +89,7 @@ func (s *Server) handlePDFExtractPages(
 			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
 		)
+
 		return
 	}
 
@@ -111,6 +117,7 @@ func (s *Server) handlePDFExtractPages(
 			"Die Seitenauswahl ist ungültig.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -132,6 +139,7 @@ func (s *Server) handlePDFExtractPages(
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
 			http.StatusServiceUnavailable,
 		)
+
 		return
 	}
 
@@ -141,6 +149,7 @@ func (s *Server) handlePDFExtractPages(
 		"",
 		"media-converter-pdf-extract-*",
 	)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -157,11 +166,14 @@ func (s *Server) handlePDFExtractPages(
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
 	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
+		if err := os.RemoveAll(
+			tempDir,
+		); err != nil {
 			s.logError(
 				r,
 				"failed to remove PDF extract temporary directory",
@@ -214,6 +226,7 @@ func (s *Server) handlePDFExtractPages(
 				"Das Extrahieren der Seiten hat zu lange gedauert.",
 				http.StatusGatewayTimeout,
 			)
+
 			return
 		}
 
@@ -222,33 +235,15 @@ func (s *Server) handlePDFExtractPages(
 			"Die ausgewählten Seiten konnten nicht extrahiert werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	file, err := os.Open(
-		outputPath,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open extracted PDF",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
+	outputSize, err :=
+		downloadFileSize(
+			outputPath,
 		)
 
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
 	if err != nil {
 		s.logError(
 			r,
@@ -265,77 +260,36 @@ func (s *Server) handlePDFExtractPages(
 			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	disposition := mime.FormatMediaType(
-		"attachment",
-		map[string]string{
-			"filename": "extrahiert.pdf",
-		},
-	)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
+	if !s.prepareDownloadResponse(
+		w,
+		r,
+		outputPath,
+		"extrahiert.pdf",
+	) {
+		return
+	}
 
 	s.pdfUploads.Delete(
 		upload.ID,
 	)
 
-	s.logger.Info(
+	s.logInfo(
 		"PDF pages extracted",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
-		"original_page_count",
+		"pages",
 		upload.PageCount,
-		"extracted_page_count",
+		"extracted",
 		len(request.Pages),
-		"input_size_bytes",
+		"input",
 		upload.Size,
-		"output_size_bytes",
-		info.Size(),
+		"output",
+		outputSize,
+		"duration",
+		time.Since(started),
 	)
-
-	if _, err := io.Copy(
-		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send extracted PDF",
-			err,
-			"filename",
-			upload.Filename,
-			"output_size_bytes",
-			info.Size(),
-		)
-	}
 }
 
 func validatePDFPageSelection(

@@ -1,4 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 import {
   deletePDFUpload,
@@ -312,7 +312,7 @@ async function createSortedPDF(): Promise<void> {
       pages.map((page) => page.originalPage),
     );
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     /*
      * Das Backend entfernt den Upload

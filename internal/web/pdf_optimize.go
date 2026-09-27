@@ -4,11 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"mime"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -19,19 +15,23 @@ const (
 )
 
 type pdfOptimizeRequest struct {
-	UploadID  string `json:"upload_id"`
-	Linearize bool   `json:"linearize"`
+	UploadID string `json:"upload_id"`
+
+	Linearize bool `json:"linearize"`
 }
 
 type pdfOptimizeAnalysisResponse struct {
 	OriginalSize int64 `json:"original_size"`
-	ResultSize   int64 `json:"result_size"`
-	DeltaBytes   int64 `json:"delta_bytes"`
+
+	ResultSize int64 `json:"result_size"`
+
+	DeltaBytes int64 `json:"delta_bytes"`
 
 	DeltaPercent float64 `json:"delta_percent"`
 
 	Linearized bool `json:"linearized"`
-	Unchanged  bool `json:"unchanged"`
+
+	Unchanged bool `json:"unchanged"`
 }
 
 func (s *Server) handlePDFOptimizeAnalyze(
@@ -63,15 +63,13 @@ func (s *Server) handlePDFOptimizeAnalyze(
 		)
 
 	if err != nil {
-		if s.handlePDFOptimizeError(
+		s.handlePDFOptimizeError(
 			w,
 			r,
 			ctx,
 			upload,
 			err,
-		) {
-			return
-		}
+		)
 
 		return
 	}
@@ -80,8 +78,7 @@ func (s *Server) handlePDFOptimizeAnalyze(
 		result.ResultSize -
 			result.OriginalSize
 
-	percent :=
-		0.0
+	percent := 0.0
 
 	if result.OriginalSize > 0 {
 		percent =
@@ -172,45 +169,6 @@ func (s *Server) handlePDFOptimize(
 		return
 	}
 
-	file, err := os.Open(
-		result.Path,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open optimized PDF",
-			err,
-			"upload_id",
-			upload.ID,
-		)
-
-		http.Error(
-			w,
-			"Die optimierte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		s.logError(
-			r,
-			"failed to inspect optimized PDF",
-			err,
-			"upload_id",
-			upload.ID,
-		)
-
-		http.Error(
-			w,
-			"Die optimierte PDF konnte nicht gelesen werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
 	filename :=
 		"optimiert.pdf"
 
@@ -219,49 +177,12 @@ func (s *Server) handlePDFOptimize(
 			"optimiert-web.pdf"
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": filename,
-			},
-		)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	if _, err := io.Copy(
+	if !s.prepareDownloadResponse(
 		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send optimized PDF",
-			err,
-			"upload_id",
-			upload.ID,
-		)
-
+		r,
+		result.Path,
+		filename,
+	) {
 		return
 	}
 
@@ -269,22 +190,16 @@ func (s *Server) handlePDFOptimize(
 		upload.ID,
 	)
 
-	s.logger.Info(
+	s.logInfo(
 		"PDF optimized",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
 		"linearized",
 		result.Linearized,
-		"input_size_bytes",
+		"input",
 		result.OriginalSize,
-		"output_size_bytes",
+		"output",
 		result.ResultSize,
+		"unchanged",
+		result.Unchanged,
 	)
 }
 

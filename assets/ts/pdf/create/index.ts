@@ -1,4 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 import { createPDFDocument, type PDFCreatePaperSize } from "./api.ts";
 
@@ -129,7 +129,7 @@ async function createDocument(): Promise<void> {
       markdown: markdown.checked,
     });
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
   } catch (error: unknown) {
     showError(
       error instanceof Error

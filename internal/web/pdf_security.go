@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -73,30 +71,11 @@ func (s *Server) writePDFSecurityResult(
 	filename string,
 	operation string,
 ) {
-	file, err := os.Open(
-		path,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open PDF security result",
-			err,
-			"operation",
-			operation,
-			"upload_id",
-			upload.ID,
+	outputSize, err :=
+		downloadFileSize(
+			path,
 		)
 
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	info, err := file.Stat()
 	if err != nil {
 		s.logError(
 			r,
@@ -113,54 +92,16 @@ func (s *Server) writePDFSecurityResult(
 			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": filename,
-			},
-		)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	if _, err := io.Copy(
+	if !s.prepareDownloadResponse(
 		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send PDF security result",
-			err,
-			"operation",
-			operation,
-			"upload_id",
-			upload.ID,
-		)
-
+		r,
+		path,
+		filename,
+	) {
 		return
 	}
 
@@ -168,22 +109,14 @@ func (s *Server) writePDFSecurityResult(
 		upload.ID,
 	)
 
-	s.logger.Info(
-		"PDF security operation completed",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
+	s.logInfo(
+		"PDF security",
 		"operation",
 		operation,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
-		"input_size_bytes",
+		"input",
 		upload.Size,
-		"output_size_bytes",
-		info.Size(),
+		"output",
+		outputSize,
 	)
 }
 
@@ -194,6 +127,7 @@ func createPDFSecurityTempDirectory(
 		"",
 		prefix,
 	)
+
 	if err != nil {
 		return "",
 			fmt.Errorf(

@@ -1,4 +1,4 @@
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 import {
   createWebPDF,
@@ -122,7 +122,7 @@ async function createPDF(): Promise<void> {
       waitMilliseconds,
     });
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
   } catch (error: unknown) {
     showError(
       error instanceof Error

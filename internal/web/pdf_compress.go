@@ -4,11 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
-	"mime"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -152,6 +148,7 @@ func (s *Server) handlePDFCompressionAnalyze(
 			"upload_id",
 			upload.ID,
 		)
+
 		return
 	}
 
@@ -216,124 +213,33 @@ func (s *Server) handlePDFCompress(
 			request.Mode,
 			err,
 		)
+
 		return
 	}
 
-	file, err := os.Open(
-		result.Path,
-	)
-	if err != nil {
-		s.logError(
-			r,
-			"failed to open PDF compression result",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-		)
-
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
-		)
-		return
-	}
-	defer file.Close()
-
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": "komprimiert.pdf",
-			},
-		)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
-	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			result.ResultSize,
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	w.Header().Set(
-		"X-Original-Size",
-		fmt.Sprintf(
-			"%d",
-			result.OriginalSize,
-		),
-	)
-
-	w.Header().Set(
-		"X-Result-Size",
-		fmt.Sprintf(
-			"%d",
-			result.ResultSize,
-		),
-	)
-
-	if result.Unchanged {
-		w.Header().Set(
-			"X-Compression-Unchanged",
-			"true",
-		)
-	}
-
-	s.logger.Info(
-		"PDF compression download started",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
-		"mode",
-		request.Mode,
-		"input_size_bytes",
-		result.OriginalSize,
-		"output_size_bytes",
-		result.ResultSize,
-		"unchanged",
-		result.Unchanged,
-	)
-
-	if _, err := io.Copy(
+	if !s.prepareDownloadResponse(
 		w,
-		file,
-	); err != nil {
-		s.logError(
-			r,
-			"failed to send compressed PDF",
-			err,
-			"filename",
-			upload.Filename,
-			"output_size_bytes",
-			result.ResultSize,
-		)
+		r,
+		result.Path,
+		"komprimiert.pdf",
+	) {
 		return
 	}
 
 	s.pdfUploads.Delete(
 		upload.ID,
+	)
+
+	s.logInfo(
+		"PDF compression",
+		"mode",
+		request.Mode,
+		"input",
+		result.OriginalSize,
+		"output",
+		result.ResultSize,
+		"unchanged",
+		result.Unchanged,
 	)
 }
 

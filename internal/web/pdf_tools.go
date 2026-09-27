@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -31,6 +29,8 @@ func (s *Server) handlePDFMerge(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	started := time.Now()
+
 	r.Body = http.MaxBytesReader(
 		w,
 		r.Body,
@@ -171,6 +171,7 @@ func (s *Server) handlePDFMerge(
 		"",
 		"media-converter-pdf-merge-*",
 	)
+
 	if err != nil {
 		http.Error(
 			w,
@@ -181,9 +182,19 @@ func (s *Server) handlePDFMerge(
 		return
 	}
 
-	defer os.RemoveAll(
-		tempDir,
-	)
+	defer func() {
+		if err := os.RemoveAll(
+			tempDir,
+		); err != nil {
+			s.logError(
+				r,
+				"PDF merge cleanup failed",
+				err,
+				"directory",
+				tempDir,
+			)
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(
 		r.Context(),
@@ -215,6 +226,16 @@ func (s *Server) handlePDFMerge(
 			return
 		}
 
+		s.logError(
+			r,
+			"PDF merge failed",
+			err,
+			"files",
+			len(request.IDs),
+			"input_size",
+			totalSize,
+		)
+
 		http.Error(
 			w,
 			"Die PDF-Dateien konnten nicht zusammengefügt werden.",
@@ -224,23 +245,18 @@ func (s *Server) handlePDFMerge(
 		return
 	}
 
-	file, err := os.Open(
-		outputPath,
-	)
-	if err != nil {
-		http.Error(
-			w,
-			"Die erzeugte PDF konnte nicht geöffnet werden.",
-			http.StatusInternalServerError,
+	outputSize, err :=
+		downloadFileSize(
+			outputPath,
 		)
 
-		return
-	}
-
-	defer file.Close()
-
-	info, err := file.Stat()
 	if err != nil {
+		s.logError(
+			r,
+			"PDF merge output stat failed",
+			err,
+		)
+
 		http.Error(
 			w,
 			"Die erzeugte PDF konnte nicht gelesen werden.",
@@ -250,54 +266,30 @@ func (s *Server) handlePDFMerge(
 		return
 	}
 
-	/*
-		Der Merge ist abgeschlossen. Die Quelldateien
-		werden nicht mehr benötigt.
+	if !s.prepareDownloadResponse(
+		w,
+		r,
+		outputPath,
+		"zusammengefuegt.pdf",
+	) {
+		return
+	}
 
-		Das Ergebnis liegt unabhängig davon im eigenen
-		temporären Merge-Verzeichnis.
-	*/
 	for _, id := range request.IDs {
 		s.pdfUploads.Delete(
 			id,
 		)
 	}
 
-	disposition :=
-		mime.FormatMediaType(
-			"attachment",
-			map[string]string{
-				"filename": "zusammengefuegt.pdf",
-			},
-		)
-
-	w.Header().Set(
-		"Content-Type",
-		"application/pdf",
+	s.logInfo(
+		"PDF merge",
+		"files",
+		len(request.IDs),
+		"input",
+		totalSize,
+		"output",
+		outputSize,
+		"duration",
+		time.Since(started),
 	)
-
-	w.Header().Set(
-		"Content-Disposition",
-		disposition,
-	)
-
-	w.Header().Set(
-		"Content-Length",
-		fmt.Sprintf(
-			"%d",
-			info.Size(),
-		),
-	)
-
-	w.Header().Set(
-		"Cache-Control",
-		"no-store",
-	)
-
-	if _, err := io.Copy(
-		w,
-		file,
-	); err != nil {
-		return
-	}
 }

@@ -1,4 +1,4 @@
-import { getDownloadFilename } from "../../shared/download.ts";
+import { requestDownload, type DownloadResult } from "../../shared/download.ts";
 
 export interface PDFOptimizationAnalysis {
   originalSize: number;
@@ -18,10 +18,7 @@ interface PDFOptimizationAnalysisResponse {
   unchanged: boolean;
 }
 
-export interface PDFOptimizationResult {
-  blob: Blob;
-  filename: string;
-}
+export type PDFOptimizationResult = DownloadResult;
 
 export async function analyzePDFOptimization(
   uploadID: string,
@@ -79,34 +76,23 @@ export async function optimizePDF(
   uploadID: string,
   linearize: boolean,
 ): Promise<PDFOptimizationResult> {
-  const response = await fetch("/pdf/optimize", {
-    method: "POST",
+  return requestDownload(
+    "/pdf/optimize",
+    {
+      method: "POST",
 
-    headers: {
-      "Content-Type": "application/json",
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        upload_id: uploadID,
+
+        linearize,
+      }),
     },
-
-    body: JSON.stringify({
-      upload_id: uploadID,
-
-      linearize,
-    }),
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-
-    throw new Error(message.trim() || "Die PDF konnte nicht optimiert werden.");
-  }
-
-  return {
-    blob: await response.blob(),
-
-    filename: getDownloadFilename(
-      response.headers.get("Content-Disposition"),
-      linearize ? "optimiert-web.pdf" : "optimiert.pdf",
-    ),
-  };
+    "Die PDF konnte nicht optimiert werden.",
+  );
 }
 
 function isAnalysisResponse(

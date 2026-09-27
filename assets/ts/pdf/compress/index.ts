@@ -23,7 +23,7 @@ import {
   type PDFCompressUIState,
 } from "./ui.ts";
 
-import { downloadBlob } from "../../shared/download.ts";
+import { downloadURL } from "../../shared/download.ts";
 
 const MAX_FILE_SIZE = 512 * 1024 * 1024;
 
@@ -384,7 +384,7 @@ async function downloadCompressedPDF(): Promise<void> {
   try {
     const result = await compressPDF(upload.id, mode);
 
-    downloadBlob(result.blob, result.filename);
+    downloadURL(result.downloadURL);
 
     upload = null;
 

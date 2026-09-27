@@ -1,3 +1,13 @@
+export interface DownloadResponse {
+  download_url: string;
+  filename: string;
+}
+
+export interface DownloadResult {
+  downloadURL: string;
+  filename: string;
+}
+
 export function getDownloadFilename(
   contentDisposition: string | null,
   fallback: string,
@@ -50,4 +60,53 @@ export function downloadURL(url: string): void {
 
   link.click();
   link.remove();
+}
+
+export async function readDownloadResponse(
+  response: Response,
+  fallbackError: string,
+): Promise<DownloadResult> {
+  if (!response.ok) {
+    const message = await response.text();
+
+    throw new Error(message.trim() || fallbackError);
+  }
+
+  const data = (await response.json()) as unknown;
+
+  if (!isDownloadResponse(data)) {
+    throw new Error(
+      "Der Server hat eine ungültige Download-Antwort geliefert.",
+    );
+  }
+
+  return {
+    downloadURL: data.download_url,
+    filename: data.filename,
+  };
+}
+
+export async function requestDownload(
+  url: string,
+  init: RequestInit,
+  fallbackError: string,
+): Promise<DownloadResult> {
+  const response = await fetch(url, init);
+
+  return readDownloadResponse(response, fallbackError);
+}
+
+function isDownloadResponse(value: unknown): value is DownloadResponse {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.download_url === "string" &&
+    candidate.download_url.startsWith("/downloads/") &&
+    typeof candidate.filename === "string" &&
+    candidate.filename.length > 0
+  );
 }
