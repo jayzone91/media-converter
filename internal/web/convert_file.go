@@ -19,6 +19,18 @@ func (s *Server) convertFile(
 	outputDir string,
 	filename string,
 ) (string, string, error) {
+	if err := s.validateConversionInput(
+		ctx,
+		format,
+		inputPath,
+	); err != nil {
+		return "", "",
+			fmt.Errorf(
+				"input validation failed: %w",
+				err,
+			)
+	}
+
 	baseName := strings.TrimSuffix(
 		filepath.Base(filename),
 		filepath.Ext(filename),
@@ -27,8 +39,13 @@ func (s *Server) convertFile(
 	outputName := baseName + "." + target
 
 	if format.Category == media.CategoryPDF &&
-		(target == "png" || target == "jpeg") {
-		outputName = baseName + "-" + target + ".zip"
+		(target == "png" ||
+			target == "jpeg") {
+		outputName =
+			baseName +
+				"-" +
+				target +
+				".zip"
 	}
 
 	outputPath := filepath.Join(
@@ -53,7 +70,8 @@ func (s *Server) convertFile(
 	case media.CategoryImage:
 		switch {
 		case format.ID == "gif" &&
-			(target == "mp4" || target == "webm"):
+			(target == "mp4" ||
+				target == "webm"):
 			err = s.ffmpeg.Convert(
 				ctx,
 				inputPath,
@@ -68,7 +86,8 @@ func (s *Server) convertFile(
 			)
 		}
 
-	case media.CategoryAudio, media.CategoryVideo:
+	case media.CategoryAudio,
+		media.CategoryVideo:
 		err = s.ffmpeg.Convert(
 			ctx,
 			inputPath,
@@ -98,7 +117,9 @@ func (s *Server) convertFile(
 				outputPath,
 			)
 
-		case "png", "jpeg", "webp":
+		case "png",
+			"jpeg",
+			"webp":
 			err = converter.MarkdownToImage(
 				ctx,
 				s.webPDF,
@@ -124,7 +145,8 @@ func (s *Server) convertFile(
 				outputPath,
 			)
 
-		case "png", "jpeg":
+		case "png",
+			"jpeg":
 			err = s.pdf.ConvertToImages(
 				ctx,
 				inputPath,
