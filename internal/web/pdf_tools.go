@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -50,20 +49,22 @@ func (s *Server) handlePDFMerge(
 	if err := decoder.Decode(
 		&request,
 	); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Merge-Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Merge-Anfrage.",
 		)
 
 		return
 	}
 
 	if len(request.IDs) < 2 {
-		http.Error(
+		writeAPIError(
 			w,
-			"Bitte mindestens zwei PDF-Dateien auswählen.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Bitte mindestens zwei PDF-Dateien auswählen.",
 		)
 
 		return
@@ -71,13 +72,14 @@ func (s *Server) handlePDFMerge(
 
 	if len(request.IDs) >
 		maxPDFMergeFiles {
-		http.Error(
+		writeAPIError(
 			w,
+			http.StatusBadRequest,
+			apiErrorInvalidRequest,
 			fmt.Sprintf(
 				"Es können maximal %d PDFs gleichzeitig zusammengefügt werden.",
 				maxPDFMergeFiles,
 			),
-			http.StatusBadRequest,
 		)
 
 		return
@@ -98,20 +100,22 @@ func (s *Server) handlePDFMerge(
 
 	for _, id := range request.IDs {
 		if id == "" {
-			http.Error(
+			writeAPIError(
 				w,
-				"Ungültige PDF-ID.",
 				http.StatusBadRequest,
+				apiErrorInvalidRequest,
+				"Ungültige PDF-ID.",
 			)
 
 			return
 		}
 
 		if _, exists := seen[id]; exists {
-			http.Error(
+			writeAPIError(
 				w,
-				"Eine PDF wurde mehrfach angegeben.",
 				http.StatusBadRequest,
+				apiErrorInvalidRequest,
+				"Eine PDF wurde mehrfach angegeben.",
 			)
 
 			return
@@ -125,10 +129,11 @@ func (s *Server) handlePDFMerge(
 			)
 
 		if !ok {
-			http.Error(
+			writeAPIError(
 				w,
-				"Eine PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 				http.StatusGone,
+				apiErrorUploadExpired,
+				"Eine PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			)
 
 			return
@@ -138,10 +143,11 @@ func (s *Server) handlePDFMerge(
 
 		if totalSize >
 			maxPDFMergeTotalSize {
-			http.Error(
+			writeAPIError(
 				w,
-				"Die PDFs dürfen zusammen maximal 1 GiB groß sein.",
 				http.StatusRequestEntityTooLarge,
+				apiErrorInvalidRequest,
+				"Die PDFs dürfen zusammen maximal 1 GiB groß sein.",
 			)
 
 			return
@@ -157,10 +163,17 @@ func (s *Server) handlePDFMerge(
 		r.Context(),
 		workloadQPDF,
 	); err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"PDF merge queue failed",
+			err,
+			"files",
+			len(request.IDs),
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -176,10 +189,17 @@ func (s *Server) handlePDFMerge(
 	)
 
 	if err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"PDF merge temp directory failed",
+			err,
+		)
+
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -216,15 +236,23 @@ func (s *Server) handlePDFMerge(
 		inputPaths,
 		outputPath,
 	); err != nil {
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Das Zusammenfügen der PDFs hat zu lange gedauert.",
 		) {
-			http.Error(
-				w,
-				"Das Zusammenfügen der PDFs hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
+			if ctx.Err() ==
+				context.DeadlineExceeded {
+				s.logError(
+					r,
+					"PDF merge timed out",
+					ctx.Err(),
+					"files",
+					len(request.IDs),
+					"input",
+					totalSize,
+				)
+			}
 
 			return
 		}
@@ -239,19 +267,19 @@ func (s *Server) handlePDFMerge(
 			totalSize,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF-Dateien konnten nicht zusammengefügt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die PDF-Dateien konnten nicht zusammengefügt werden.",
 		)
 
 		return
 	}
 
-	outputSize, err :=
-		downloadFileSize(
-			outputPath,
-		)
+	outputSize, err := downloadFileSize(
+		outputPath,
+	)
 
 	if err != nil {
 		s.logError(
@@ -260,10 +288,11 @@ func (s *Server) handlePDFMerge(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return

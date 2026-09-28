@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -54,26 +53,38 @@ func (s *Server) handlePDFRotatePages(
 	if err := decoder.Decode(
 		&request,
 	); err != nil {
-		s.logError(
+		s.logWarn(
 			r,
-			"failed to decode PDF rotate request",
+			"PDF rotate rejected",
+			"reason",
+			"invalid request",
+			"error",
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		s.logWarn(
+			r,
+			"PDF rotate rejected",
+			"reason",
+			"missing upload id",
+		)
+
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return
@@ -86,15 +97,18 @@ func (s *Server) handlePDFRotatePages(
 	if !ok {
 		s.logWarn(
 			r,
-			"PDF page rotation requested for unknown upload",
+			"PDF rotate rejected",
+			"reason",
+			"unknown upload",
 			"upload_id",
 			request.UploadID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -108,23 +122,22 @@ func (s *Server) handlePDFRotatePages(
 	if err != nil {
 		s.logWarn(
 			r,
-			"invalid PDF page rotation request",
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"page_count",
-			upload.PageCount,
-			"rotation_count",
-			len(request.Rotations),
+			"PDF rotate rejected",
 			"reason",
 			err.Error(),
+			"filename",
+			upload.Filename,
+			"pages",
+			upload.PageCount,
+			"rotations",
+			len(request.Rotations),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Seitendrehungen sind ungültig.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die Seitendrehungen sind ungültig.",
 		)
 
 		return
@@ -136,18 +149,15 @@ func (s *Server) handlePDFRotatePages(
 	); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF rotate qpdf workload",
+			"PDF rotate queue failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -165,18 +175,17 @@ func (s *Server) handlePDFRotatePages(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to create PDF rotate temporary directory",
+			"PDF rotate temp directory failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -188,7 +197,7 @@ func (s *Server) handlePDFRotatePages(
 		); err != nil {
 			s.logError(
 				r,
-				"failed to remove PDF rotate temporary directory",
+				"PDF rotate cleanup failed",
 				err,
 				"directory",
 				tempDir,
@@ -214,64 +223,71 @@ func (s *Server) handlePDFRotatePages(
 		rotations,
 		outputPath,
 	); err != nil {
-		s.logError(
-			r,
-			"PDF page rotation failed",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"size_bytes",
-			upload.Size,
-			"page_count",
-			upload.PageCount,
-			"rotation_count",
-			len(rotations),
-		)
-
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Das Drehen der PDF-Seiten hat zu lange gedauert.",
 		) {
-			http.Error(
-				w,
-				"Das Drehen der PDF-Seiten hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
+			if ctx.Err() ==
+				context.DeadlineExceeded {
+				s.logError(
+					r,
+					"PDF rotate timed out",
+					ctx.Err(),
+					"filename",
+					upload.Filename,
+					"pages",
+					upload.PageCount,
+					"rotations",
+					len(rotations),
+				)
+			}
 
 			return
 		}
 
-		http.Error(
+		s.logError(
+			r,
+			"PDF rotate failed",
+			err,
+			"filename",
+			upload.Filename,
+			"size",
+			upload.Size,
+			"pages",
+			upload.PageCount,
+			"rotations",
+			len(rotations),
+		)
+
+		writeAPIError(
 			w,
-			"Die Seiten konnten nicht gedreht werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die Seiten konnten nicht gedreht werden.",
 		)
 
 		return
 	}
 
-	outputSize, err :=
-		downloadFileSize(
-			outputPath,
-		)
+	outputSize, err := downloadFileSize(
+		outputPath,
+	)
 
 	if err != nil {
 		s.logError(
 			r,
-			"failed to inspect rotated PDF",
+			"PDF rotate output stat failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
@@ -310,21 +326,24 @@ func validatePDFRotations(
 	pageCount int,
 ) ([]converter.PDFPageRotation, error) {
 	if pageCount < 1 {
-		return nil, fmt.Errorf(
-			"invalid page count",
-		)
+		return nil,
+			fmt.Errorf(
+				"invalid page count",
+			)
 	}
 
 	if len(requests) == 0 {
-		return nil, fmt.Errorf(
-			"no rotations supplied",
-		)
+		return nil,
+			fmt.Errorf(
+				"no rotations supplied",
+			)
 	}
 
 	if len(requests) > pageCount {
-		return nil, fmt.Errorf(
-			"too many rotations supplied",
-		)
+		return nil,
+			fmt.Errorf(
+				"too many rotations supplied",
+			)
 	}
 
 	seen := make(
@@ -341,36 +360,41 @@ func validatePDFRotations(
 	for _, request := range requests {
 		if request.Page < 1 ||
 			request.Page > pageCount {
-			return nil, fmt.Errorf(
-				"page %d is outside range 1-%d",
-				request.Page,
-				pageCount,
-			)
+			return nil,
+				fmt.Errorf(
+					"page %d is outside range 1-%d",
+					request.Page,
+					pageCount,
+				)
 		}
 
 		if _, exists := seen[request.Page]; exists {
-			return nil, fmt.Errorf(
-				"page %d occurs more than once",
-				request.Page,
-			)
+			return nil,
+				fmt.Errorf(
+					"page %d occurs more than once",
+					request.Page,
+				)
 		}
 
 		seen[request.Page] = struct{}{}
 
 		switch request.Angle {
 		case 90, 180, 270:
+
 		default:
-			return nil, fmt.Errorf(
-				"invalid angle %d for page %d",
-				request.Angle,
-				request.Page,
-			)
+			return nil,
+				fmt.Errorf(
+					"invalid angle %d for page %d",
+					request.Angle,
+					request.Page,
+				)
 		}
 
 		rotations = append(
 			rotations,
 			converter.PDFPageRotation{
-				Page:  request.Page,
+				Page: request.Page,
+
 				Angle: request.Angle,
 			},
 		)

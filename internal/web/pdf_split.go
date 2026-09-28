@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -53,26 +52,38 @@ func (s *Server) handlePDFSplit(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		s.logError(
+		s.logWarn(
 			r,
-			"failed to decode PDF split request",
+			"PDF split rejected",
+			"reason",
+			"invalid request",
+			"error",
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		s.logWarn(
+			r,
+			"PDF split rejected",
+			"reason",
+			"missing upload id",
+		)
+
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return
@@ -80,10 +91,11 @@ func (s *Server) handlePDFSplit(
 
 	if len(request.SplitAfter) >=
 		maxPDFSplitParts {
-		http.Error(
+		writeAPIError(
 			w,
-			"Es können maximal 200 Teildokumente erzeugt werden.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Es können maximal 200 Teildokumente erzeugt werden.",
 		)
 
 		return
@@ -97,15 +109,18 @@ func (s *Server) handlePDFSplit(
 	if !ok {
 		s.logWarn(
 			r,
-			"PDF split requested for unknown upload",
+			"PDF split rejected",
+			"reason",
+			"unknown upload",
 			"upload_id",
 			request.UploadID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -120,23 +135,22 @@ func (s *Server) handlePDFSplit(
 	if err != nil {
 		s.logWarn(
 			r,
-			"invalid PDF split request",
-			"upload_id",
-			upload.ID,
+			"PDF split rejected",
+			"reason",
+			err.Error(),
 			"filename",
 			upload.Filename,
-			"page_count",
+			"pages",
 			upload.PageCount,
 			"split_points",
 			len(request.SplitAfter),
-			"reason",
-			err.Error(),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Trennpunkte sind ungültig.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die Trennpunkte sind ungültig.",
 		)
 
 		return
@@ -149,18 +163,15 @@ func (s *Server) handlePDFSplit(
 		); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF split qpdf workload",
+			"PDF split queue failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -179,18 +190,17 @@ func (s *Server) handlePDFSplit(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to create PDF split temporary directory",
+			"PDF split temp directory failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -203,7 +213,7 @@ func (s *Server) handlePDFSplit(
 			); err != nil {
 			s.logError(
 				r,
-				"failed to remove PDF split temporary directory",
+				"PDF split cleanup failed",
 				err,
 				"directory",
 				tempDir,
@@ -228,35 +238,42 @@ func (s *Server) handlePDFSplit(
 		)
 
 	if err != nil {
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Das Trennen der PDF hat zu lange gedauert.",
+		) {
+			if ctx.Err() ==
+				context.DeadlineExceeded {
+				s.logError(
+					r,
+					"PDF split timed out",
+					ctx.Err(),
+					"filename",
+					upload.Filename,
+					"parts",
+					len(ranges),
+				)
+			}
+
+			return
+		}
+
 		s.logError(
 			r,
 			"PDF split part creation failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 			"part_count",
 			len(ranges),
 		)
 
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"Das Trennen der PDF hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
-
-			return
-		}
-
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF konnte nicht getrennt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die PDF konnte nicht getrennt werden.",
 		)
 
 		return
@@ -276,20 +293,19 @@ func (s *Server) handlePDFSplit(
 		); err != nil {
 		s.logError(
 			r,
-			"failed to create PDF split archive",
+			"PDF split archive failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
-			"part_count",
+			"parts",
 			len(ranges),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"ZIP-Datei konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"ZIP-Datei konnte nicht erstellt werden.",
 		)
 
 		return
@@ -303,14 +319,17 @@ func (s *Server) handlePDFSplit(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to inspect PDF split archive",
+			"PDF split output stat failed",
 			err,
+			"filename",
+			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"ZIP-Datei konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"ZIP-Datei konnte nicht gelesen werden.",
 		)
 
 		return

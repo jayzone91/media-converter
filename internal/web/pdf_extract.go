@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -47,26 +46,38 @@ func (s *Server) handlePDFExtractPages(
 	if err := decoder.Decode(
 		&request,
 	); err != nil {
-		s.logError(
+		s.logWarn(
 			r,
-			"failed to decode PDF extract request",
+			"PDF extract rejected",
+			"reason",
+			"invalid request",
+			"error",
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		s.logWarn(
+			r,
+			"PDF extract rejected",
+			"reason",
+			"missing upload id",
+		)
+
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return
@@ -79,15 +90,18 @@ func (s *Server) handlePDFExtractPages(
 	if !ok {
 		s.logWarn(
 			r,
-			"PDF page extraction requested for unknown upload",
+			"PDF extract rejected",
+			"reason",
+			"unknown upload",
 			"upload_id",
 			request.UploadID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -99,23 +113,22 @@ func (s *Server) handlePDFExtractPages(
 	); err != nil {
 		s.logWarn(
 			r,
-			"invalid PDF page extraction request",
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"page_count",
-			upload.PageCount,
-			"selected_pages",
-			len(request.Pages),
+			"PDF extract rejected",
 			"reason",
 			err.Error(),
+			"filename",
+			upload.Filename,
+			"pages",
+			upload.PageCount,
+			"selected",
+			len(request.Pages),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Seitenauswahl ist ungültig.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die Seitenauswahl ist ungültig.",
 		)
 
 		return
@@ -127,18 +140,15 @@ func (s *Server) handlePDFExtractPages(
 	); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF extract qpdf workload",
+			"PDF extract queue failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -156,18 +166,17 @@ func (s *Server) handlePDFExtractPages(
 	if err != nil {
 		s.logError(
 			r,
-			"failed to create PDF extract temporary directory",
+			"PDF extract temp directory failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -179,7 +188,7 @@ func (s *Server) handlePDFExtractPages(
 		); err != nil {
 			s.logError(
 				r,
-				"failed to remove PDF extract temporary directory",
+				"PDF extract cleanup failed",
 				err,
 				"directory",
 				tempDir,
@@ -205,64 +214,71 @@ func (s *Server) handlePDFExtractPages(
 		request.Pages,
 		outputPath,
 	); err != nil {
-		s.logError(
-			r,
-			"PDF page extraction failed",
-			err,
-			"upload_id",
-			upload.ID,
-			"filename",
-			upload.Filename,
-			"size_bytes",
-			upload.Size,
-			"page_count",
-			upload.PageCount,
-			"selected_pages",
-			len(request.Pages),
-		)
-
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Das Extrahieren der Seiten hat zu lange gedauert.",
 		) {
-			http.Error(
-				w,
-				"Das Extrahieren der Seiten hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
+			if ctx.Err() ==
+				context.DeadlineExceeded {
+				s.logError(
+					r,
+					"PDF extract timed out",
+					ctx.Err(),
+					"filename",
+					upload.Filename,
+					"pages",
+					upload.PageCount,
+					"selected",
+					len(request.Pages),
+				)
+			}
 
 			return
 		}
 
-		http.Error(
+		s.logError(
+			r,
+			"PDF extract failed",
+			err,
+			"filename",
+			upload.Filename,
+			"size",
+			upload.Size,
+			"pages",
+			upload.PageCount,
+			"selected",
+			len(request.Pages),
+		)
+
+		writeAPIError(
 			w,
-			"Die ausgewählten Seiten konnten nicht extrahiert werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die ausgewählten Seiten konnten nicht extrahiert werden.",
 		)
 
 		return
 	}
 
-	outputSize, err :=
-		downloadFileSize(
-			outputPath,
-		)
+	outputSize, err := downloadFileSize(
+		outputPath,
+	)
 
 	if err != nil {
 		s.logError(
 			r,
-			"failed to inspect extracted PDF",
+			"PDF extract output stat failed",
 			err,
-			"upload_id",
-			upload.ID,
 			"filename",
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
