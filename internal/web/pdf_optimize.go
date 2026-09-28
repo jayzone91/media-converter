@@ -53,6 +53,7 @@ func (s *Server) handlePDFOptimizeAnalyze(
 			r.Context(),
 			pdfOptimizeTimeout,
 		)
+
 	defer cancel()
 
 	result, err :=
@@ -78,11 +79,14 @@ func (s *Server) handlePDFOptimizeAnalyze(
 		result.ResultSize -
 			result.OriginalSize
 
-	percent := 0.0
+	percent :=
+		0.0
 
 	if result.OriginalSize > 0 {
 		percent =
-			float64(delta) /
+			float64(
+				delta,
+			) /
 				float64(
 					result.OriginalSize,
 				) *
@@ -114,11 +118,12 @@ func (s *Server) handlePDFOptimizeAnalyze(
 		"no-store",
 	)
 
-	if err := json.NewEncoder(
-		w,
-	).Encode(
-		response,
-	); err != nil {
+	if err :=
+		json.NewEncoder(
+			w,
+		).Encode(
+			response,
+		); err != nil {
 		s.logError(
 			r,
 			"failed to encode PDF optimization analysis",
@@ -148,6 +153,7 @@ func (s *Server) handlePDFOptimize(
 			r.Context(),
 			pdfOptimizeTimeout,
 		)
+
 	defer cancel()
 
 	result, err :=
@@ -211,11 +217,13 @@ func (s *Server) readPDFOptimizeRequest(
 	storedPDFUpload,
 	bool,
 ) {
-	r.Body = http.MaxBytesReader(
-		w,
-		r.Body,
-		maxPDFOptimizeRequestSize,
-	)
+	r.Body =
+		http.MaxBytesReader(
+			w,
+			r.Body,
+			maxPDFOptimizeRequestSize,
+		)
+
 	defer r.Body.Close()
 
 	var request pdfOptimizeRequest
@@ -227,9 +235,10 @@ func (s *Server) readPDFOptimizeRequest(
 
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(
-		&request,
-	); err != nil {
+	if err :=
+		decoder.Decode(
+			&request,
+		); err != nil {
 		http.Error(
 			w,
 			"Ungültige Anfrage.",
@@ -282,6 +291,28 @@ func (s *Server) handlePDFOptimizeError(
 	upload storedPDFUpload,
 	err error,
 ) bool {
+	if errors.Is(
+		err,
+		errPDFOptimizationSignedDocument,
+	) {
+		s.logWarn(
+			r,
+			"PDF optimization rejected for signed document",
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+		)
+
+		http.Error(
+			w,
+			"Diese PDF enthält eine digitale Signatur. Eine Optimierung würde die Signatur ungültig machen.",
+			http.StatusUnprocessableEntity,
+		)
+
+		return true
+	}
+
 	if errors.Is(
 		ctx.Err(),
 		context.Canceled,

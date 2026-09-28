@@ -9,11 +9,27 @@ func (q *QPDF) Optimize(
 	input string,
 	output string,
 ) error {
-	return q.optimize(
-		ctx,
+	args := []string{
+		"--warning-exit-0",
+
+		"--object-streams=generate",
+
+		"--compress-streams=y",
+
+		"--decode-level=generalized",
+
+		"--recompress-flate",
+
+		"--compression-level=9",
+
 		input,
 		output,
-		false,
+	}
+
+	return q.run(
+		ctx,
+		"optimize",
+		args,
 	)
 }
 
@@ -22,44 +38,45 @@ func (q *QPDF) OptimizeLinearized(
 	input string,
 	output string,
 ) error {
-	return q.optimize(
-		ctx,
-		input,
-		output,
-		true,
-	)
-}
-
-func (q *QPDF) optimize(
-	ctx context.Context,
-	input string,
-	output string,
-	linearize bool,
-) error {
 	args := []string{
 		"--warning-exit-0",
+
 		"--object-streams=generate",
-		"--stream-data=compress",
+
+		"--compress-streams=y",
+
+		"--decode-level=generalized",
+
 		"--recompress-flate",
+
 		"--compression-level=9",
-	}
 
-	if linearize {
-		args = append(
-			args,
-			"--linearize",
-		)
-	}
+		"--linearize",
 
-	args = append(
-		args,
 		input,
 		output,
-	)
+	}
 
 	return q.run(
 		ctx,
-		"optimize",
+		"optimize-linearized",
+		args,
+	)
+}
+
+func (q *QPDF) CheckLinearization(
+	ctx context.Context,
+	input string,
+) error {
+	args := []string{
+		"--warning-exit-0",
+		"--check-linearization",
+		input,
+	}
+
+	return q.run(
+		ctx,
+		"check-linearization",
 		args,
 	)
 }

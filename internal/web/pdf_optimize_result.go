@@ -30,15 +30,17 @@ func (s *Server) ensurePDFOptimizationResult(
 		return result, nil
 	}
 
-	if err := s.acquireConversionSlot(
-		ctx,
-	); err != nil {
+	if err :=
+		s.acquireConversionSlot(
+			ctx,
+		); err != nil {
 		return pdfOptimizationResult{},
 			fmt.Errorf(
 				"failed to acquire optimization slot: %w",
 				err,
 			)
 	}
+
 	defer s.releaseConversionSlot()
 
 	if result, ok :=
@@ -49,15 +51,24 @@ func (s *Server) ensurePDFOptimizationResult(
 		return result, nil
 	}
 
+	if err :=
+		validatePDFOptimizationInput(
+			upload.Path,
+		); err != nil {
+		return pdfOptimizationResult{},
+			err
+	}
+
 	cacheDirectory :=
 		pdfOptimizationCacheDirectory(
 			upload,
 		)
 
-	if err := os.MkdirAll(
-		cacheDirectory,
-		0700,
-	); err != nil {
+	if err :=
+		os.MkdirAll(
+			cacheDirectory,
+			0700,
+		); err != nil {
 		return pdfOptimizationResult{},
 			fmt.Errorf(
 				"create optimization cache directory: %w",
@@ -65,10 +76,12 @@ func (s *Server) ensurePDFOptimizationResult(
 			)
 	}
 
-	tempFile, err := os.CreateTemp(
-		cacheDirectory,
-		"optimize-*.pdf",
-	)
+	tempFile, err :=
+		os.CreateTemp(
+			cacheDirectory,
+			"optimize-*.pdf",
+		)
+
 	if err != nil {
 		return pdfOptimizationResult{},
 			fmt.Errorf(
@@ -80,7 +93,8 @@ func (s *Server) ensurePDFOptimizationResult(
 	tempPath :=
 		tempFile.Name()
 
-	if err := tempFile.Close(); err != nil {
+	if err :=
+		tempFile.Close(); err != nil {
 		_ = os.Remove(
 			tempPath,
 		)
@@ -96,19 +110,33 @@ func (s *Server) ensurePDFOptimizationResult(
 		tempPath,
 	)
 
-	if err := s.optimizePDF(
-		ctx,
-		upload.Path,
-		tempPath,
-		linearize,
-	); err != nil {
+	if err :=
+		s.optimizePDF(
+			ctx,
+			upload.Path,
+			tempPath,
+			linearize,
+		); err != nil {
 		return pdfOptimizationResult{},
 			err
 	}
 
-	info, err := os.Stat(
-		tempPath,
-	)
+	if err :=
+		s.validatePDFOptimizationOutput(
+			ctx,
+			tempPath,
+			upload.PageCount,
+			linearize,
+		); err != nil {
+		return pdfOptimizationResult{},
+			err
+	}
+
+	info, err :=
+		os.Stat(
+			tempPath,
+		)
+
 	if err != nil {
 		return pdfOptimizationResult{},
 			fmt.Errorf(
@@ -133,7 +161,8 @@ func (s *Server) ensurePDFOptimizationResult(
 		erfüllt aber trotzdem den gewünschten Zweck.
 	*/
 	if !linearize &&
-		info.Size() >= upload.Size {
+		info.Size() >=
+			upload.Size {
 		if err :=
 			writePDFOptimizationUnchangedMarker(
 				upload,
@@ -159,10 +188,11 @@ func (s *Server) ensurePDFOptimizationResult(
 			linearize,
 		)
 
-	if err := os.Rename(
-		tempPath,
-		cachePath,
-	); err != nil {
+	if err :=
+		os.Rename(
+			tempPath,
+			cachePath,
+		); err != nil {
 		if existing, statErr :=
 			os.Stat(
 				cachePath,
@@ -229,9 +259,11 @@ func readCachedPDFOptimizationResult(
 			linearize,
 		)
 
-	info, err := os.Stat(
-		cachePath,
-	)
+	info, err :=
+		os.Stat(
+			cachePath,
+		)
+
 	if err == nil &&
 		info.Size() > 0 {
 		return pdfOptimizationResult{
@@ -246,11 +278,12 @@ func readCachedPDFOptimizationResult(
 	}
 
 	if !linearize {
-		if _, err := os.Stat(
-			pdfOptimizationUnchangedMarkerPath(
-				upload,
-			),
-		); err == nil {
+		if _, err :=
+			os.Stat(
+				pdfOptimizationUnchangedMarkerPath(
+					upload,
+				),
+			); err == nil {
 			return pdfOptimizationResult{
 				Path: upload.Path,
 
@@ -315,23 +348,27 @@ func writePDFOptimizationUnchangedMarker(
 			upload,
 		)
 
-	if err := os.MkdirAll(
-		directory,
-		0700,
-	); err != nil {
+	if err :=
+		os.MkdirAll(
+			directory,
+			0700,
+		); err != nil {
 		return fmt.Errorf(
 			"create optimization marker directory: %w",
 			err,
 		)
 	}
 
-	if err := os.WriteFile(
-		pdfOptimizationUnchangedMarkerPath(
-			upload,
-		),
-		[]byte("unchanged"),
-		0600,
-	); err != nil {
+	if err :=
+		os.WriteFile(
+			pdfOptimizationUnchangedMarkerPath(
+				upload,
+			),
+			[]byte(
+				"unchanged",
+			),
+			0600,
+		); err != nil {
 		return fmt.Errorf(
 			"write optimization marker: %w",
 			err,
