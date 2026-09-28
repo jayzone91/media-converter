@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -211,130 +210,6 @@ func writePDFDrawStroke(
 	return nil
 }
 
-func appendPDFPageContent(
-	ctx *model.Context,
-	page int,
-	content []byte,
-) error {
-	pageDict, _, _, err :=
-		ctx.PageDict(
-			page,
-			false,
-		)
-	if err != nil {
-		return fmt.Errorf(
-			"read page %d for drawing: %w",
-			page,
-			err,
-		)
-	}
-
-	if pageDict == nil {
-		return fmt.Errorf(
-			"page %d not found",
-			page,
-		)
-	}
-
-	stream, err :=
-		ctx.XRefTable.NewStreamDictForBuf(
-			content,
-		)
-	if err != nil {
-		return fmt.Errorf(
-			"create drawing stream for page %d: %w",
-			page,
-			err,
-		)
-	}
-
-	if err := stream.Encode(); err != nil {
-		return fmt.Errorf(
-			"encode drawing stream for page %d: %w",
-			page,
-			err,
-		)
-	}
-
-	streamReference, err :=
-		ctx.XRefTable.IndRefForNewObject(
-			*stream,
-		)
-	if err != nil {
-		return fmt.Errorf(
-			"store drawing stream for page %d: %w",
-			page,
-			err,
-		)
-	}
-
-	existing, found :=
-		pageDict.Find(
-			"Contents",
-		)
-
-	if !found ||
-		existing == nil {
-		pageDict.Insert(
-			"Contents",
-			*streamReference,
-		)
-
-		return nil
-	}
-
-	resolved, err :=
-		ctx.XRefTable.Dereference(
-			existing,
-		)
-	if err != nil {
-		return fmt.Errorf(
-			"resolve page %d contents: %w",
-			page,
-			err,
-		)
-	}
-
-	switch value :=
-		resolved.(type) {
-	case types.Array:
-		contents :=
-			append(
-				types.Array{},
-				value...,
-			)
-
-		contents =
-			append(
-				contents,
-				*streamReference,
-			)
-
-		pageDict.Insert(
-			"Contents",
-			contents,
-		)
-
-	case types.StreamDict:
-		pageDict.Insert(
-			"Contents",
-			types.Array{
-				existing,
-				*streamReference,
-			},
-		)
-
-	default:
-		return fmt.Errorf(
-			"unsupported page %d contents type %T",
-			page,
-			resolved,
-		)
-	}
-
-	return nil
-}
-
 func validatePDFDrawEdit(
 	drawing PDFDrawEdit,
 	pageCount int,
@@ -398,7 +273,12 @@ func validatePDFDrawEdit(
 
 func parsePDFDrawColor(
 	value string,
-) (float64, float64, float64, error) {
+) (
+	float64,
+	float64,
+	float64,
+	error,
+) {
 	if !pdfDrawColorPattern.MatchString(
 		value,
 	) {
@@ -420,7 +300,10 @@ func parsePDFDrawColor(
 			8,
 		)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0,
+			0,
+			0,
+			err
 	}
 
 	green, err :=
@@ -430,7 +313,10 @@ func parsePDFDrawColor(
 			8,
 		)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0,
+			0,
+			0,
+			err
 	}
 
 	blue, err :=
@@ -440,7 +326,10 @@ func parsePDFDrawColor(
 			8,
 		)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0,
+			0,
+			0,
+			err
 	}
 
 	return float64(red) / 255,
