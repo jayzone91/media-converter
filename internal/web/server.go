@@ -37,6 +37,8 @@ type Server struct {
 	pdfUploads *pdfUploadStore
 	downloads  *downloadStore
 
+	pdfCompressionFlights *pdfCompressionFlightGroup
+
 	conversionSlots chan struct{}
 
 	mux        *http.ServeMux
@@ -73,6 +75,8 @@ func NewServer(
 		uploads:    newUploadStore(),
 		pdfUploads: newPDFUploadStore(),
 		downloads:  newDownloadStore(),
+
+		pdfCompressionFlights: newPDFCompressionFlightGroup(),
 
 		conversionSlots: make(
 			chan struct{},

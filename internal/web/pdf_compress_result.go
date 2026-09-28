@@ -24,7 +24,9 @@ func (s *Server) ensurePDFCompressionResult(
 	upload storedPDFUpload,
 	mode string,
 ) (pdfCompressionResult, error) {
-	if !validPDFCompressionMode(mode) {
+	if !validPDFCompressionMode(
+		mode,
+	) {
 		return pdfCompressionResult{},
 			fmt.Errorf(
 				"unsupported PDF compression mode: %s",
@@ -40,21 +42,64 @@ func (s *Server) ensurePDFCompressionResult(
 		return result, nil
 	}
 
-	if err := s.acquireConversionSlot(
+	key :=
+		upload.ID +
+			"\x00" +
+			mode
+
+	return s.pdfCompressionFlights.Do(
 		ctx,
-	); err != nil {
+		key,
+		func() (
+			pdfCompressionResult,
+			error,
+		) {
+			return s.createPDFCompressionResult(
+				ctx,
+				upload,
+				mode,
+			)
+		},
+	)
+}
+
+func (s *Server) createPDFCompressionResult(
+	ctx context.Context,
+	upload storedPDFUpload,
+	mode string,
+) (pdfCompressionResult, error) {
+	/*
+		Ein Request kann vor dem Eintritt in den
+		Single-Flight bereits am Cache vorbeigelaufen sein.
+
+		Daher innerhalb des exklusiven Flights
+		noch einmal prüfen.
+	*/
+	if result, ok :=
+		readCachedPDFCompressionResult(
+			upload,
+			mode,
+		); ok {
+		return result, nil
+	}
+
+	if err :=
+		s.acquireConversionSlot(
+			ctx,
+		); err != nil {
 		return pdfCompressionResult{},
 			fmt.Errorf(
 				"failed to acquire compression slot: %w",
 				err,
 			)
 	}
+
 	defer s.releaseConversionSlot()
 
 	/*
-		Noch einmal prüfen, nachdem wir auf einen Slot
-		gewartet haben. Ein vorheriger Request kann das
-		gleiche Preset inzwischen bereits erzeugt haben.
+		Während wir auf einen globalen Conversion-Slot
+		gewartet haben, könnte ein vorheriger Flight
+		ein Ergebnis erzeugt haben.
 	*/
 	if result, ok :=
 		readCachedPDFCompressionResult(
@@ -69,10 +114,11 @@ func (s *Server) ensurePDFCompressionResult(
 			upload,
 		)
 
-	if err := os.MkdirAll(
-		cacheDirectory,
-		0700,
-	); err != nil {
+	if err :=
+		os.MkdirAll(
+			cacheDirectory,
+			0700,
+		); err != nil {
 		return pdfCompressionResult{},
 			fmt.Errorf(
 				"failed to create PDF compression cache directory: %w",
@@ -80,10 +126,12 @@ func (s *Server) ensurePDFCompressionResult(
 			)
 	}
 
-	tempFile, err := os.CreateTemp(
-		cacheDirectory,
-		mode+"-*.pdf",
-	)
+	tempFile, err :=
+		os.CreateTemp(
+			cacheDirectory,
+			mode+"-*.pdf",
+		)
+
 	if err != nil {
 		return pdfCompressionResult{},
 			fmt.Errorf(
@@ -95,7 +143,8 @@ func (s *Server) ensurePDFCompressionResult(
 	tempPath :=
 		tempFile.Name()
 
-	if err := tempFile.Close(); err != nil {
+	if err :=
+		tempFile.Close(); err != nil {
 		_ = os.Remove(
 			tempPath,
 		)
@@ -111,19 +160,22 @@ func (s *Server) ensurePDFCompressionResult(
 		tempPath,
 	)
 
-	if err := s.compressPDF(
-		ctx,
-		upload.Path,
-		tempPath,
-		mode,
-	); err != nil {
+	if err :=
+		s.compressPDF(
+			ctx,
+			upload.Path,
+			tempPath,
+			mode,
+		); err != nil {
 		return pdfCompressionResult{},
 			err
 	}
 
-	info, err := os.Stat(
-		tempPath,
-	)
+	info, err :=
+		os.Stat(
+			tempPath,
+		)
+
 	if err != nil {
 		return pdfCompressionResult{},
 			fmt.Errorf(
@@ -139,11 +191,13 @@ func (s *Server) ensurePDFCompressionResult(
 			)
 	}
 
-	if info.Size() >= upload.Size {
-		if err := writePDFCompressionUnchangedMarker(
-			upload,
-			mode,
-		); err != nil {
+	if info.Size() >=
+		upload.Size {
+		if err :=
+			writePDFCompressionUnchangedMarker(
+				upload,
+				mode,
+			); err != nil {
 			return pdfCompressionResult{},
 				err
 		}
@@ -152,7 +206,8 @@ func (s *Server) ensurePDFCompressionResult(
 			Path: upload.Path,
 
 			OriginalSize: upload.Size,
-			ResultSize:   upload.Size,
+
+			ResultSize: upload.Size,
 
 			Unchanged: true,
 		}, nil
@@ -164,14 +219,18 @@ func (s *Server) ensurePDFCompressionResult(
 			mode,
 		)
 
-	if err := os.Rename(
-		tempPath,
-		cachePath,
-	); err != nil {
+	if err :=
+		os.Rename(
+			tempPath,
+			cachePath,
+		); err != nil {
 		/*
-			Unter Windows schlägt Rename fehl, wenn ein
-			paralleler Request die Zieldatei bereits
-			angelegt hat. In dem Fall verwenden wir diese.
+			Der Single-Flight verhindert dies
+			normalerweise bereits.
+
+			Der Fallback bleibt trotzdem bestehen,
+			falls z. B. ein älterer Cache bereits
+			auf dem Dateisystem liegt.
 		*/
 		if existing, statErr :=
 			os.Stat(
@@ -182,7 +241,8 @@ func (s *Server) ensurePDFCompressionResult(
 				Path: cachePath,
 
 				OriginalSize: upload.Size,
-				ResultSize:   existing.Size(),
+
+				ResultSize: existing.Size(),
 			}, nil
 		}
 
@@ -197,7 +257,8 @@ func (s *Server) ensurePDFCompressionResult(
 		Path: cachePath,
 
 		OriginalSize: upload.Size,
-		ResultSize:   info.Size(),
+
+		ResultSize: info.Size(),
 	}, nil
 }
 
@@ -211,16 +272,19 @@ func readCachedPDFCompressionResult(
 			mode,
 		)
 
-	info, err := os.Stat(
-		cachePath,
-	)
+	info, err :=
+		os.Stat(
+			cachePath,
+		)
+
 	if err == nil &&
 		info.Size() > 0 {
 		return pdfCompressionResult{
 			Path: cachePath,
 
 			OriginalSize: upload.Size,
-			ResultSize:   info.Size(),
+
+			ResultSize: info.Size(),
 		}, true
 	}
 
@@ -230,14 +294,16 @@ func readCachedPDFCompressionResult(
 			mode,
 		)
 
-	if _, err := os.Stat(
-		markerPath,
-	); err == nil {
+	if _, err :=
+		os.Stat(
+			markerPath,
+		); err == nil {
 		return pdfCompressionResult{
 			Path: upload.Path,
 
 			OriginalSize: upload.Size,
-			ResultSize:   upload.Size,
+
+			ResultSize: upload.Size,
 
 			Unchanged: true,
 		}, true
@@ -257,11 +323,14 @@ func writePDFCompressionUnchangedMarker(
 			mode,
 		)
 
-	if err := os.WriteFile(
-		path,
-		[]byte("unchanged"),
-		0600,
-	); err != nil {
+	if err :=
+		os.WriteFile(
+			path,
+			[]byte(
+				"unchanged",
+			),
+			0600,
+		); err != nil {
 		return fmt.Errorf(
 			"failed to cache unchanged PDF compression result: %w",
 			err,
