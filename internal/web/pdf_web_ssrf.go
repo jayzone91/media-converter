@@ -42,9 +42,11 @@ func validatePDFWebRequest(
 	ctx context.Context,
 	rawURL string,
 ) error {
-	target, err := validatePDFWebURL(
-		rawURL,
-	)
+	target, err :=
+		validatePDFWebURL(
+			rawURL,
+		)
+
 	if err != nil {
 		return err
 	}
@@ -80,9 +82,10 @@ func validatePDFWebTargetWithResolver(
 		)
 	}
 
-	if ip := net.ParseIP(
-		host,
-	); ip != nil {
+	if ip :=
+		net.ParseIP(
+			host,
+		); ip != nil {
 		return validatePDFWebIP(
 			ip,
 		)
@@ -93,6 +96,7 @@ func validatePDFWebTargetWithResolver(
 			ctx,
 			pdfWebDNSLookupTimeout,
 		)
+
 	defer cancel()
 
 	addresses, err :=
@@ -100,6 +104,7 @@ func validatePDFWebTargetWithResolver(
 			lookupCtx,
 			host,
 		)
+
 	if err != nil {
 		return fmt.Errorf(
 			"resolve target host: %w",
@@ -118,9 +123,10 @@ func validatePDFWebTargetWithResolver(
 			continue
 		}
 
-		if err := validatePDFWebIP(
-			address.IP,
-		); err != nil {
+		if err :=
+			validatePDFWebIP(
+				address.IP,
+			); err != nil {
 			return fmt.Errorf(
 				"target host resolves to blocked address %s: %w",
 				address.IP,
@@ -157,21 +163,34 @@ func validatePDFWebIP(
 			"multicast address",
 		)
 
-	case ip.IsLinkLocalUnicast(),
+	case
+		ip.IsLinkLocalUnicast(),
 		ip.IsLinkLocalMulticast():
+
 		return fmt.Errorf(
 			"link-local address",
 		)
 
-	case isCloudMetadataIP(ip):
+	case isCloudMetadataIP(
+		ip,
+	):
 		return fmt.Errorf(
 			"cloud metadata address",
 		)
 
-	case isLocalServerIP(ip):
+	case isLocalServerIP(
+		ip,
+	):
 		return fmt.Errorf(
 			"media-converter server address",
 		)
+	}
+
+	if err :=
+		validateConfiguredPDFWebNetwork(
+			ip,
+		); err != nil {
+		return err
 	}
 
 	return nil
@@ -182,7 +201,9 @@ func isCloudMetadataIP(
 ) bool {
 	for _, blocked := range cloudMetadataIPs {
 		if blocked != nil &&
-			ip.Equal(blocked) {
+			ip.Equal(
+				blocked,
+			) {
 			return true
 		}
 	}
@@ -199,6 +220,7 @@ func isLocalServerIP(
 
 	addresses, err :=
 		net.InterfaceAddrs()
+
 	if err != nil {
 		return false
 	}
@@ -210,7 +232,9 @@ func isLocalServerIP(
 			)
 
 		if ip != nil &&
-			target.Equal(ip) {
+			target.Equal(
+				ip,
+			) {
 			return true
 		}
 	}
