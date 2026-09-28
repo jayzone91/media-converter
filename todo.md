@@ -95,8 +95,8 @@
   - [x] Drag-and-Drop insbesondere bei benachbarten Seiten nochmals testen
 
 - [ ] PDF trennen
-  - [ ] Performance bei sehr vielen erzeugten Einzeldateien verbessern
-  - [ ] nicht für jeden Teil unnötig einen separaten qpdf-Prozess starten, falls vermeidbar
+  - [x] Performance bei sehr vielen erzeugten Einzeldateien verbessern
+  - [x] nicht für jeden Teil unnötig einen separaten qpdf-Prozess starten, falls vermeidbar
 
 - [ ] PDF komprimieren
   - [ ] parallele Analyse desselben Uploads/Modus gegen doppelte Berechnung absichern

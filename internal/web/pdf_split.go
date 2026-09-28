@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,33 +19,40 @@ const (
 )
 
 type pdfSplitRequest struct {
-	UploadID   string `json:"upload_id"`
-	SplitAfter []int  `json:"split_after"`
+	UploadID string `json:"upload_id"`
+
+	SplitAfter []int `json:"split_after"`
 }
 
 func (s *Server) handlePDFSplit(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	started := time.Now()
+	started :=
+		time.Now()
 
-	r.Body = http.MaxBytesReader(
-		w,
-		r.Body,
-		maxPDFSplitRequestSize,
-	)
+	r.Body =
+		http.MaxBytesReader(
+			w,
+			r.Body,
+			maxPDFSplitRequestSize,
+		)
+
 	defer r.Body.Close()
 
 	var request pdfSplitRequest
 
-	decoder := json.NewDecoder(
-		r.Body,
-	)
+	decoder :=
+		json.NewDecoder(
+			r.Body,
+		)
+
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(
-		&request,
-	); err != nil {
+	if err :=
+		decoder.Decode(
+			&request,
+		); err != nil {
 		s.logError(
 			r,
 			"failed to decode PDF split request",
@@ -83,9 +89,10 @@ func (s *Server) handlePDFSplit(
 		return
 	}
 
-	upload, ok := s.pdfUploads.Get(
-		request.UploadID,
-	)
+	upload, ok :=
+		s.pdfUploads.Get(
+			request.UploadID,
+		)
 
 	if !ok {
 		s.logWarn(
@@ -104,10 +111,11 @@ func (s *Server) handlePDFSplit(
 		return
 	}
 
-	ranges, err := buildPDFSplitRanges(
-		upload.PageCount,
-		request.SplitAfter,
-	)
+	ranges, err :=
+		buildPDFSplitRanges(
+			upload.PageCount,
+			request.SplitAfter,
+		)
 
 	if err != nil {
 		s.logWarn(
@@ -134,9 +142,10 @@ func (s *Server) handlePDFSplit(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
+	if err :=
+		s.acquireConversionSlot(
+			r.Context(),
+		); err != nil {
 		s.logError(
 			r,
 			"failed to acquire PDF split conversion slot",
@@ -158,10 +167,11 @@ func (s *Server) handlePDFSplit(
 
 	defer s.releaseConversionSlot()
 
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-pdf-split-*",
-	)
+	tempDir, err :=
+		os.MkdirTemp(
+			"",
+			"media-converter-pdf-split-*",
+		)
 
 	if err != nil {
 		s.logError(
@@ -184,9 +194,10 @@ func (s *Server) handlePDFSplit(
 	}
 
 	defer func() {
-		if err := os.RemoveAll(
-			tempDir,
-		); err != nil {
+		if err :=
+			os.RemoveAll(
+				tempDir,
+			); err != nil {
 			s.logError(
 				r,
 				"failed to remove PDF split temporary directory",
@@ -197,88 +208,69 @@ func (s *Server) handlePDFSplit(
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		pdfSplitTimeout,
-	)
-	defer cancel()
-
-	files := make(
-		[]string,
-		0,
-		len(ranges),
-	)
-
-	for index, pageRange := range ranges {
-		outputPath := filepath.Join(
-			tempDir,
-			fmt.Sprintf(
-				"part-%03d.pdf",
-				index+1,
-			),
+	ctx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			pdfSplitTimeout,
 		)
 
-		if err := s.qpdf.ExtractRange(
+	defer cancel()
+
+	files, err :=
+		s.createPDFSplitParts(
 			ctx,
 			upload.Path,
-			pageRange.Start,
-			pageRange.End,
-			outputPath,
-		); err != nil {
-			s.logError(
-				r,
-				"PDF split part creation failed",
-				err,
-				"upload_id",
-				upload.ID,
-				"filename",
-				upload.Filename,
-				"part",
-				index+1,
-				"start_page",
-				pageRange.Start,
-				"end_page",
-				pageRange.End,
-			)
+			tempDir,
+			ranges,
+		)
 
-			if errors.Is(
-				ctx.Err(),
-				context.DeadlineExceeded,
-			) {
-				http.Error(
-					w,
-					"Das Trennen der PDF hat zu lange gedauert.",
-					http.StatusGatewayTimeout,
-				)
+	if err != nil {
+		s.logError(
+			r,
+			"PDF split part creation failed",
+			err,
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+			"part_count",
+			len(ranges),
+		)
 
-				return
-			}
-
+		if errors.Is(
+			ctx.Err(),
+			context.DeadlineExceeded,
+		) {
 			http.Error(
 				w,
-				"Die PDF konnte nicht getrennt werden.",
-				http.StatusInternalServerError,
+				"Das Trennen der PDF hat zu lange gedauert.",
+				http.StatusGatewayTimeout,
 			)
 
 			return
 		}
 
-		files = append(
-			files,
-			outputPath,
+		http.Error(
+			w,
+			"Die PDF konnte nicht getrennt werden.",
+			http.StatusInternalServerError,
 		)
+
+		return
 	}
 
-	archivePath := filepath.Join(
-		tempDir,
-		"getrennte-pdfs.zip",
-	)
+	archivePath :=
+		filepath.Join(
+			tempDir,
+			"getrennte-pdfs.zip",
+		)
 
-	if err := createPDFSplitArchive(
-		archivePath,
-		files,
-		ranges,
-	); err != nil {
+	if err :=
+		createPDFSplitArchive(
+			archivePath,
+			files,
+			ranges,
+		); err != nil {
 		s.logError(
 			r,
 			"failed to create PDF split archive",
@@ -345,6 +337,8 @@ func (s *Server) handlePDFSplit(
 		"output",
 		outputSize,
 		"duration",
-		time.Since(started),
+		time.Since(
+			started,
+		),
 	)
 }
