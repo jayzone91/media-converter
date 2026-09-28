@@ -150,6 +150,62 @@ func TestWorkloadLimiterKeepsWorkloadsIndependent(
 	)
 }
 
+func TestWorkloadLimiterKeepsPreviewIndependent(
+	t *testing.T,
+) {
+	t.Parallel()
+
+	limiter :=
+		newWorkloadLimiter()
+
+	ctx :=
+		context.Background()
+
+	for range maxConcurrentPDFPreview {
+		if err :=
+			limiter.Acquire(
+				ctx,
+				workloadPDFPreview,
+			); err != nil {
+			t.Fatalf(
+				"acquire preview slot: %v",
+				err,
+			)
+		}
+	}
+
+	defer func() {
+		for range maxConcurrentPDFPreview {
+			limiter.Release(
+				workloadPDFPreview,
+			)
+		}
+	}()
+
+	acquireCtx, cancel :=
+		context.WithTimeout(
+			context.Background(),
+			100*time.Millisecond,
+		)
+
+	defer cancel()
+
+	if err :=
+		limiter.Acquire(
+			acquireCtx,
+			workloadQPDF,
+		); err != nil {
+		t.Fatalf(
+			"qpdf should not be blocked by preview workload: %v",
+			err,
+		)
+	}
+
+	limiter.Release(
+		workloadQPDF,
+	)
+}
+
 func TestWorkloadLimiterUnblocksAfterRelease(
 	t *testing.T,
 ) {

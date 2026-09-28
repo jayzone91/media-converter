@@ -20,7 +20,8 @@ func (s *Server) handlePDFPreview(
 	pageValue := r.PathValue("page")
 
 	page, err := strconv.Atoi(pageValue)
-	if err != nil || page < 1 {
+	if err != nil ||
+		page < 1 {
 		s.logWarn(
 			r,
 			"invalid PDF preview page requested",
@@ -30,11 +31,19 @@ func (s *Server) handlePDFPreview(
 			pageValue,
 		)
 
-		http.NotFound(w, r)
+		http.NotFound(
+			w,
+			r,
+		)
+
 		return
 	}
 
-	upload, ok := s.pdfUploads.Get(id)
+	upload, ok :=
+		s.pdfUploads.Get(
+			id,
+		)
+
 	if !ok {
 		s.logWarn(
 			r,
@@ -45,11 +54,16 @@ func (s *Server) handlePDFPreview(
 			page,
 		)
 
-		http.NotFound(w, r)
+		http.NotFound(
+			w,
+			r,
+		)
+
 		return
 	}
 
-	if page > upload.PageCount {
+	if page >
+		upload.PageCount {
 		s.logWarn(
 			r,
 			"PDF preview page exceeds document page count",
@@ -63,19 +77,33 @@ func (s *Server) handlePDFPreview(
 			upload.PageCount,
 		)
 
-		http.NotFound(w, r)
+		http.NotFound(
+			w,
+			r,
+		)
+
 		return
 	}
 
-	previewPath := upload.PreviewPath(page)
-
-	if _, err := os.Stat(previewPath); errors.Is(err, os.ErrNotExist) {
-		if err := s.renderPDFPreview(
-			r,
-			upload,
+	previewPath :=
+		upload.PreviewPath(
 			page,
+		)
+
+	if _, err :=
+		os.Stat(
 			previewPath,
-		); err != nil {
+		); errors.Is(
+		err,
+		os.ErrNotExist,
+	) {
+		if err :=
+			s.renderPDFPreview(
+				r,
+				upload,
+				page,
+				previewPath,
+			); err != nil {
 			s.handlePDFPreviewError(
 				w,
 				r,
@@ -83,6 +111,7 @@ func (s *Server) handlePDFPreview(
 				page,
 				err,
 			)
+
 			return
 		}
 	} else if err != nil {
@@ -103,6 +132,7 @@ func (s *Server) handlePDFPreview(
 			"PDF-Vorschau konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -110,6 +140,7 @@ func (s *Server) handlePDFPreview(
 		"Content-Type",
 		"image/jpeg",
 	)
+
 	w.Header().Set(
 		"Cache-Control",
 		"private, max-age=1800",
@@ -145,12 +176,16 @@ func (s *Server) handlePDFPreviewError(
 		upload.PageCount,
 	)
 
-	if errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(
+		err,
+		context.DeadlineExceeded,
+	) {
 		http.Error(
 			w,
 			"PDF-Vorschau konnte nicht rechtzeitig erstellt werden.",
 			http.StatusGatewayTimeout,
 		)
+
 		return
 	}
 
@@ -167,27 +202,38 @@ func (s *Server) renderPDFPreview(
 	page int,
 	outputPath string,
 ) error {
-	if err := s.acquireConversionSlot(r.Context()); err != nil {
+	if err :=
+		s.acquireWorkload(
+			r.Context(),
+			workloadPDFPreview,
+		); err != nil {
 		return fmt.Errorf(
-			"failed to acquire conversion slot: %w",
+			"failed to acquire PDF preview workload: %w",
 			err,
 		)
 	}
-	defer s.releaseConversionSlot()
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		pdfPreviewTimeout,
+	defer s.releaseWorkload(
+		workloadPDFPreview,
 	)
+
+	ctx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			pdfPreviewTimeout,
+		)
+
 	defer cancel()
 
-	if err := s.pdf.RenderPreviewPage(
-		ctx,
-		upload.Path,
-		outputPath,
-		page,
-	); err != nil {
-		if ctxErr := ctx.Err(); ctxErr != nil {
+	if err :=
+		s.pdf.RenderPreviewPage(
+			ctx,
+			upload.Path,
+			outputPath,
+			page,
+		); err != nil {
+		if ctxErr :=
+			ctx.Err(); ctxErr != nil {
 			return fmt.Errorf(
 				"PDF preview rendering failed: %w",
 				ctxErr,

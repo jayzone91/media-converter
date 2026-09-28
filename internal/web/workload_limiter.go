@@ -14,6 +14,7 @@ const (
 	workloadChromium    workloadType = "chromium"
 	workloadLibreOffice workloadType = "libreoffice"
 	workloadQPDF        workloadType = "qpdf"
+	workloadPDFPreview  workloadType = "pdf-preview"
 )
 
 const (
@@ -23,6 +24,7 @@ const (
 	maxConcurrentChromium    = 2
 	maxConcurrentLibreOffice = 1
 	maxConcurrentQPDF        = 2
+	maxConcurrentPDFPreview  = 4
 )
 
 type workloadLimiter struct {
@@ -60,6 +62,11 @@ func newWorkloadLimiter() *workloadLimiter {
 			workloadQPDF: make(
 				chan struct{},
 				maxConcurrentQPDF,
+			),
+
+			workloadPDFPreview: make(
+				chan struct{},
+				maxConcurrentPDFPreview,
 			),
 		},
 	}
