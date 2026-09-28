@@ -121,12 +121,13 @@ func (s *Server) handlePDFExtractPages(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
+	if err := s.acquireWorkload(
 		r.Context(),
+		workloadQPDF,
 	); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF extract conversion slot",
+			"failed to acquire PDF extract qpdf workload",
 			err,
 			"upload_id",
 			upload.ID,
@@ -143,7 +144,9 @@ func (s *Server) handlePDFExtractPages(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err := os.MkdirTemp(
 		"",
@@ -193,6 +196,7 @@ func (s *Server) handlePDFExtractPages(
 		r.Context(),
 		pdfExtractTimeout,
 	)
+
 	defer cancel()
 
 	if err := s.qpdf.Reorder(

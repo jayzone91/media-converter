@@ -134,8 +134,9 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
+	if err := s.acquireWorkload(
 		r.Context(),
+		workloadQPDF,
 	); err != nil {
 		s.logError(
 			r,
@@ -154,7 +155,9 @@ func (s *Server) handlePDFDeletePages(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err := os.MkdirTemp(
 		"",

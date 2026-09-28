@@ -40,6 +40,7 @@ func (s *Server) handlePDFRotatePages(
 		r.Body,
 		maxPDFRotateRequestSize,
 	)
+
 	defer r.Body.Close()
 
 	var request pdfRotateRequest
@@ -47,6 +48,7 @@ func (s *Server) handlePDFRotatePages(
 	decoder := json.NewDecoder(
 		r.Body,
 	)
+
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(
@@ -128,12 +130,13 @@ func (s *Server) handlePDFRotatePages(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
+	if err := s.acquireWorkload(
 		r.Context(),
+		workloadQPDF,
 	); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF rotate conversion slot",
+			"failed to acquire PDF rotate qpdf workload",
 			err,
 			"upload_id",
 			upload.ID,
@@ -150,7 +153,9 @@ func (s *Server) handlePDFRotatePages(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err := os.MkdirTemp(
 		"",
