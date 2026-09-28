@@ -207,7 +207,7 @@ func (s *Server) readPDFEncryptRequest(
 	); err != nil {
 		http.Error(
 			w,
-			"Das Passwort muss zwischen 1 und 256 Zeichen lang sein.",
+			"Das Passwort muss zwischen 1 und 127 Zeichen lang sein und darf keine Zeilenumbrüche enthalten.",
 			http.StatusBadRequest,
 		)
 

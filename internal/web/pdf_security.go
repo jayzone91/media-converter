@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 const (
-	maxPDFPasswordLength = 256
+	maxPDFPasswordLength = 127
 
 	pdfSecurityTimeout = 30 * time.Minute
 )
@@ -36,6 +37,15 @@ func validatePDFPassword(
 		)
 	}
 
+	if strings.ContainsAny(
+		password,
+		"\r\n\x00",
+	) {
+		return fmt.Errorf(
+			"password contains unsupported control characters",
+		)
+	}
+
 	return nil
 }
 
@@ -48,9 +58,10 @@ func generatePDFOwnerPassword() (
 		32,
 	)
 
-	if _, err := rand.Read(
-		buffer,
-	); err != nil {
+	if _, err :=
+		rand.Read(
+			buffer,
+		); err != nil {
 		return "",
 			fmt.Errorf(
 				"generate owner password: %w",
@@ -123,10 +134,11 @@ func (s *Server) writePDFSecurityResult(
 func createPDFSecurityTempDirectory(
 	prefix string,
 ) (string, error) {
-	directory, err := os.MkdirTemp(
-		"",
-		prefix,
-	)
+	directory, err :=
+		os.MkdirTemp(
+			"",
+			prefix,
+		)
 
 	if err != nil {
 		return "",

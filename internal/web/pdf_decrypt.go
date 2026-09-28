@@ -185,7 +185,7 @@ func (s *Server) readPDFDecryptRequest(
 	); err != nil {
 		http.Error(
 			w,
-			"Das Passwort darf maximal 256 Zeichen lang sein.",
+			"Das Passwort darf maximal 127 Zeichen lang sein und keine Zeilenumbrüche enthalten.",
 			http.StatusBadRequest,
 		)
 
