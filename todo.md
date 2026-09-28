@@ -104,8 +104,8 @@
   - [x] Formulare, Transparenzen und eingebettete Fonts testen
 
 - [ ] PDF optimieren
-  - [ ] Fast-Web-View / Linearization mit größeren PDFs testen
-  - [ ] bereits optimierte PDFs testen
+  - [x] Fast-Web-View / Linearization mit größeren PDFs testen
+  - [x] bereits optimierte PDFs testen
   - [ ] PDFs mit Formularen und Signaturen testen
 
 - [x] PDF verschlüsseln / entschlüsseln
