@@ -97,6 +97,15 @@ func (s *Server) createPDFCompressionResult(
 		return result, nil
 	}
 
+	if err :=
+		validatePDFCompressionInput(
+			upload.Path,
+			mode,
+		); err != nil {
+		return pdfCompressionResult{},
+			err
+	}
+
 	cacheDirectory :=
 		pdfCompressionCacheDirectory(
 			upload,

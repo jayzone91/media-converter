@@ -43,10 +43,12 @@ func (s *Server) handlePDFCompressionAnalyze(
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		pdfCompressTimeout,
-	)
+	ctx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			pdfCompressTimeout,
+		)
+
 	defer cancel()
 
 	result, err :=
@@ -57,22 +59,14 @@ func (s *Server) handlePDFCompressionAnalyze(
 		)
 
 	if err != nil {
-		if errors.Is(
-			ctx.Err(),
-			context.Canceled,
+		if s.handlePDFCompressionSpecialError(
+			w,
+			r,
+			ctx,
+			upload,
+			request.Mode,
+			err,
 		) {
-			return
-		}
-
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"Die Berechnung der Kompression hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
 			return
 		}
 
@@ -93,6 +87,7 @@ func (s *Server) handlePDFCompressionAnalyze(
 			"Die mögliche Kompression konnte nicht berechnet werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -104,12 +99,17 @@ func (s *Server) handlePDFCompressionAnalyze(
 		savings = 0
 	}
 
-	percent := 0.0
+	percent :=
+		0.0
 
 	if result.OriginalSize > 0 {
 		percent =
-			float64(savings) /
-				float64(result.OriginalSize) *
+			float64(
+				savings,
+			) /
+				float64(
+					result.OriginalSize,
+				) *
 				100
 	}
 
@@ -136,11 +136,12 @@ func (s *Server) handlePDFCompressionAnalyze(
 		"no-store",
 	)
 
-	if err := json.NewEncoder(
-		w,
-	).Encode(
-		response,
-	); err != nil {
+	if err :=
+		json.NewEncoder(
+			w,
+		).Encode(
+			response,
+		); err != nil {
 		s.logError(
 			r,
 			"failed to encode PDF compression analysis",
@@ -152,26 +153,14 @@ func (s *Server) handlePDFCompressionAnalyze(
 		return
 	}
 
-	s.logger.Info(
+	s.logInfo(
 		"PDF compression analyzed",
-		"method",
-		r.Method,
-		"path",
-		r.URL.Path,
-		"upload_id",
-		upload.ID,
-		"filename",
-		upload.Filename,
 		"mode",
 		request.Mode,
-		"input_size_bytes",
+		"input",
 		result.OriginalSize,
-		"output_size_bytes",
+		"output",
 		result.ResultSize,
-		"savings_bytes",
-		savings,
-		"savings_percent",
-		percent,
 		"unchanged",
 		result.Unchanged,
 	)
@@ -191,10 +180,12 @@ func (s *Server) handlePDFCompress(
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(
-		r.Context(),
-		pdfCompressTimeout,
-	)
+	ctx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			pdfCompressTimeout,
+		)
+
 	defer cancel()
 
 	result, err :=
@@ -246,24 +237,33 @@ func (s *Server) handlePDFCompress(
 func (s *Server) parsePDFCompressionRequest(
 	w http.ResponseWriter,
 	r *http.Request,
-) (pdfCompressRequest, storedPDFUpload, bool) {
-	r.Body = http.MaxBytesReader(
-		w,
-		r.Body,
-		maxPDFCompressRequestSize,
-	)
+) (
+	pdfCompressRequest,
+	storedPDFUpload,
+	bool,
+) {
+	r.Body =
+		http.MaxBytesReader(
+			w,
+			r.Body,
+			maxPDFCompressRequestSize,
+		)
+
 	defer r.Body.Close()
 
 	var request pdfCompressRequest
 
-	decoder := json.NewDecoder(
-		r.Body,
-	)
+	decoder :=
+		json.NewDecoder(
+			r.Body,
+		)
+
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(
-		&request,
-	); err != nil {
+	if err :=
+		decoder.Decode(
+			&request,
+		); err != nil {
 		http.Error(
 			w,
 			"Ungültige Anfrage.",
@@ -331,21 +331,14 @@ func (s *Server) handlePDFCompressionError(
 	mode string,
 	err error,
 ) {
-	if compressionWasCancelled(
-		err,
+	if s.handlePDFCompressionSpecialError(
+		w,
+		r,
 		ctx,
+		upload,
+		mode,
+		err,
 	) {
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"Die PDF-Komprimierung hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
-		}
-
 		return
 	}
 
@@ -368,4 +361,57 @@ func (s *Server) handlePDFCompressionError(
 		"Die PDF konnte nicht komprimiert werden.",
 		http.StatusInternalServerError,
 	)
+}
+
+func (s *Server) handlePDFCompressionSpecialError(
+	w http.ResponseWriter,
+	r *http.Request,
+	ctx context.Context,
+	upload storedPDFUpload,
+	mode string,
+	err error,
+) bool {
+	if errors.Is(
+		err,
+		errPDFCompressionInteractiveForm,
+	) {
+		s.logWarn(
+			r,
+			"lossy PDF compression rejected for interactive form",
+			"upload_id",
+			upload.ID,
+			"filename",
+			upload.Filename,
+			"mode",
+			mode,
+		)
+
+		http.Error(
+			w,
+			"Diese PDF enthält interaktive Formularfelder. Verwende den Modus „Verlustfrei“, damit das Formular erhalten bleibt.",
+			http.StatusUnprocessableEntity,
+		)
+
+		return true
+	}
+
+	if compressionWasCancelled(
+		err,
+		ctx,
+	) {
+		if errors.Is(
+			ctx.Err(),
+			context.DeadlineExceeded,
+		) {
+			http.Error(
+				w,
+				"Die PDF-Komprimierung hat zu lange gedauert.",
+				http.StatusGatewayTimeout,
+			)
+		}
+
+		return true
+	}
+
+	return false
 }
