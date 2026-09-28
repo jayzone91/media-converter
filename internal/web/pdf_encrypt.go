@@ -30,10 +30,17 @@ func (s *Server) handlePDFEncrypt(
 			r.Context(),
 			workloadQPDF,
 		); err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"PDF encrypt queue failed",
+			err,
+			"filename",
+			upload.Filename,
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -57,10 +64,11 @@ func (s *Server) handlePDFEncrypt(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -93,10 +101,11 @@ func (s *Server) handlePDFEncrypt(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Verschlüsselung konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Verschlüsselung konnte nicht vorbereitet werden.",
 		)
 
 		return
@@ -123,16 +132,11 @@ func (s *Server) handlePDFEncrypt(
 			ownerPassword,
 			outputPath,
 		); err != nil {
-		if isPDFSecurityTimeout(
+		if writeTimeoutAPIError(
+			w,
 			ctx,
-			err,
+			"Die Verschlüsselung hat zu lange gedauert.",
 		) {
-			http.Error(
-				w,
-				"Die Verschlüsselung hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
-
 			return
 		}
 
@@ -146,10 +150,11 @@ func (s *Server) handlePDFEncrypt(
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF konnte nicht verschlüsselt werden.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die PDF konnte nicht verschlüsselt werden.",
 		)
 
 		return
@@ -195,10 +200,11 @@ func (s *Server) readPDFEncryptRequest(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return request,
@@ -207,10 +213,11 @@ func (s *Server) readPDFEncryptRequest(
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return request,
@@ -223,10 +230,11 @@ func (s *Server) readPDFEncryptRequest(
 			request.Password,
 			false,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Das Passwort muss zwischen 1 und 127 Zeichen lang sein und darf keine Zeilenumbrüche enthalten.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Das Passwort muss zwischen 1 und 127 Zeichen lang sein und darf keine Zeilenumbrüche enthalten.",
 		)
 
 		return request,
@@ -240,10 +248,11 @@ func (s *Server) readPDFEncryptRequest(
 		)
 
 	if !ok {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return request,

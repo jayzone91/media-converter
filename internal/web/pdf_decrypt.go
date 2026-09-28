@@ -30,10 +30,17 @@ func (s *Server) handlePDFDecrypt(
 			r.Context(),
 			workloadQPDF,
 		); err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"PDF decrypt queue failed",
+			err,
+			"filename",
+			upload.Filename,
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -57,10 +64,11 @@ func (s *Server) handlePDFDecrypt(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -101,16 +109,11 @@ func (s *Server) handlePDFDecrypt(
 			request.Password,
 			outputPath,
 		); err != nil {
-		if isPDFSecurityTimeout(
+		if writeTimeoutAPIError(
+			w,
 			ctx,
-			err,
+			"Das Entfernen des Passworts hat zu lange gedauert.",
 		) {
-			http.Error(
-				w,
-				"Das Entfernen des Passworts hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
-
 			return
 		}
 
@@ -123,10 +126,11 @@ func (s *Server) handlePDFDecrypt(
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Das Passwort ist falsch oder die PDF kann nicht entschlüsselt werden.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Das Passwort ist falsch oder die PDF kann nicht entschlüsselt werden.",
 		)
 
 		return
@@ -172,10 +176,11 @@ func (s *Server) readPDFDecryptRequest(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return request,
@@ -184,10 +189,11 @@ func (s *Server) readPDFDecryptRequest(
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return request,
@@ -200,10 +206,11 @@ func (s *Server) readPDFDecryptRequest(
 			request.Password,
 			true,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Das Passwort darf maximal 127 Zeichen lang sein und keine Zeilenumbrüche enthalten.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Das Passwort darf maximal 127 Zeichen lang sein und keine Zeilenumbrüche enthalten.",
 		)
 
 		return request,
@@ -217,10 +224,11 @@ func (s *Server) readPDFDecryptRequest(
 		)
 
 	if !ok {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return request,

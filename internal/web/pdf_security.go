@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -98,10 +97,11 @@ func (s *Server) writePDFSecurityResult(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
@@ -172,18 +172,4 @@ func pdfSecurityTimedContext(
 		parent,
 		pdfSecurityTimeout,
 	)
-}
-
-func isPDFSecurityTimeout(
-	ctx context.Context,
-	err error,
-) bool {
-	return errors.Is(
-		ctx.Err(),
-		context.DeadlineExceeded,
-	) ||
-		errors.Is(
-			err,
-			context.DeadlineExceeded,
-		)
 }
