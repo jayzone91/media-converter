@@ -69,14 +69,14 @@
 
 ### Noch offene Werkzeuge
 
-- [ ] PDF bearbeiten
+- [x] PDF bearbeiten
   - [x] Funktionsumfang definieren
   - [x] Text hinzufügen
   - [x] Textfelder positionieren
   - [x] Bilder hinzufügen
   - [x] ggf. Freihand / Zeichnen
   - [x] bestehende PDF-Seite als Hintergrund verwenden
-  - [ ] Änderungen verlustfrei auf PDF anwenden
+  - [x] Änderungen verlustfrei auf PDF anwenden
 
 - [ ] PDF schwärzen
   - [ ] PDF hochladen
