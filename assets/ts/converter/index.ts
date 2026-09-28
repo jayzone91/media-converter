@@ -1,3 +1,4 @@
+import { readAPIError } from "../shared/api-error.ts";
 import { downloadURL } from "../shared/download.ts";
 
 interface ConversionResponse {
@@ -90,9 +91,12 @@ async function handleConversionSubmit(
     });
 
     if (!response.ok) {
-      const message = await response.text();
+      const error = await readAPIError(
+        response,
+        "Konvertierung fehlgeschlagen.",
+      );
 
-      throw new Error(message.trim() || "Konvertierung fehlgeschlagen.");
+      throw new Error(error.message);
     }
 
     const result = (await response.json()) as ConversionResponse;

@@ -31,16 +31,18 @@ func (s *Server) handleConvert(
 			contentType,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"direct conversion upload is not supported",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Direkter Datei-Upload ist an diesem Endpunkt nicht erlaubt.",
 		)
 
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
+	if err :=
+		r.ParseForm(); err != nil {
 		s.logWarn(
 			r,
 			"convert rejected",
@@ -48,18 +50,20 @@ func (s *Server) handleConvert(
 			"invalid form",
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"invalid form",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return
 	}
 
-	uploadID := r.FormValue(
-		"upload_id",
-	)
+	uploadID :=
+		r.FormValue(
+			"upload_id",
+		)
 
 	if uploadID == "" {
 		s.logWarn(
@@ -69,18 +73,20 @@ func (s *Server) handleConvert(
 			"missing upload id",
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"missing upload id",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return
 	}
 
-	upload, ok := s.uploads.Take(
-		uploadID,
-	)
+	upload, ok :=
+		s.uploads.Take(
+			uploadID,
+		)
 
 	if !ok {
 		s.logWarn(
@@ -90,10 +96,11 @@ func (s *Server) handleConvert(
 			"upload expired",
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"upload expired or not found",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Der Upload ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -112,20 +119,22 @@ func (s *Server) handleConvert(
 			uploadID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"upload contains no files",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Der Upload enthält keine Dateien.",
 		)
 
 		return
 	}
 
-	target := strings.ToLower(
-		r.FormValue(
-			"target",
-		),
-	)
+	target :=
+		strings.ToLower(
+			r.FormValue(
+				"target",
+			),
+		)
 
 	if target == "" {
 		s.logWarn(
@@ -139,10 +148,11 @@ func (s *Server) handleConvert(
 			len(upload.Files),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"missing target format",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Zielformat fehlt.",
 		)
 
 		return
@@ -163,10 +173,11 @@ func (s *Server) handleConvert(
 			target,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"unsupported conversion",
 			http.StatusBadRequest,
+			apiErrorUnsupportedConversion,
+			"Diese Konvertierung wird nicht unterstützt.",
 		)
 
 		return
@@ -189,10 +200,11 @@ func (s *Server) handleConvert(
 			target,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"conversion configuration error",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die Konvertierung konnte nicht vorbereitet werden.",
 		)
 
 		return
@@ -222,12 +234,29 @@ func (s *Server) handleConvert(
 			err,
 			context.DeadlineExceeded,
 		) {
-			http.Error(
+			writeAPIError(
 				w,
-				"conversion queue full",
 				http.StatusServiceUnavailable,
+				apiErrorQueueTimeout,
+				"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
 			)
+
+			return
 		}
+
+		if errors.Is(
+			err,
+			context.Canceled,
+		) {
+			return
+		}
+
+		writeAPIError(
+			w,
+			http.StatusServiceUnavailable,
+			apiErrorInternal,
+			"Die Konvertierung konnte nicht gestartet werden.",
+		)
 
 		return
 	}
