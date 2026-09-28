@@ -113,7 +113,7 @@
   - [x] Passwörter möglichst nicht über Prozess-Argumente weitergeben
   - [x] qpdf Password-File-Unterstützung verwenden, sofern geeignet
   - [x] Passwortlängen entsprechend qpdf/PDF-Spezifikation validieren
-  - [ ] verschiedene AES-256-PDFs testen
+  - [x] verschiedene AES-256-PDFs testen
 
 - [x] Webseite → PDF
   - [x] Desktop-Modus testen
@@ -340,7 +340,7 @@
   - [ ] Redirect → eigene Server-IP
   - [x] DNS-Rebinding
 
-- [ ] Tests für PDF Encrypt/Decrypt
+- [x] Tests für PDF Encrypt/Decrypt
 - [ ] Tests für PDF Compression
 - [ ] Tests für PDF Optimize
 - [ ] Tests für PDF Split/Merge/Sort/Rotate/Delete/Extract
