@@ -21,7 +21,7 @@ interface RedactionInteraction {
 
   pointerId: number;
 
-  id: string | null;
+  id: string;
 
   startX: number;
   startY: number;
@@ -44,7 +44,7 @@ export function setupRedactionInteraction(): boolean {
     return false;
   }
 
-  overlay.addEventListener("pointerdown", beginCreateRedaction);
+  overlay.addEventListener("pointerdown", handlePointerDown);
 
   overlay.addEventListener("pointermove", handlePointerMove);
 
@@ -59,121 +59,49 @@ export function resetRedactionInteraction(): void {
   interaction = null;
 }
 
-export function beginMoveRedaction(
-  event: PointerEvent,
-  redaction: PDFRedaction,
-): void {
-  if (event.button !== 0) {
-    return;
-  }
-
-  const overlay = redactOverlay();
-
-  if (!overlay) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  const point = normalizedPointer(event, overlay);
-
-  redactState.selectedID = redaction.id;
-
-  interaction = {
-    mode: "move",
-
-    pointerId: event.pointerId,
-
-    id: redaction.id,
-
-    startX: point.x,
-
-    startY: point.y,
-
-    originalX: redaction.x,
-
-    originalY: redaction.y,
-
-    originalWidth: redaction.width,
-
-    originalHeight: redaction.height,
-  };
-
-  overlay.setPointerCapture(event.pointerId);
-
-  renderRedactions();
-  updateControls();
-}
-
-export function beginResizeRedaction(
-  event: PointerEvent,
-  redaction: PDFRedaction,
-): void {
-  if (event.button !== 0) {
-    return;
-  }
-
-  const overlay = redactOverlay();
-
-  if (!overlay) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  const point = normalizedPointer(event, overlay);
-
-  redactState.selectedID = redaction.id;
-
-  interaction = {
-    mode: "resize",
-
-    pointerId: event.pointerId,
-
-    id: redaction.id,
-
-    startX: point.x,
-
-    startY: point.y,
-
-    originalX: redaction.x,
-
-    originalY: redaction.y,
-
-    originalWidth: redaction.width,
-
-    originalHeight: redaction.height,
-  };
-
-  overlay.setPointerCapture(event.pointerId);
-
-  renderRedactions();
-  updateControls();
-}
-
-function beginCreateRedaction(event: PointerEvent): void {
+function handlePointerDown(event: PointerEvent): void {
   if (event.button !== 0 || !redactState.activeUpload) {
     return;
   }
 
   const target = event.target;
 
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
-
-  if (target.closest(".pdf-redact-area")) {
-    return;
-  }
-
   const overlay = event.currentTarget;
 
-  if (!(overlay instanceof HTMLElement)) {
+  if (!(target instanceof Element) || !(overlay instanceof HTMLElement)) {
     return;
   }
 
+  const area = target.closest<HTMLElement>(".pdf-redact-area");
+
+  if (!area) {
+    beginCreateRedaction(event, overlay);
+
+    return;
+  }
+
+  const id = area.dataset.redactionId;
+
+  if (!id) {
+    return;
+  }
+
+  const redaction = findRedaction(redactState.activePage, id);
+
+  if (!redaction) {
+    return;
+  }
+
+  if (target.closest(".pdf-redact-resize-handle")) {
+    beginResizeRedaction(event, overlay, redaction);
+
+    return;
+  }
+
+  beginMoveRedaction(event, overlay, redaction);
+}
+
+function beginCreateRedaction(event: PointerEvent, overlay: HTMLElement): void {
   event.preventDefault();
 
   const point = normalizedPointer(event, overlay);
@@ -213,6 +141,82 @@ function beginCreateRedaction(event: PointerEvent): void {
   updateControls();
 }
 
+function beginMoveRedaction(
+  event: PointerEvent,
+  overlay: HTMLElement,
+  redaction: PDFRedaction,
+): void {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const point = normalizedPointer(event, overlay);
+
+  redactState.selectedID = redaction.id;
+
+  interaction = {
+    mode: "move",
+
+    pointerId: event.pointerId,
+
+    id: redaction.id,
+
+    startX: point.x,
+
+    startY: point.y,
+
+    originalX: redaction.x,
+
+    originalY: redaction.y,
+
+    originalWidth: redaction.width,
+
+    originalHeight: redaction.height,
+  };
+
+  overlay.setPointerCapture(event.pointerId);
+
+  renderRedactions();
+  updateControls();
+}
+
+function beginResizeRedaction(
+  event: PointerEvent,
+  overlay: HTMLElement,
+  redaction: PDFRedaction,
+): void {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const point = normalizedPointer(event, overlay);
+
+  redactState.selectedID = redaction.id;
+
+  interaction = {
+    mode: "resize",
+
+    pointerId: event.pointerId,
+
+    id: redaction.id,
+
+    startX: point.x,
+
+    startY: point.y,
+
+    originalX: redaction.x,
+
+    originalY: redaction.y,
+
+    originalWidth: redaction.width,
+
+    originalHeight: redaction.height,
+  };
+
+  overlay.setPointerCapture(event.pointerId);
+
+  renderRedactions();
+  updateControls();
+}
+
 function handlePointerMove(event: PointerEvent): void {
   if (!interaction || interaction.pointerId !== event.pointerId) {
     return;
@@ -224,13 +228,7 @@ function handlePointerMove(event: PointerEvent): void {
     return;
   }
 
-  const id = interaction.id;
-
-  if (!id) {
-    return;
-  }
-
-  const redaction = findRedaction(redactState.activePage, id);
+  const redaction = findRedaction(redactState.activePage, interaction.id);
 
   if (!redaction) {
     return;
@@ -346,10 +344,6 @@ function finishInteraction(event: PointerEvent): void {
   const id = interaction.id;
 
   interaction = null;
-
-  if (!id) {
-    return;
-  }
 
   const redaction = findRedaction(redactState.activePage, id);
 

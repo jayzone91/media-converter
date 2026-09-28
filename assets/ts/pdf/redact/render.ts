@@ -7,12 +7,6 @@ import {
   type PDFRedaction,
 } from "./state.ts";
 
-import {
-  beginMoveRedaction,
-  beginResizeRedaction,
-  resetRedactionInteraction,
-} from "./interaction.ts";
-
 export function renderRedactions(): void {
   const overlay = redactOverlay();
 
@@ -139,8 +133,6 @@ export function clearCurrentPage(): void {
 
   redactState.selectedID = null;
 
-  resetRedactionInteraction();
-
   renderRedactions();
   updateControls();
   updatePageIndicators();
@@ -167,29 +159,12 @@ function createRedactionElement(redaction: PDFRedaction): HTMLButtonElement {
 
   element.classList.toggle("selected", redactState.selectedID === redaction.id);
 
-  element.addEventListener("pointerdown", (event) => {
-    beginMoveRedaction(event, redaction);
-  });
-
-  element.addEventListener("click", (event) => {
-    event.stopPropagation();
-
-    redactState.selectedID = redaction.id;
-
-    renderRedactions();
-    updateControls();
-  });
-
   if (redactState.selectedID === redaction.id) {
     const handle = document.createElement("span");
 
     handle.className = "pdf-redact-resize-handle";
 
     handle.setAttribute("aria-hidden", "true");
-
-    handle.addEventListener("pointerdown", (event) => {
-      beginResizeRedaction(event, redaction);
-    });
 
     element.append(handle);
   }
