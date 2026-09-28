@@ -108,11 +108,11 @@
   - [ ] bereits optimierte PDFs testen
   - [ ] PDFs mit Formularen und Signaturen testen
 
-- [ ] PDF verschlüsseln / entschlüsseln
-  - [ ] Passwortübergabe an qpdf prüfen
-  - [ ] Passwörter möglichst nicht über Prozess-Argumente weitergeben
-  - [ ] qpdf Password-File-Unterstützung verwenden, sofern geeignet
-  - [ ] Passwortlängen entsprechend qpdf/PDF-Spezifikation validieren
+- [x] PDF verschlüsseln / entschlüsseln
+  - [x] Passwortübergabe an qpdf prüfen
+  - [x] Passwörter möglichst nicht über Prozess-Argumente weitergeben
+  - [x] qpdf Password-File-Unterstützung verwenden, sofern geeignet
+  - [x] Passwortlängen entsprechend qpdf/PDF-Spezifikation validieren
   - [ ] verschiedene AES-256-PDFs testen
 
 - [x] Webseite → PDF
@@ -154,11 +154,11 @@
   - [x] Fonts
   - [x] JavaScript
   - [x] iframes
-- [ ] entscheiden, ob weitere sensible Netze explizit blockiert werden sollen
+- [x] entscheiden, ob weitere sensible Netze explizit blockiert werden sollen
   - [x] Link-local
   - [x] Cloud-Metadata-Adressen
-  - [ ] Docker-/Container-Netze
-  - [ ] Proxmox-/Management-Netze
+  - [x] Docker-/Container-Netze
+  - [x] Proxmox-/Management-Netze
 
 ### Uploads
 
@@ -332,13 +332,13 @@
 - [ ] Tests für Web-PDF-Sicherheit
   - [x] localhost
   - [x] `127.0.0.1`
-  - [ ] anderes `127.x.x.x`
+  - [x] anderes `127.x.x.x`
   - [x] `::1`
   - [x] eigene Server-IP
   - [x] DNS → eigene Server-IP
   - [ ] Redirect → localhost
   - [ ] Redirect → eigene Server-IP
-  - [ ] DNS-Rebinding
+  - [x] DNS-Rebinding
 
 - [ ] Tests für PDF Encrypt/Decrypt
 - [ ] Tests für PDF Compression
