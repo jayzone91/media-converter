@@ -169,20 +169,18 @@ func (c *WebPDF) Render(
 			)
 	}
 
-	allocatorCtx, allocatorCancel :=
-		chromedp.NewExecAllocator(
+	browser :=
+		newWebPDFBrowserContext(
 			ctx,
 			allocatorOptions...,
 		)
 
-	defer allocatorCancel()
-
-	browserCtx, browserCancel :=
-		chromedp.NewContext(
-			allocatorCtx,
-		)
-
-	defer browserCancel()
+	/*
+		Dieser Cleanup läuft vor dem Entfernen des
+		Profilverzeichnisses, weil sein defer später
+		registriert wurde.
+	*/
+	defer browser.Close()
 
 	blockedRequests :=
 		make(
@@ -195,7 +193,7 @@ func (c *WebPDF) Render(
 	actions :=
 		[]chromedp.Action{
 			setupWebPDFRequestGuard(
-				browserCtx,
+				browser.Context,
 				options.RequestValidator,
 				blockedRequests,
 			),
@@ -289,7 +287,7 @@ func (c *WebPDF) Render(
 
 	runErr :=
 		chromedp.Run(
-			browserCtx,
+			browser.Context,
 			actions...,
 		)
 
@@ -303,6 +301,14 @@ func (c *WebPDF) Render(
 	}
 
 	if runErr != nil {
+		if ctxErr :=
+			ctx.Err(); ctxErr != nil {
+			return fmt.Errorf(
+				"render webpage: %w",
+				ctxErr,
+			)
+		}
+
 		return fmt.Errorf(
 			"render webpage: %w",
 			runErr,
