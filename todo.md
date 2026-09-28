@@ -78,16 +78,16 @@
   - [x] bestehende PDF-Seite als Hintergrund verwenden
   - [x] Änderungen verlustfrei auf PDF anwenden
 
-- [ ] PDF schwärzen
-  - [ ] PDF hochladen
-  - [ ] Seitenvorschau anzeigen
-  - [ ] Bereiche per Maus markieren
-  - [ ] mehrere Schwärzungen pro Seite
-  - [ ] Markierungen entfernen / ändern
-  - [ ] echte Redaction statt nur schwarzer Overlay-Fläche
-  - [ ] darunterliegenden Text/Inhalt dauerhaft entfernen
-  - [ ] Metadaten / versteckte Inhalte berücksichtigen
-  - [ ] Ergebnis kontrollieren
+- [x] PDF schwärzen
+  - [x] PDF hochladen
+  - [x] Seitenvorschau anzeigen
+  - [x] Bereiche per Maus markieren
+  - [x] mehrere Schwärzungen pro Seite
+  - [x] Markierungen entfernen / ändern
+  - [x] echte Redaction statt nur schwarzer Overlay-Fläche
+  - [x] darunterliegenden Text/Inhalt dauerhaft entfernen
+  - [x] Metadaten / versteckte Inhalte berücksichtigen
+  - [x] Ergebnis kontrollieren
 
 ### Vorhandene PDF-Werkzeuge – Nacharbeiten
 
