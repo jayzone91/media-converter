@@ -70,9 +70,11 @@ func (s *Server) handlePDFCreate(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
+	if err :=
+		s.acquireWorkload(
+			r.Context(),
+			workloadChromium,
+		); err != nil {
 		http.Error(
 			w,
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
@@ -82,7 +84,9 @@ func (s *Server) handlePDFCreate(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadChromium,
+	)
 
 	tempDir, err :=
 		os.MkdirTemp(
@@ -107,9 +111,10 @@ func (s *Server) handlePDFCreate(
 	}
 
 	defer func() {
-		if err := os.RemoveAll(
-			tempDir,
-		); err != nil {
+		if err :=
+			os.RemoveAll(
+				tempDir,
+			); err != nil {
 			s.logError(
 				r,
 				"failed to remove PDF document temporary directory",
@@ -131,6 +136,7 @@ func (s *Server) handlePDFCreate(
 			r.Context(),
 			pdfCreateTimeout,
 		)
+
 	defer cancel()
 
 	options :=
@@ -144,12 +150,13 @@ func (s *Server) handlePDFCreate(
 			PrintBackground: true,
 		}
 
-	if err := s.webPDF.RenderHTML(
-		ctx,
-		html,
-		outputPath,
-		options,
-	); err != nil {
+	if err :=
+		s.webPDF.RenderHTML(
+			ctx,
+			html,
+			outputPath,
+			options,
+		); err != nil {
 		if errors.Is(
 			ctx.Err(),
 			context.DeadlineExceeded,
@@ -208,11 +215,13 @@ func readPDFCreateRequest(
 	pdfCreateDocument,
 	bool,
 ) {
-	r.Body = http.MaxBytesReader(
-		w,
-		r.Body,
-		maxPDFCreateRequestSize,
-	)
+	r.Body =
+		http.MaxBytesReader(
+			w,
+			r.Body,
+			maxPDFCreateRequestSize,
+		)
+
 	defer r.Body.Close()
 
 	var request pdfCreateRequest
@@ -224,9 +233,10 @@ func readPDFCreateRequest(
 
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(
-		&request,
-	); err != nil {
+	if err :=
+		decoder.Decode(
+			&request,
+		); err != nil {
 		http.Error(
 			w,
 			"Ungültige Anfrage.",
