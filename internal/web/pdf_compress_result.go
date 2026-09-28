@@ -76,18 +76,31 @@ func (s *Server) createPDFCompressionResult(
 		return result, nil
 	}
 
-	if err :=
-		s.acquireConversionSlot(
+	plan, err :=
+		pdfCompressionWorkloadPlan(
+			mode,
+		)
+
+	if err != nil {
+		return pdfCompressionResult{},
+			err
+	}
+
+	releaseWorkloads, err :=
+		s.acquireConversionWorkloads(
 			ctx,
-		); err != nil {
+			plan,
+		)
+
+	if err != nil {
 		return pdfCompressionResult{},
 			fmt.Errorf(
-				"failed to acquire compression slot: %w",
+				"failed to acquire PDF compression workload: %w",
 				err,
 			)
 	}
 
-	defer s.releaseConversionSlot()
+	defer releaseWorkloads()
 
 	if result, ok :=
 		readCachedPDFCompressionResult(
@@ -259,6 +272,34 @@ func (s *Server) createPDFCompressionResult(
 
 		ResultSize: info.Size(),
 	}, nil
+}
+
+func pdfCompressionWorkloadPlan(
+	mode string,
+) (conversionWorkloadPlan, error) {
+	switch mode {
+	case "lossless":
+		return conversionWorkloadPlan{
+			Workloads: []workloadType{
+				workloadQPDF,
+			},
+		}, nil
+
+	case "balanced",
+		"strong":
+		return conversionWorkloadPlan{
+			Workloads: []workloadType{
+				workloadGhostscript,
+			},
+		}, nil
+
+	default:
+		return conversionWorkloadPlan{},
+			fmt.Errorf(
+				"unsupported PDF compression mode: %s",
+				mode,
+			)
+	}
 }
 
 func readCachedPDFCompressionResult(
