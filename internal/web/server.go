@@ -174,6 +174,11 @@ func (s *Server) routes() {
 	)
 
 	s.mux.HandleFunc(
+		"POST /pdf/redact",
+		s.handlePDFRedact,
+	)
+
+	s.mux.HandleFunc(
 		"POST /pdf/split",
 		s.handlePDFSplit,
 	)

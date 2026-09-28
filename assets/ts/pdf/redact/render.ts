@@ -1,11 +1,12 @@
 import {
   findRedaction,
   getPageRedactions,
-  hasRedactions,
   pageHasRedactions,
   redactState,
   type PDFRedaction,
 } from "./state.ts";
+
+import { updateRedactSubmitState } from "./submit.ts";
 
 export function renderRedactions(): void {
   const overlay = redactOverlay();
@@ -41,9 +42,6 @@ export function updateControls(): void {
     "#pdf-redact-selection-info",
   );
 
-  const applyButton =
-    root.querySelector<HTMLButtonElement>("#pdf-redact-apply");
-
   const selected = redactState.selectedID
     ? findRedaction(redactState.activePage, redactState.selectedID)
     : null;
@@ -67,11 +65,7 @@ export function updateControls(): void {
     )} × ${Math.round(selected.height * 100)} %`;
   }
 
-  if (applyButton) {
-    applyButton.disabled = true;
-
-    applyButton.dataset.ready = hasRedactions() ? "true" : "false";
-  }
+  updateRedactSubmitState();
 }
 
 export function updatePageIndicators(): void {

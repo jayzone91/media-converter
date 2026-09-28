@@ -6,6 +6,8 @@ import {
   updateControls,
 } from "./render.ts";
 
+import { setupRedactSubmit } from "./submit.ts";
+
 import { destroyRedactUpload, setupRedactUpload } from "./upload.ts";
 
 import { redactState } from "./state.ts";
@@ -13,7 +15,11 @@ import { redactState } from "./state.ts";
 export function setupPDFRedact(workspace: HTMLElement): void {
   redactState.root = workspace;
 
-  if (!setupRedactUpload() || !setupRedactionInteraction()) {
+  if (
+    !setupRedactUpload() ||
+    !setupRedactionInteraction() ||
+    !setupRedactSubmit()
+  ) {
     return;
   }
 
