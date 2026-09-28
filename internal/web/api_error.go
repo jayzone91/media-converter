@@ -1,7 +1,9 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -16,7 +18,7 @@ const (
 
 	apiErrorQueueTimeout apiErrorCode = "queue_timeout"
 
-	apiErrorConversionTimeout apiErrorCode = "conversion_timeout"
+	apiErrorTimeout apiErrorCode = "timeout"
 
 	apiErrorInternal apiErrorCode = "internal_error"
 )
@@ -51,4 +53,66 @@ func writeAPIError(
 			Message: message,
 		},
 	)
+}
+
+func writeQueueAPIError(
+	w http.ResponseWriter,
+	err error,
+) {
+	if errors.Is(
+		err,
+		context.Canceled,
+	) {
+		return
+	}
+
+	if errors.Is(
+		err,
+		context.DeadlineExceeded,
+	) {
+		writeAPIError(
+			w,
+			http.StatusServiceUnavailable,
+			apiErrorQueueTimeout,
+			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
+		)
+
+		return
+	}
+
+	writeAPIError(
+		w,
+		http.StatusServiceUnavailable,
+		apiErrorInternal,
+		"Die Verarbeitung konnte nicht gestartet werden.",
+	)
+}
+
+func writeTimeoutAPIError(
+	w http.ResponseWriter,
+	ctx context.Context,
+	message string,
+) bool {
+	if errors.Is(
+		ctx.Err(),
+		context.Canceled,
+	) {
+		return true
+	}
+
+	if !errors.Is(
+		ctx.Err(),
+		context.DeadlineExceeded,
+	) {
+		return false
+	}
+
+	writeAPIError(
+		w,
+		http.StatusGatewayTimeout,
+		apiErrorTimeout,
+		message,
+	)
+
+	return true
 }

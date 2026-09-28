@@ -1,3 +1,5 @@
+import { readAPIError } from "./api-error.ts";
+
 export interface DownloadResponse {
   download_url: string;
   filename: string;
@@ -67,9 +69,9 @@ export async function readDownloadResponse(
   fallbackError: string,
 ): Promise<DownloadResult> {
   if (!response.ok) {
-    const message = await response.text();
+    const error = await readAPIError(response, fallbackError);
 
-    throw new Error(message.trim() || fallbackError);
+    throw new Error(error.message);
   }
 
   const data = (await response.json()) as unknown;

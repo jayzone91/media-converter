@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -61,10 +60,11 @@ func (s *Server) handlePDFSort(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Sortier-Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Sortier-Anfrage.",
 		)
 
 		return
@@ -85,10 +85,11 @@ func (s *Server) handlePDFSort(
 			request.UploadID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -112,10 +113,11 @@ func (s *Server) handlePDFSort(
 			len(request.Pages),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Seitenreihenfolge ist ungültig.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die Seitenreihenfolge ist ungültig.",
 		)
 
 		return
@@ -134,10 +136,9 @@ func (s *Server) handlePDFSort(
 			upload.Filename,
 		)
 
-		http.Error(
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -162,10 +163,11 @@ func (s *Server) handlePDFSort(
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -207,25 +209,23 @@ func (s *Server) handlePDFSort(
 			request.Pages,
 			outputPath,
 		); err != nil {
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Das Sortieren der PDF hat zu lange gedauert.",
 		) {
-			s.logError(
-				r,
-				"PDF sort timed out",
-				ctx.Err(),
-				"filename",
-				upload.Filename,
-				"pages",
-				upload.PageCount,
-			)
-
-			http.Error(
-				w,
-				"Das Sortieren der PDF hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
+			if ctx.Err() ==
+				context.DeadlineExceeded {
+				s.logError(
+					r,
+					"PDF sort timed out",
+					ctx.Err(),
+					"filename",
+					upload.Filename,
+					"pages",
+					upload.PageCount,
+				)
+			}
 
 			return
 		}
@@ -242,10 +242,11 @@ func (s *Server) handlePDFSort(
 			upload.Size,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF-Seiten konnten nicht sortiert werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die PDF-Seiten konnten nicht sortiert werden.",
 		)
 
 		return
@@ -265,10 +266,11 @@ func (s *Server) handlePDFSort(
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
