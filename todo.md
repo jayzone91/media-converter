@@ -180,7 +180,7 @@
 - [x] temporäre Dateien nach Erfolg zuverlässig löschen
 - [x] temporäre Dateien nach Fehler zuverlässig löschen
 - [x] temporäre Dateien nach Client-Abbruch zuverlässig löschen
-- [ ] Cleanup beim Server-Shutdown testen
+- [x] Cleanup beim Server-Shutdown testen
 
 - [ ] einheitliche Lebensdauer für temporäre Uploads dokumentieren
 
