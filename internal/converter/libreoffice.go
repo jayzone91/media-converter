@@ -31,7 +31,7 @@ func (c *LibreOffice) Convert(ctx context.Context, input, output string) error {
 
 	outputDir := filepath.Dir(output)
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.binary,
 		"--headless",

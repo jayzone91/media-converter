@@ -31,7 +31,7 @@ func (c *ImageMagick) Validate(
 	ctx context.Context,
 	input string,
 ) error {
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.binary,
 		"identify",
@@ -67,7 +67,7 @@ func (c *ImageMagick) Convert(
 	input string,
 	output string,
 ) error {
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.binary,
 		input,

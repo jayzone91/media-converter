@@ -203,7 +203,7 @@ func (q *QPDF) PageCount(
 	ctx context.Context,
 	input string,
 ) (QPDFPageCountResult, error) {
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		q.binary,
 		"--warning-exit-0",
@@ -273,7 +273,7 @@ func (q *QPDF) run(
 	operation string,
 	args []string,
 ) error {
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		q.binary,
 		args...,

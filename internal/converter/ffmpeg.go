@@ -35,7 +35,7 @@ func (c *FFmpeg) Convert(ctx context.Context, input, output string) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.binary,
 		args...,

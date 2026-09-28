@@ -7,7 +7,6 @@ import (
 	"image/draw"
 	"image/png"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -164,7 +163,7 @@ func (c *PDF) renderRedactionPage(
 		)
 
 	cmd :=
-		exec.CommandContext(
+		externalCommandContext(
 			ctx,
 			c.pdfToPPM,
 			"-f",

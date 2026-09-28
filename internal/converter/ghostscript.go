@@ -62,7 +62,7 @@ func (g *Ghostscript) CompressPDF(
 		return err
 	}
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		g.binary,
 		args...,

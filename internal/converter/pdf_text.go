@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -105,7 +104,7 @@ func (c *PDF) extractText(
 	input string,
 	output string,
 ) error {
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.pdfToText,
 		"-layout",

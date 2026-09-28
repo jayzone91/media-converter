@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 )
@@ -70,7 +69,7 @@ func (c *PDF) ConvertToImages(
 		prefix,
 	)
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.pdfToPPM,
 		args...,

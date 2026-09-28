@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -328,7 +327,7 @@ func requireEmbeddedPDFFont(
 		)
 
 	command :=
-		exec.CommandContext(
+		externalCommandContext(
 			ctx,
 			qpdf.binary,
 			"--warning-exit-0",

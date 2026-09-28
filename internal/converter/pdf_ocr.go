@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -33,7 +32,7 @@ func (c *PDF) extractTextWithOCR(
 		"page",
 	)
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.pdfToPPM,
 		"-png",
@@ -126,7 +125,7 @@ func (c *PDF) ocrPDFPage(
 		pageNumber,
 	)
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.pdfToPPM,
 		"-f",
@@ -168,7 +167,7 @@ func (c *PDF) ocrPage(
 	ctx context.Context,
 	image string,
 ) (string, error) {
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.tesseract,
 		image,

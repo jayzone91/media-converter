@@ -3,7 +3,6 @@ package converter
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -358,7 +357,7 @@ func requireQPDFAES256Encryption(
 	}()
 
 	command :=
-		exec.CommandContext(
+		externalCommandContext(
 			ctx,
 			qpdf.binary,
 			"--warning-exit-0",

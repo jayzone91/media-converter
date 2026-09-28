@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 )
@@ -71,7 +70,7 @@ func (c *PDF) RenderPreviewPage(
 	pageString :=
 		strconv.Itoa(page)
 
-	cmd := exec.CommandContext(
+	cmd := externalCommandContext(
 		ctx,
 		c.pdfToPPM,
 		"-f",
