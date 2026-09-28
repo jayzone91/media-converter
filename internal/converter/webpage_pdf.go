@@ -4,10 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
 	"time"
 
 	"github.com/chromedp/cdproto/page"
@@ -66,15 +62,33 @@ func (c *WebPDF) Render(
 	}
 
 	if options.RequestValidator != nil {
-		if err := options.RequestValidator(
-			ctx,
-			url,
-		); err != nil {
+		if err :=
+			options.RequestValidator(
+				ctx,
+				url,
+			); err != nil {
 			return fmt.Errorf(
 				"initial webpage request rejected: %w",
 				err,
 			)
 		}
+	}
+
+	proxy, err :=
+		startWebPDFProxy(
+			ctx,
+			options.RequestValidator,
+		)
+
+	if err != nil {
+		return fmt.Errorf(
+			"prepare webpage network proxy: %w",
+			err,
+		)
+	}
+
+	if proxy != nil {
+		defer proxy.Close()
 	}
 
 	profileDirectory, err :=
@@ -103,61 +117,89 @@ func (c *WebPDF) Render(
 	allocatorOptions =
 		append(
 			allocatorOptions,
+
 			chromedp.ExecPath(
 				c.browserPath,
 			),
+
 			chromedp.UserDataDir(
 				profileDirectory,
 			),
+
 			chromedp.WindowSize(
 				1440,
 				1366,
 			),
+
 			chromedp.Flag(
 				"disable-gpu",
 				true,
 			),
+
 			chromedp.Flag(
 				"disable-dev-shm-usage",
 				true,
 			),
+
 			chromedp.Flag(
 				"no-first-run",
 				true,
 			),
+
 			chromedp.Flag(
 				"no-default-browser-check",
 				true,
 			),
 		)
 
+	if proxy != nil {
+		allocatorOptions =
+			append(
+				allocatorOptions,
+
+				chromedp.Flag(
+					"proxy-server",
+					proxy.URL(),
+				),
+
+				chromedp.Flag(
+					"proxy-bypass-list",
+					"<-loopback>",
+				),
+			)
+	}
+
 	allocatorCtx, allocatorCancel :=
 		chromedp.NewExecAllocator(
 			ctx,
 			allocatorOptions...,
 		)
+
 	defer allocatorCancel()
 
 	browserCtx, browserCancel :=
 		chromedp.NewContext(
 			allocatorCtx,
 		)
+
 	defer browserCancel()
 
-	blockedRequests := make(
-		chan error,
-		1,
-	)
+	blockedRequests :=
+		make(
+			chan error,
+			1,
+		)
 
 	var pdfData []byte
 
-	actions := []chromedp.Action{
-		setupWebPDFRequestGuard(
-			browserCtx,
-			options.RequestValidator,
-			blockedRequests,
-		),
-	}
+	actions :=
+		[]chromedp.Action{
+			setupWebPDFRequestGuard(
+				browserCtx,
+				options.RequestValidator,
+				blockedRequests,
+			),
+		}
 
 	actions = append(
 		actions,
@@ -245,14 +287,18 @@ func (c *WebPDF) Render(
 		),
 	)
 
-	runErr := chromedp.Run(
-		browserCtx,
-		actions...,
-	)
+	runErr :=
+		chromedp.Run(
+			browserCtx,
+			actions...,
+		)
 
 	select {
-	case blockedErr := <-blockedRequests:
+	case blockedErr :=
+		<-blockedRequests:
+
 		return blockedErr
+
 	default:
 	}
 
@@ -269,11 +315,12 @@ func (c *WebPDF) Render(
 		)
 	}
 
-	if err := os.WriteFile(
-		output,
-		pdfData,
-		0o600,
-	); err != nil {
+	if err :=
+		os.WriteFile(
+			output,
+			pdfData,
+			0o600,
+		); err != nil {
 		return fmt.Errorf(
 			"write webpage PDF: %w",
 			err,
@@ -281,195 +328,4 @@ func (c *WebPDF) Render(
 	}
 
 	return nil
-}
-
-func webPDFPaperDimensions(
-	paperSize string,
-) (float64, float64, error) {
-	switch strings.ToLower(
-		paperSize,
-	) {
-	case "a4":
-		return 8.2677165354,
-			11.6929133858,
-			nil
-
-	case "letter":
-		return 8.5,
-			11,
-			nil
-
-	default:
-		return 0,
-			0,
-			fmt.Errorf(
-				"unsupported paper size: %s",
-				paperSize,
-			)
-	}
-}
-
-func findBrowserExecutable() (
-	string,
-	error,
-) {
-	if override :=
-		strings.TrimSpace(
-			os.Getenv(
-				"CHROME_BIN",
-			),
-		); override != "" {
-		if path, ok :=
-			resolveBrowserExecutable(
-				override,
-			); ok {
-			return path,
-				nil
-		}
-	}
-
-	for _, candidate := range browserExecutableNames() {
-		if path, err :=
-			exec.LookPath(
-				candidate,
-			); err == nil {
-			return path,
-				nil
-		}
-	}
-
-	for _, candidate := range browserExecutablePaths() {
-		if info, err :=
-			os.Stat(
-				candidate,
-			); err == nil &&
-			!info.IsDir() {
-			return candidate,
-				nil
-		}
-	}
-
-	return "",
-		fmt.Errorf(
-			"Chrome, Chromium or Edge not found",
-		)
-}
-
-func resolveBrowserExecutable(
-	value string,
-) (string, bool) {
-	if info, err :=
-		os.Stat(
-			value,
-		); err == nil &&
-		!info.IsDir() {
-		return value,
-			true
-	}
-
-	path, err :=
-		exec.LookPath(
-			value,
-		)
-
-	if err != nil {
-		return "",
-			false
-	}
-
-	return path,
-		true
-}
-
-func browserExecutableNames() []string {
-	if runtime.GOOS ==
-		"windows" {
-		return []string{
-			"chrome.exe",
-			"msedge.exe",
-			"chromium.exe",
-			"chrome",
-			"msedge",
-			"chromium",
-		}
-	}
-
-	return []string{
-		"chromium",
-		"chromium-browser",
-		"google-chrome",
-		"google-chrome-stable",
-		"microsoft-edge",
-		"microsoft-edge-stable",
-		"chrome",
-	}
-}
-
-func browserExecutablePaths() []string {
-	var paths []string
-
-	add :=
-		func(
-			base string,
-			parts ...string,
-		) {
-			if base == "" {
-				return
-			}
-
-			paths = append(
-				paths,
-				filepath.Join(
-					append(
-						[]string{
-							base,
-						},
-						parts...,
-					)...,
-				),
-			)
-		}
-
-	if runtime.GOOS ==
-		"windows" {
-		for _, base := range []string{
-			os.Getenv(
-				"LOCALAPPDATA",
-			),
-			os.Getenv(
-				"PROGRAMFILES",
-			),
-			os.Getenv(
-				"PROGRAMFILES(X86)",
-			),
-		} {
-			add(
-				base,
-				"Google",
-				"Chrome",
-				"Application",
-				"chrome.exe",
-			)
-
-			add(
-				base,
-				"Microsoft",
-				"Edge",
-				"Application",
-				"msedge.exe",
-			)
-		}
-	}
-
-	if runtime.GOOS ==
-		"darwin" {
-		paths = append(
-			paths,
-			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-			"/Applications/Chromium.app/Contents/MacOS/Chromium",
-		)
-	}
-
-	return paths
 }
