@@ -55,12 +55,6 @@ func TestPDFCompressionWorkloadPlan(
 					)
 				}
 
-				if plan.UseLegacySlot {
-					t.Fatal(
-						"PDF compression must not use legacy slot",
-					)
-				}
-
 				if len(
 					plan.Workloads,
 				) != 1 {

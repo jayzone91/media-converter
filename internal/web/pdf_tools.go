@@ -153,8 +153,9 @@ func (s *Server) handlePDFMerge(
 		)
 	}
 
-	if err := s.acquireConversionSlot(
+	if err := s.acquireWorkload(
 		r.Context(),
+		workloadQPDF,
 	); err != nil {
 		http.Error(
 			w,
@@ -165,7 +166,9 @@ func (s *Server) handlePDFMerge(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err := os.MkdirTemp(
 		"",

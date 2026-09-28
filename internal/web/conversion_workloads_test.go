@@ -20,7 +20,6 @@ func TestConversionWorkloads(
 			target string
 
 			workloads []workloadType
-			legacy    bool
 		}{
 			{
 				name: "image uses ImageMagick",
@@ -115,7 +114,7 @@ func TestConversionWorkloads(
 				},
 			},
 			{
-				name: "pdf to docx uses LibreOffice pool",
+				name: "pdf to docx uses LibreOffice and Poppler",
 
 				format: media.Format{
 					ID: "pdf",
@@ -127,10 +126,11 @@ func TestConversionWorkloads(
 
 				workloads: []workloadType{
 					workloadLibreOffice,
+					workloadPoppler,
 				},
 			},
 			{
-				name: "pdf to image remains legacy",
+				name: "pdf to png uses Poppler",
 
 				format: media.Format{
 					ID: "pdf",
@@ -140,22 +140,24 @@ func TestConversionWorkloads(
 
 				target: "png",
 
-				legacy: true,
+				workloads: []workloadType{
+					workloadPoppler,
+				},
 			},
 			{
-				name: "unknown conversion remains legacy",
+				name: "pdf to jpeg uses Poppler",
 
 				format: media.Format{
-					ID: "unknown",
+					ID: "pdf",
 
-					Category: media.Category(
-						"unknown",
-					),
+					Category: media.CategoryPDF,
 				},
 
-				target: "unknown",
+				target: "jpeg",
 
-				legacy: true,
+				workloads: []workloadType{
+					workloadPoppler,
+				},
 			},
 		}
 
@@ -170,18 +172,16 @@ func TestConversionWorkloads(
 			) {
 				t.Parallel()
 
-				plan :=
+				plan, err :=
 					conversionWorkloads(
 						test.format,
 						test.target,
 					)
 
-				if plan.UseLegacySlot !=
-					test.legacy {
+				if err != nil {
 					t.Fatalf(
-						"legacy mismatch: expected %v, got %v",
-						test.legacy,
-						plan.UseLegacySlot,
+						"create workload plan: %v",
+						err,
 					)
 				}
 
@@ -196,6 +196,30 @@ func TestConversionWorkloads(
 					)
 				}
 			},
+		)
+	}
+}
+
+func TestConversionWorkloadsRejectsUnknownConversion(
+	t *testing.T,
+) {
+	t.Parallel()
+
+	_, err :=
+		conversionWorkloads(
+			media.Format{
+				ID: "unknown",
+
+				Category: media.Category(
+					"unknown",
+				),
+			},
+			"unknown",
+		)
+
+	if err == nil {
+		t.Fatal(
+			"expected unknown conversion workload mapping to fail",
 		)
 	}
 }

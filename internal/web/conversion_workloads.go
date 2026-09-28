@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/jayzone91/media-converter/internal/media"
@@ -9,14 +10,15 @@ import (
 
 type conversionWorkloadPlan struct {
 	Workloads []workloadType
-
-	UseLegacySlot bool
 }
 
 func conversionWorkloads(
 	format media.Format,
 	target string,
-) conversionWorkloadPlan {
+) (
+	conversionWorkloadPlan,
+	error,
+) {
 	switch format.Category {
 	case media.CategoryImage:
 		if format.ID == "gif" &&
@@ -26,14 +28,14 @@ func conversionWorkloads(
 				Workloads: []workloadType{
 					workloadFFmpeg,
 				},
-			}
+			}, nil
 		}
 
 		return conversionWorkloadPlan{
 			Workloads: []workloadType{
 				workloadImageMagick,
 			},
-		}
+		}, nil
 
 	case media.CategoryAudio,
 		media.CategoryVideo:
@@ -41,31 +43,33 @@ func conversionWorkloads(
 			Workloads: []workloadType{
 				workloadFFmpeg,
 			},
-		}
+		}, nil
 
 	case media.CategoryDocument:
 		if format.ID == "txt" &&
 			target == "html" {
-			return conversionWorkloadPlan{}
+			return conversionWorkloadPlan{},
+				nil
 		}
 
 		return conversionWorkloadPlan{
 			Workloads: []workloadType{
 				workloadLibreOffice,
 			},
-		}
+		}, nil
 
 	case media.CategoryMarkdown:
 		switch target {
 		case "html":
-			return conversionWorkloadPlan{}
+			return conversionWorkloadPlan{},
+				nil
 
 		case "pdf":
 			return conversionWorkloadPlan{
 				Workloads: []workloadType{
 					workloadChromium,
 				},
-			}
+			}, nil
 
 		case "png",
 			"jpeg",
@@ -75,7 +79,7 @@ func conversionWorkloads(
 					workloadChromium,
 					workloadImageMagick,
 				},
-			}
+			}, nil
 		}
 
 	case media.CategoryPDF:
@@ -84,28 +88,26 @@ func conversionWorkloads(
 			return conversionWorkloadPlan{
 				Workloads: []workloadType{
 					workloadLibreOffice,
+					workloadPoppler,
 				},
-			}
+			}, nil
 
 		case "png",
 			"jpeg":
-			/*
-				Dieser Pfad arbeitet aktuell vor allem mit
-				Poppler und ggf. weiteren PDF-Werkzeugen.
-
-				Dafür existiert noch kein eigener Workload-Pool.
-				Bis dieser Pfad separat klassifiziert wird,
-				bleibt er durch den bisherigen Slot begrenzt.
-			*/
 			return conversionWorkloadPlan{
-				UseLegacySlot: true,
-			}
+				Workloads: []workloadType{
+					workloadPoppler,
+				},
+			}, nil
 		}
 	}
 
-	return conversionWorkloadPlan{
-		UseLegacySlot: true,
-	}
+	return conversionWorkloadPlan{},
+		fmt.Errorf(
+			"no workload mapping for conversion %s -> %s",
+			format.ID,
+			target,
+		)
 }
 
 func (s *Server) acquireConversionWorkloads(
@@ -115,19 +117,6 @@ func (s *Server) acquireConversionWorkloads(
 	func(),
 	error,
 ) {
-	if plan.UseLegacySlot {
-		if err :=
-			s.acquireConversionSlot(
-				ctx,
-			); err != nil {
-			return nil, err
-		}
-
-		return func() {
-			s.releaseConversionSlot()
-		}, nil
-	}
-
 	if len(plan.Workloads) == 0 {
 		return func() {}, nil
 	}

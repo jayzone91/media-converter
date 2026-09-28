@@ -172,11 +172,31 @@ func (s *Server) handleConvert(
 		return
 	}
 
-	workloadPlan :=
+	workloadPlan, err :=
 		conversionWorkloads(
 			upload.Format,
 			target,
 		)
+
+	if err != nil {
+		s.logError(
+			r,
+			"conversion workload mapping missing",
+			err,
+			"source",
+			upload.Format.ID,
+			"target",
+			target,
+		)
+
+		http.Error(
+			w,
+			"conversion configuration error",
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
 
 	releaseWorkloads, err :=
 		s.acquireConversionWorkloads(

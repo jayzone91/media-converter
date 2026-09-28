@@ -14,6 +14,8 @@ const (
 	workloadChromium    workloadType = "chromium"
 	workloadLibreOffice workloadType = "libreoffice"
 	workloadQPDF        workloadType = "qpdf"
+	workloadPoppler     workloadType = "poppler"
+	workloadPDFCPU      workloadType = "pdfcpu"
 	workloadPDFPreview  workloadType = "pdf-preview"
 )
 
@@ -24,6 +26,8 @@ const (
 	maxConcurrentChromium    = 2
 	maxConcurrentLibreOffice = 1
 	maxConcurrentQPDF        = 2
+	maxConcurrentPoppler     = 2
+	maxConcurrentPDFCPU      = 2
 	maxConcurrentPDFPreview  = 4
 )
 
@@ -62,6 +66,16 @@ func newWorkloadLimiter() *workloadLimiter {
 			workloadQPDF: make(
 				chan struct{},
 				maxConcurrentQPDF,
+			),
+
+			workloadPoppler: make(
+				chan struct{},
+				maxConcurrentPoppler,
+			),
+
+			workloadPDFCPU: make(
+				chan struct{},
+				maxConcurrentPDFCPU,
 			),
 
 			workloadPDFPreview: make(

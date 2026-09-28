@@ -210,8 +210,9 @@ func (s *Server) handlePDFEdit(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
+	if err := s.acquireWorkload(
 		r.Context(),
+		workloadPDFCPU,
 	); err != nil {
 		http.Error(
 			w,
@@ -222,7 +223,9 @@ func (s *Server) handlePDFEdit(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadPDFCPU,
+	)
 
 	outputPath := filepath.Join(
 		tempDir,

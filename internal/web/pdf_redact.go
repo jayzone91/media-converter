@@ -84,10 +84,19 @@ func (s *Server) handlePDFRedact(
 		return
 	}
 
-	if err :=
-		s.acquireConversionSlot(
+	releaseWorkloads, err :=
+		s.acquireConversionWorkloads(
 			r.Context(),
-		); err != nil {
+			conversionWorkloadPlan{
+				Workloads: []workloadType{
+					workloadPDFCPU,
+					workloadPoppler,
+					workloadQPDF,
+				},
+			},
+		)
+
+	if err != nil {
 		http.Error(
 			w,
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
@@ -97,7 +106,7 @@ func (s *Server) handlePDFRedact(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer releaseWorkloads()
 
 	tempDir, err :=
 		os.MkdirTemp(

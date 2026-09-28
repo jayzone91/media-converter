@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	maxConcurrentConversions = 2
-	conversionQueueTimeout   = 60 * time.Second
+	conversionQueueTimeout = 60 * time.Second
 
 	readHeaderTimeout = 10 * time.Second
 	readTimeout       = 15 * time.Minute
@@ -39,8 +38,7 @@ type Server struct {
 
 	pdfCompressionFlights *pdfCompressionFlightGroup
 
-	conversionSlots chan struct{}
-	workloads       *workloadLimiter
+	workloads *workloadLimiter
 
 	mux        *http.ServeMux
 	httpServer *http.Server
@@ -78,11 +76,6 @@ func NewServer(
 		downloads:  newDownloadStore(),
 
 		pdfCompressionFlights: newPDFCompressionFlightGroup(),
-
-		conversionSlots: make(
-			chan struct{},
-			maxConcurrentConversions,
-		),
 
 		workloads: newWorkloadLimiter(),
 
@@ -239,30 +232,6 @@ func (s *Server) routes() {
 	)
 }
 
-func (s *Server) acquireConversionSlot(
-	ctx context.Context,
-) error {
-	queueCtx, cancel :=
-		context.WithTimeout(
-			ctx,
-			conversionQueueTimeout,
-		)
-
-	defer cancel()
-
-	select {
-	case s.conversionSlots <- struct{}{}:
-		return nil
-
-	case <-queueCtx.Done():
-		return queueCtx.Err()
-	}
-}
-
-func (s *Server) releaseConversionSlot() {
-	<-s.conversionSlots
-}
-
 func (s *Server) acquireWorkload(
 	ctx context.Context,
 	workload workloadType,
@@ -302,8 +271,6 @@ func (s *Server) ListenAndServe(
 		"http server starting",
 		"address",
 		addr,
-		"max_concurrent_conversions",
-		maxConcurrentConversions,
 		"conversion_queue_timeout",
 		conversionQueueTimeout,
 	)
