@@ -268,15 +268,7 @@ function reorderPage(sourcePage: number, targetPage: number): void {
 
   pages.splice(sourceIndex, 1);
 
-  /*
-   * Wir interpretieren das Ziel als konkrete
-   * Zielposition. Nach dem Entfernen der Quelle
-   * muss bei einer Bewegung nach rechts/unten
-   * der Index um eins korrigiert werden.
-   */
-  const destination = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-
-  pages.splice(destination, 0, page);
+  pages.splice(targetIndex, 0, page);
 
   renderPages();
 
@@ -314,10 +306,6 @@ async function createSortedPDF(): Promise<void> {
 
     downloadURL(result.downloadURL);
 
-    /*
-     * Das Backend entfernt den Upload
-     * nach erfolgreicher Verarbeitung.
-     */
     upload = null;
 
     pages = [];
@@ -362,7 +350,9 @@ function render(): void {
   }
 
   if (upload && meta) {
-    meta.textContent = `${upload.pageCount} Seiten · ${formatBytes(upload.size)}`;
+    meta.textContent = `${upload.pageCount} Seiten · ${formatBytes(
+      upload.size,
+    )}`;
   }
 
   renderPages();

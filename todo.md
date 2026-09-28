@@ -91,8 +91,8 @@
 
 ### Vorhandene PDF-Werkzeuge – Nacharbeiten
 
-- [ ] PDF-Seiten sortieren
-  - [ ] Drag-and-Drop insbesondere bei benachbarten Seiten nochmals testen
+- [x] PDF-Seiten sortieren
+  - [x] Drag-and-Drop insbesondere bei benachbarten Seiten nochmals testen
 
 - [ ] PDF trennen
   - [ ] Performance bei sehr vielen erzeugten Einzeldateien verbessern
