@@ -98,10 +98,10 @@
   - [x] Performance bei sehr vielen erzeugten Einzeldateien verbessern
   - [x] nicht für jeden Teil unnötig einen separaten qpdf-Prozess starten, falls vermeidbar
 
-- [ ] PDF komprimieren
+- [x] PDF komprimieren
   - [x] parallele Analyse desselben Uploads/Modus gegen doppelte Berechnung absichern
-  - [ ] Ghostscript-Ergebnisse mit problematischen PDFs weiter testen
-  - [ ] Formulare, Transparenzen und eingebettete Fonts testen
+  - [x] Ghostscript-Ergebnisse mit problematischen PDFs weiter testen
+  - [x] Formulare, Transparenzen und eingebettete Fonts testen
 
 - [ ] PDF optimieren
   - [ ] Fast-Web-View / Linearization mit größeren PDFs testen
