@@ -199,23 +199,23 @@
 
 ## 6. Parallelisierung und Ressourcen
 
-- [ ] globale Conversion-Slots überprüfen
-- [ ] unterschiedliche Workloads ggf. getrennt limitieren
-  - [ ] FFmpeg
-  - [ ] ImageMagick
-  - [ ] Ghostscript
-  - [ ] Chromium
-  - [ ] LibreOffice
-  - [ ] qpdf
+- [x] globale Conversion-Slots überprüfen
+- [x] unterschiedliche Workloads ggf. getrennt limitieren
+  - [x] FFmpeg
+  - [x] ImageMagick
+  - [x] Ghostscript
+  - [x] Chromium
+  - [x] LibreOffice
+  - [x] qpdf
 
-- [ ] Chromium-Prozesse aufräumen, wenn Request abgebrochen wird
-- [ ] Zombie-Prozesse verhindern
+- [x] Chromium-Prozesse aufräumen, wenn Request abgebrochen wird
+- [x] Zombie-Prozesse verhindern
 - [ ] Speicherverbrauch bei großen Dateien beobachten
 - [ ] maximale CPU-/RAM-Auslastung auf Produktionsserver testen
 
-- [ ] Preview-Rendering prüfen
-  - [ ] PDF-Previews konkurrieren aktuell mit normalen Conversion-Slots
-  - [ ] ggf. eigenen Preview-Pool verwenden
+- [x] Preview-Rendering prüfen
+  - [x] PDF-Previews konkurrieren aktuell mit normalen Conversion-Slots
+  - [x] ggf. eigenen Preview-Pool verwenden
 
 ## 7. Fehlerbehandlung
 
