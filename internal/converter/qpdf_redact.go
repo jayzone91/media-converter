@@ -65,3 +65,46 @@ func (q *QPDF) AssembleRedactedPDF(
 		args,
 	)
 }
+
+func (q *QPDF) SanitizeRedactedPDF(
+	ctx context.Context,
+	input string,
+	output string,
+) error {
+	args := []string{
+		"--warning-exit-0",
+
+		"--remove-info",
+		"--remove-metadata",
+		"--remove-structure",
+
+		"--generate-appearances",
+		"--flatten-annotations=all",
+
+		input,
+		output,
+	}
+
+	return q.run(
+		ctx,
+		"sanitize redacted PDF",
+		args,
+	)
+}
+
+func (q *QPDF) CheckPDF(
+	ctx context.Context,
+	input string,
+) error {
+	args := []string{
+		"--warning-exit-0",
+		"--check",
+		input,
+	}
+
+	return q.run(
+		ctx,
+		"check PDF",
+		args,
+	)
+}

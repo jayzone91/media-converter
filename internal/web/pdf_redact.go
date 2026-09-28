@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -172,10 +171,10 @@ func (s *Server) handlePDFRedact(
 			pagePath
 	}
 
-	outputPath :=
+	assembledPath :=
 		filepath.Join(
 			tempDir,
-			"geschwaerzt.pdf",
+			"assembled.pdf",
 		)
 
 	if err :=
@@ -184,7 +183,7 @@ func (s *Server) handlePDFRedact(
 			upload.Path,
 			replacements,
 			upload.PageCount,
-			outputPath,
+			assembledPath,
 		); err != nil {
 		s.logError(
 			r,
@@ -197,6 +196,57 @@ func (s *Server) handlePDFRedact(
 		http.Error(
 			w,
 			"Die geschwärzte PDF konnte nicht erstellt werden.",
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+
+	outputPath :=
+		filepath.Join(
+			tempDir,
+			"geschwaerzt.pdf",
+		)
+
+	if err :=
+		s.qpdf.SanitizeRedactedPDF(
+			r.Context(),
+			assembledPath,
+			outputPath,
+		); err != nil {
+		s.logError(
+			r,
+			"PDF redaction sanitization failed",
+			err,
+			"upload_id",
+			upload.ID,
+		)
+
+		http.Error(
+			w,
+			"Die geschwärzte PDF konnte nicht sicher bereinigt werden.",
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+
+	if err :=
+		s.qpdf.CheckPDF(
+			r.Context(),
+			outputPath,
+		); err != nil {
+		s.logError(
+			r,
+			"PDF redaction output validation failed",
+			err,
+			"upload_id",
+			upload.ID,
+		)
+
+		http.Error(
+			w,
+			"Die erzeugte PDF hat die Sicherheitsprüfung nicht bestanden.",
 			http.StatusInternalServerError,
 		)
 
@@ -284,12 +334,4 @@ func decodePDFRedactRequestBody(
 	return decodePDFRedactRequest(
 		string(data),
 	)
-}
-
-func redactedPageFilename(
-	page int,
-) string {
-	return "page-" +
-		strconv.Itoa(page) +
-		".pdf"
 }
