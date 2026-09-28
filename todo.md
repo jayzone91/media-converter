@@ -182,7 +182,7 @@
 - [x] temporäre Dateien nach Client-Abbruch zuverlässig löschen
 - [x] Cleanup beim Server-Shutdown testen
 
-- [ ] einheitliche Lebensdauer für temporäre Uploads dokumentieren
+- [x] einheitliche Lebensdauer für temporäre Uploads dokumentieren
 
 ## 5. Downloads und große Dateien
 
