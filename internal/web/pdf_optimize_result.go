@@ -31,17 +31,20 @@ func (s *Server) ensurePDFOptimizationResult(
 	}
 
 	if err :=
-		s.acquireConversionSlot(
+		s.acquireWorkload(
 			ctx,
+			workloadQPDF,
 		); err != nil {
 		return pdfOptimizationResult{},
 			fmt.Errorf(
-				"failed to acquire optimization slot: %w",
+				"failed to acquire qpdf optimization workload: %w",
 				err,
 			)
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	if result, ok :=
 		readCachedPDFOptimizationResult(

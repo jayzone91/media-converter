@@ -143,12 +143,13 @@ func (s *Server) handlePDFSplit(
 	}
 
 	if err :=
-		s.acquireConversionSlot(
+		s.acquireWorkload(
 			r.Context(),
+			workloadQPDF,
 		); err != nil {
 		s.logError(
 			r,
-			"failed to acquire PDF split conversion slot",
+			"failed to acquire PDF split qpdf workload",
 			err,
 			"upload_id",
 			upload.ID,
@@ -165,7 +166,9 @@ func (s *Server) handlePDFSplit(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err :=
 		os.MkdirTemp(

@@ -25,17 +25,23 @@ func (s *Server) handlePDFEncrypt(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
+	if err :=
+		s.acquireWorkload(
+			r.Context(),
+			workloadQPDF,
+		); err != nil {
 		http.Error(
 			w,
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
 			http.StatusServiceUnavailable,
 		)
+
 		return
 	}
-	defer s.releaseConversionSlot()
+
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err :=
 		createPDFSecurityTempDirectory(
@@ -56,13 +62,15 @@ func (s *Server) handlePDFEncrypt(
 			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
 	defer func() {
-		if err := os.RemoveAll(
-			tempDir,
-		); err != nil {
+		if err :=
+			os.RemoveAll(
+				tempDir,
+			); err != nil {
 			s.logError(
 				r,
 				"failed to remove PDF encrypt temporary directory",
@@ -90,6 +98,7 @@ func (s *Server) handlePDFEncrypt(
 			"Verschlüsselung konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
 		)
+
 		return
 	}
 
@@ -103,15 +112,17 @@ func (s *Server) handlePDFEncrypt(
 		pdfSecurityTimedContext(
 			r.Context(),
 		)
+
 	defer cancel()
 
-	if err := s.qpdf.Encrypt(
-		ctx,
-		upload.Path,
-		request.Password,
-		ownerPassword,
-		outputPath,
-	); err != nil {
+	if err :=
+		s.qpdf.Encrypt(
+			ctx,
+			upload.Path,
+			request.Password,
+			ownerPassword,
+			outputPath,
+		); err != nil {
 		if isPDFSecurityTimeout(
 			ctx,
 			err,
@@ -121,6 +132,7 @@ func (s *Server) handlePDFEncrypt(
 				"Die Verschlüsselung hat zu lange gedauert.",
 				http.StatusGatewayTimeout,
 			)
+
 			return
 		}
 
@@ -139,6 +151,7 @@ func (s *Server) handlePDFEncrypt(
 			"Die PDF konnte nicht verschlüsselt werden.",
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -160,24 +173,28 @@ func (s *Server) readPDFEncryptRequest(
 	storedPDFUpload,
 	bool,
 ) {
-	r.Body = http.MaxBytesReader(
-		w,
-		r.Body,
-		maxPDFCompressRequestSize,
-	)
+	r.Body =
+		http.MaxBytesReader(
+			w,
+			r.Body,
+			maxPDFCompressRequestSize,
+		)
+
 	defer r.Body.Close()
 
 	var request pdfEncryptRequest
 
-	decoder := json.NewDecoder(
-		r.Body,
-	)
+	decoder :=
+		json.NewDecoder(
+			r.Body,
+		)
 
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(
-		&request,
-	); err != nil {
+	if err :=
+		decoder.Decode(
+			&request,
+		); err != nil {
 		http.Error(
 			w,
 			"Ungültige Anfrage.",
@@ -201,10 +218,11 @@ func (s *Server) readPDFEncryptRequest(
 			false
 	}
 
-	if err := validatePDFPassword(
-		request.Password,
-		false,
-	); err != nil {
+	if err :=
+		validatePDFPassword(
+			request.Password,
+			false,
+		); err != nil {
 		http.Error(
 			w,
 			"Das Passwort muss zwischen 1 und 127 Zeichen lang sein und darf keine Zeilenumbrüche enthalten.",

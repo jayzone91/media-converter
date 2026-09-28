@@ -27,7 +27,8 @@ func (s *Server) handlePDFSort(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	started := time.Now()
+	started :=
+		time.Now()
 
 	r.Body =
 		http.MaxBytesReader(
@@ -121,8 +122,9 @@ func (s *Server) handlePDFSort(
 	}
 
 	if err :=
-		s.acquireConversionSlot(
+		s.acquireWorkload(
 			r.Context(),
+			workloadQPDF,
 		); err != nil {
 		s.logError(
 			r,
@@ -141,7 +143,9 @@ func (s *Server) handlePDFSort(
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	defer s.releaseWorkload(
+		workloadQPDF,
+	)
 
 	tempDir, err :=
 		os.MkdirTemp(
@@ -309,10 +313,11 @@ func validatePDFPageOrder(
 		)
 	}
 
-	seen := make(
-		[]bool,
-		pageCount+1,
-	)
+	seen :=
+		make(
+			[]bool,
+			pageCount+1,
+		)
 
 	for _, page := range pages {
 		if page < 1 ||
