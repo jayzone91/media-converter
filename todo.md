@@ -94,7 +94,7 @@
 - [x] PDF-Seiten sortieren
   - [x] Drag-and-Drop insbesondere bei benachbarten Seiten nochmals testen
 
-- [ ] PDF trennen
+- [x] PDF trennen
   - [x] Performance bei sehr vielen erzeugten Einzeldateien verbessern
   - [x] nicht für jeden Teil unnötig einen separaten qpdf-Prozess starten, falls vermeidbar
 
@@ -115,7 +115,7 @@
   - [ ] Passwortlängen entsprechend qpdf/PDF-Spezifikation validieren
   - [ ] verschiedene AES-256-PDFs testen
 
-- [ ] Webseite → PDF
+- [x] Webseite → PDF
   - [x] Desktop-Modus testen
   - [x] Tablet-Modus testen
   - [x] Mobil-Modus testen
@@ -123,8 +123,8 @@
   - [x] responsive Breakpoints mit realen Webseiten testen
   - [x] Weiterleitungen sicher behandeln
   - [x] SSRF-Schutz auch nach Redirects sicherstellen
-  - [ ] DNS-Rebinding berücksichtigen
-  - [ ] Ziel-IP unmittelbar vor Verbindung erneut prüfen
+  - [x] DNS-Rebinding berücksichtigen
+  - [x] Ziel-IP unmittelbar vor Verbindung erneut prüfen
   - [x] lokale Server-IP weiterhin blockieren
   - [x] localhost / Loopback weiterhin blockieren
 
@@ -147,7 +147,7 @@
 - [x] alle IP-Adressen des Media-Converter-Servers blockieren
 - [x] DNS-Namen blockieren, die auf den Media-Converter-Server zeigen
 - [x] Redirect-Ziele ebenfalls validieren
-- [ ] DNS-Rebinding absichern
+- [x] DNS-Rebinding absichern
 - [x] Chromium-Netzwerkzugriffe auf Subresources bewerten
   - [x] Bilder
   - [x] CSS

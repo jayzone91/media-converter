@@ -15,12 +15,19 @@ const (
 	webPDFProxyShutdownTimeout  = 2 * time.Second
 )
 
+type webPDFProxyResolver interface {
+	LookupIPAddr(
+		context.Context,
+		string,
+	) ([]net.IPAddr, error)
+}
+
 type webPDFProxy struct {
 	listener net.Listener
 	server   *http.Server
 
 	validator WebPDFRequestValidator
-	resolver  *net.Resolver
+	resolver  webPDFProxyResolver
 }
 
 func startWebPDFProxy(

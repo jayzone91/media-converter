@@ -62,6 +62,68 @@ func (p *webPDFProxy) dialTarget(
 		)
 	}
 
+	resolved, err :=
+		resolveValidatedWebPDFIPs(
+			ctx,
+			p,
+			scheme,
+			host,
+			port,
+		)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var lastErr error
+
+	for _, ip := range resolved {
+		connection, err :=
+			dialWebPDFResolvedIP(
+				ctx,
+				network,
+				ip,
+				port,
+			)
+
+		if err == nil {
+			return connection,
+				nil
+		}
+
+		lastErr =
+			err
+	}
+
+	return nil,
+		fmt.Errorf(
+			"connect proxy target %q: %w",
+			host,
+			lastErr,
+		)
+}
+
+func resolveValidatedWebPDFIPs(
+	ctx context.Context,
+	proxy *webPDFProxy,
+	scheme string,
+	host string,
+	port string,
+) ([]net.IP, error) {
+	if proxy == nil {
+		return nil,
+			fmt.Errorf(
+				"web PDF proxy is nil",
+			)
+	}
+
+	if proxy.resolver == nil {
+		return nil,
+			fmt.Errorf(
+				"web PDF proxy resolver is nil",
+			)
+	}
+
 	lookupCtx, cancel :=
 		context.WithTimeout(
 			ctx,
@@ -71,7 +133,7 @@ func (p *webPDFProxy) dialTarget(
 	defer cancel()
 
 	addresses, err :=
-		p.resolver.LookupIPAddr(
+		proxy.resolver.LookupIPAddr(
 			lookupCtx,
 			host,
 		)
@@ -106,7 +168,7 @@ func (p *webPDFProxy) dialTarget(
 		}
 
 		if err :=
-			p.validateResolvedIP(
+			proxy.validateResolvedIP(
 				ctx,
 				scheme,
 				address.IP,
@@ -135,32 +197,7 @@ func (p *webPDFProxy) dialTarget(
 			)
 	}
 
-	var lastErr error
-
-	for _, ip := range resolved {
-		connection, err :=
-			dialWebPDFResolvedIP(
-				ctx,
-				network,
-				ip,
-				port,
-			)
-
-		if err == nil {
-			return connection,
-				nil
-		}
-
-		lastErr =
-			err
-	}
-
-	return nil,
-		fmt.Errorf(
-			"connect proxy target %q: %w",
-			host,
-			lastErr,
-		)
+	return resolved, nil
 }
 
 func webPDFProxyHostPort(
@@ -227,6 +264,13 @@ func (p *webPDFProxy) validateResolvedIP(
 	ip net.IP,
 	port string,
 ) error {
+	if p == nil ||
+		p.validator == nil {
+		return fmt.Errorf(
+			"web PDF proxy validator is unavailable",
+		)
+	}
+
 	target :=
 		&url.URL{
 			Scheme: scheme,
