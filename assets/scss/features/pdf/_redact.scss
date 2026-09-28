@@ -1,0 +1,174 @@
+@use "../../abstracts/tokens" as *;
+@use "../../abstracts/mixins" as *;
+
+.pdf-redact-canvas {
+  cursor: crosshair;
+
+  touch-action: none;
+}
+
+.pdf-redact-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  overflow: hidden;
+
+  touch-action: none;
+
+  user-select: none;
+}
+
+.pdf-redact-area {
+  position: absolute;
+
+  display: block;
+
+  min-width: 1px;
+  min-height: 1px;
+
+  padding: 0;
+
+  border: 1px solid rgba(
+    255,
+    255,
+    255,
+    0.65
+  );
+
+  outline: none;
+
+  background: rgba(
+    0,
+    0,
+    0,
+    0.82
+  );
+
+  box-shadow:
+    0 0 0 1px
+    rgba(
+      0,
+      0,
+      0,
+      0.4
+    );
+
+  cursor: move;
+
+  touch-action: none;
+
+  &:hover {
+    border-color:
+      $color-border-active;
+  }
+
+  &.selected {
+    border-color:
+      $color-accent;
+
+    box-shadow:
+      0 0 0 2px
+      rgba(
+        56,
+        189,
+        248,
+        0.35
+      );
+  }
+}
+
+.pdf-redact-resize-handle {
+  position: absolute;
+
+  right: -0.35rem;
+  bottom: -0.35rem;
+
+  width: 0.75rem;
+  height: 0.75rem;
+
+  border: 2px solid
+    $color-bg;
+
+  border-radius:
+    $radius-sm;
+
+  background:
+    $color-accent;
+
+  cursor: nwse-resize;
+
+  touch-action: none;
+}
+
+.pdf-redact-properties {
+  display: flex;
+
+  align-items: center;
+
+  gap: $space-4;
+
+  margin-bottom:
+    $space-4;
+
+  padding: $space-4;
+
+  border: 1px solid
+    $color-border;
+
+  border-radius:
+    $radius-lg;
+
+  background:
+    $color-bg-panel;
+
+  &[hidden] {
+    display: none;
+  }
+
+  > div {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: $space-1;
+
+    span {
+      color:
+        $color-text-subtle;
+
+      font-size:
+        $font-size-md;
+    }
+
+    strong {
+      color:
+        $color-text;
+
+      font-size:
+        $font-size-base;
+    }
+  }
+
+  .pdf-edit-delete-object {
+    margin-left: auto;
+  }
+
+  @include mobile {
+    align-items: stretch;
+
+    flex-direction: column;
+
+    .pdf-edit-delete-object {
+      margin-left: 0;
+    }
+  }
+}
+
+.pdf-redact-property-note {
+  color:
+    $color-text-subtle;
+
+  font-size:
+    $font-size-md;
+}

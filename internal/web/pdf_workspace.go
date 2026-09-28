@@ -61,6 +61,11 @@ func (s *Server) handlePDFWorkspace(
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
 		}
 
+	case "redact":
+		if err := view.PDFRedactWorkspace().Render(r.Context(), w); err != nil {
+			s.handlePDFWorkspaceRenderError(w, r, tool, err)
+		}
+
 	case "encrypt":
 		if err := view.PDFEncryptWorkspace().Render(r.Context(), w); err != nil {
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
@@ -84,24 +89,6 @@ func (s *Server) handlePDFWorkspace(
 	case "create":
 		if err := view.PDFCreateWorkspace().Render(r.Context(), w); err != nil {
 			s.handlePDFWorkspaceRenderError(w, r, tool, err)
-		}
-
-	case "redact":
-		if err :=
-			view.PDFPlaceholderWorkspace(
-				pdfToolTitle(
-					tool,
-				),
-			).Render(
-				r.Context(),
-				w,
-			); err != nil {
-			s.handlePDFWorkspaceRenderError(
-				w,
-				r,
-				tool,
-				err,
-			)
 		}
 
 	default:

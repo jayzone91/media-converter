@@ -1,0 +1,189 @@
+package view
+
+templ PDFRedactWorkspace() {
+	<div data-pdf-workspace="redact">
+		@PDFWorkspaceBackButton()
+		<div class="pdf-workspace-header">
+			<div>
+				<span class="eyebrow">
+					PDF
+				</span>
+				<h3>
+					PDF schwärzen
+				</h3>
+				<p>
+					Markiere vertrauliche Bereiche direkt auf den PDF-Seiten.
+					Die endgültige Schwärzung entfernt den darunterliegenden
+					Inhalt dauerhaft.
+				</p>
+			</div>
+		</div>
+		<label
+			class="pdf-drop-zone"
+			id="pdf-redact-drop-zone"
+			for="pdf-redact-file"
+		>
+			<span class="pdf-drop-icon">
+				↑
+			</span>
+			<strong>
+				PDF auswählen
+			</strong>
+			<span>
+				oder eine Datei hier ablegen
+			</span>
+			<small>
+				Max. 512 MiB
+			</small>
+			<input
+				id="pdf-redact-file"
+				type="file"
+				accept="application/pdf,.pdf"
+				hidden
+			/>
+		</label>
+		<div
+			id="pdf-redact-error"
+			class="pdf-message pdf-message-error"
+			hidden
+		></div>
+		<div
+			id="pdf-redact-upload-progress"
+			class="pdf-progress"
+			hidden
+		>
+			<span class="small-spinner"></span>
+			<div>
+				<strong>
+					PDF wird vorbereitet …
+				</strong>
+				<span>
+					Datei wird hochgeladen und analysiert.
+				</span>
+			</div>
+		</div>
+		<section
+			id="pdf-redact-editor"
+			class="pdf-edit-editor"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong id="pdf-redact-filename"></strong>
+					<span id="pdf-redact-meta"></span>
+				</div>
+				<button
+					id="pdf-redact-reset-file"
+					class="pdf-button-secondary"
+					type="button"
+				>
+					Andere PDF
+				</button>
+			</header>
+			<div class="pdf-edit-layout">
+				<aside
+					id="pdf-redact-pages"
+					class="pdf-edit-pages"
+					aria-label="PDF-Seiten"
+				></aside>
+				<section class="pdf-edit-work-area">
+					<div class="pdf-edit-toolbar">
+						<strong>
+							Schwärzungsbereiche
+						</strong>
+						<span class="pdf-edit-toolbar-note">
+							Mit gedrückter Maustaste einen Bereich aufziehen.
+						</span>
+						<button
+							id="pdf-redact-clear-page"
+							class="pdf-button-secondary"
+							type="button"
+							disabled
+						>
+							Seite leeren
+						</button>
+					</div>
+					<div
+						id="pdf-redact-properties"
+						class="pdf-redact-properties"
+						hidden
+					>
+						<div>
+							<span>
+								Ausgewählter Bereich
+							</span>
+							<strong id="pdf-redact-selection-info"></strong>
+						</div>
+						<span class="pdf-redact-property-note">
+							Ziehen zum Verschieben · Griff unten rechts zum Skalieren
+						</span>
+						<button
+							id="pdf-redact-delete"
+							class="pdf-edit-delete-object"
+							type="button"
+							disabled
+						>
+							Bereich löschen
+						</button>
+					</div>
+					<div class="pdf-edit-canvas-shell">
+						<div
+							id="pdf-redact-canvas"
+							class="pdf-edit-canvas pdf-redact-canvas"
+						>
+							<img
+								id="pdf-redact-preview"
+								class="pdf-edit-page-preview"
+								alt=""
+							/>
+							<div
+								id="pdf-redact-overlay"
+								class="pdf-redact-overlay"
+								aria-label="Schwärzungsbereiche"
+							></div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Sichere Schwärzung
+					</strong>
+					<span>
+						Markierte Inhalte werden beim Export dauerhaft entfernt.
+					</span>
+				</div>
+				<button
+					id="pdf-redact-apply"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+					title="Der sichere Redaction-Export wird im nächsten Schritt implementiert."
+				>
+					Schwärzung anwenden
+				</button>
+			</div>
+		</section>
+		<template id="pdf-redact-page-template">
+			<button
+				class="pdf-edit-page"
+				type="button"
+			>
+				<span class="pdf-edit-page-number"></span>
+				<img
+					loading="lazy"
+					decoding="async"
+					alt=""
+				/>
+				<span
+					class="pdf-edit-page-change-indicator"
+					hidden
+					aria-label="Seite enthält Schwärzungen"
+				>
+					●
+				</span>
+			</button>
+		</template>
+	</div>
+}
