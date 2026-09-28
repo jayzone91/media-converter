@@ -4,6 +4,7 @@ import {
   editorState,
   findTextObject,
   getPageTextObjects,
+  pageHasEdits,
   type PDFTextObject,
 } from "./state.ts";
 
@@ -169,7 +170,7 @@ export function updatePageChangeIndicators(): void {
         return;
       }
 
-      indicator.hidden = getPageTextObjects(page).length === 0;
+      indicator.hidden = !pageHasEdits(page);
     });
 }
 
@@ -187,6 +188,10 @@ function addTextObject(): void {
   editorState.pageTextObjects.set(editorState.activePage, objects);
 
   editorState.selectedTextID = object.id;
+
+  editorState.selectedImageID = null;
+
+  hideImageProperties();
 
   renderTextObjects();
   updateTextProperties();
@@ -272,6 +277,10 @@ function previewFontSize(points: number): number {
 function selectTextObject(id: string): void {
   editorState.selectedTextID = id;
 
+  editorState.selectedImageID = null;
+
+  hideImageProperties();
+
   renderTextObjects();
   updateTextProperties();
 }
@@ -281,32 +290,24 @@ function beginTextDrag(
   id: string,
   element: HTMLElement,
 ): void {
-  const root = editorState.root;
-
-  if (!root) {
-    return;
-  }
-
-  const overlay = root.querySelector<HTMLElement>("#pdf-edit-overlay");
-
-  if (!overlay) {
-    return;
-  }
-
   event.preventDefault();
+
+  const rectangle = element.getBoundingClientRect();
 
   editorState.selectedTextID = id;
 
-  const elementRect = element.getBoundingClientRect();
+  editorState.selectedImageID = null;
+
+  hideImageProperties();
 
   editorState.dragState = {
     id,
 
     pointerId: event.pointerId,
 
-    offsetX: event.clientX - elementRect.left,
+    offsetX: event.clientX - rectangle.left,
 
-    offsetY: event.clientY - elementRect.top,
+    offsetY: event.clientY - rectangle.top,
   };
 
   element.setPointerCapture(event.pointerId);
@@ -335,17 +336,15 @@ function moveTextDrag(event: PointerEvent): void {
     return;
   }
 
-  const overlayRect = overlay.getBoundingClientRect();
+  const rectangle = overlay.getBoundingClientRect();
 
-  if (overlayRect.width <= 0 || overlayRect.height <= 0) {
+  if (rectangle.width <= 0 || rectangle.height <= 0) {
     return;
   }
 
-  const x =
-    (event.clientX - overlayRect.left - drag.offsetX) / overlayRect.width;
+  const x = (event.clientX - rectangle.left - drag.offsetX) / rectangle.width;
 
-  const y =
-    (event.clientY - overlayRect.top - drag.offsetY) / overlayRect.height;
+  const y = (event.clientY - rectangle.top - drag.offsetY) / rectangle.height;
 
   setTextPosition(drag.id, x, y, element);
 }
@@ -450,4 +449,14 @@ function deleteSelectedText(): void {
   updateTextProperties();
   updatePageChangeIndicators();
   updatePDFEditSubmitState();
+}
+
+function hideImageProperties(): void {
+  const properties = editorState.root?.querySelector<HTMLElement>(
+    "#pdf-edit-image-properties",
+  );
+
+  if (properties) {
+    properties.hidden = true;
+  }
 }

@@ -95,13 +95,18 @@ templ PDFEditWorkspace() {
 							＋ Text
 						</button>
 						<button
+							id="pdf-edit-add-image"
 							class="pdf-button-secondary"
 							type="button"
-							data-pdf-edit-tool="image"
-							disabled
 						>
 							＋ Bild
 						</button>
+						<input
+							id="pdf-edit-image-file"
+							type="file"
+							accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+							hidden
+						/>
 						<button
 							class="pdf-button-secondary"
 							type="button"
@@ -114,7 +119,7 @@ templ PDFEditWorkspace() {
 							id="pdf-edit-toolbar-note"
 							class="pdf-edit-toolbar-note"
 						>
-							Text hinzufügen und anschließend frei verschieben.
+							Elemente hinzufügen und frei auf der Seite positionieren.
 						</span>
 					</div>
 					<div
@@ -168,6 +173,44 @@ templ PDFEditWorkspace() {
 							Text löschen
 						</button>
 					</div>
+					<div
+						id="pdf-edit-image-properties"
+						class="pdf-edit-properties pdf-edit-image-properties"
+						hidden
+					>
+						<div class="pdf-edit-property pdf-edit-property-text">
+							<label>
+								Bild
+							</label>
+							<div
+								id="pdf-edit-image-name"
+								class="pdf-edit-image-name"
+							></div>
+						</div>
+						<div class="pdf-edit-property">
+							<label for="pdf-edit-image-width">
+								Breite
+							</label>
+							<div class="pdf-edit-size-field">
+								<input
+									id="pdf-edit-image-width"
+									type="number"
+									min="5"
+									max="100"
+									step="1"
+									value="25"
+								/>
+								<span>%</span>
+							</div>
+						</div>
+						<button
+							id="pdf-edit-delete-image"
+							class="pdf-edit-delete-object"
+							type="button"
+						>
+							Bild löschen
+						</button>
+					</div>
 					<div class="pdf-edit-canvas-shell">
 						<div
 							id="pdf-edit-canvas"
@@ -179,9 +222,14 @@ templ PDFEditWorkspace() {
 								alt=""
 							/>
 							<div
+								id="pdf-edit-image-overlay"
+								class="pdf-edit-overlay"
+								aria-label="Bildebene"
+							></div>
+							<div
 								id="pdf-edit-overlay"
 								class="pdf-edit-overlay"
-								aria-label="Bearbeitungsebene"
+								aria-label="Textebene"
 							></div>
 						</div>
 					</div>

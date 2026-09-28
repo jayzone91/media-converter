@@ -1,0 +1,434 @@
+@use "../../../abstracts/tokens" as *;
+@use "../../../abstracts/mixins" as *;
+
+.pdf-edit-editor {
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pdf-edit-layout {
+  display: grid;
+
+  grid-template-columns: 13rem minmax(0, 1fr);
+
+  gap: $space-6;
+
+  margin-top: $space-5;
+
+  @include tablet {
+    grid-template-columns: 10rem minmax(0, 1fr);
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-edit-pages {
+  display: flex;
+
+  max-height: 60rem;
+
+  flex-direction: column;
+
+  gap: $space-3;
+
+  overflow-y: auto;
+
+  padding-right: $space-2;
+
+  @include mobile {
+    max-height: none;
+
+    flex-direction: row;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding-right: 0;
+    padding-bottom: $space-2;
+  }
+}
+
+.pdf-edit-page {
+  position: relative;
+
+  display: flex;
+
+  width: 100%;
+
+  flex: none;
+  flex-direction: column;
+
+  gap: $space-2;
+
+  padding: $space-2;
+
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+
+  background: $color-surface;
+
+  color: $color-text-muted;
+
+  font: inherit;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    border-color: $color-border-strong;
+
+    background: $color-surface-raised;
+  }
+
+  &.selected {
+    border-color: $color-border-active;
+
+    color: $color-text;
+  }
+
+  img {
+    display: block;
+
+    width: 100%;
+    height: auto;
+
+    border-radius: $radius-sm;
+
+    background: $color-bg;
+  }
+
+  @include mobile {
+    width: 8rem;
+  }
+}
+
+.pdf-edit-page-number {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  text-align: left;
+}
+
+.pdf-edit-page-change-indicator {
+  position: absolute;
+
+  top: $space-2;
+  right: $space-2;
+
+  display: grid;
+
+  width: 1.25rem;
+  height: 1.25rem;
+
+  place-items: center;
+
+  border-radius: $radius-round;
+
+  background: $color-accent;
+
+  color: $color-bg;
+
+  font-size: $font-size-xs;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.pdf-edit-work-area {
+  min-width: 0;
+}
+
+.pdf-edit-toolbar {
+  display: flex;
+
+  align-items: center;
+
+  gap: $space-2;
+
+  margin-bottom: $space-4;
+
+  padding: $space-3;
+
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+
+  background: $color-surface;
+
+  @include mobile {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+  button {
+    flex: none;
+  }
+}
+
+.pdf-edit-toolbar-note {
+  margin-left: auto;
+
+  color: $color-text-subtle;
+
+  font-size: $font-size-md;
+
+  @include mobile {
+    margin-left: 0;
+  }
+}
+
+.pdf-edit-properties {
+  display: grid;
+
+  grid-template-columns:
+    minmax(12rem, 1fr)
+    8rem
+    5rem
+    auto;
+
+  align-items: end;
+
+  gap: $space-3;
+
+  margin-bottom: $space-4;
+
+  padding: $space-4;
+
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+
+  background: $color-bg-panel;
+
+  &[hidden] {
+    display: none;
+  }
+
+  @include tablet {
+    grid-template-columns:
+      minmax(10rem, 1fr)
+      7rem
+      5rem;
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-edit-image-properties {
+  grid-template-columns:
+    minmax(12rem, 1fr)
+    8rem
+    auto;
+
+  @include tablet {
+    grid-template-columns:
+      minmax(10rem, 1fr)
+      7rem;
+  }
+
+  @include mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pdf-edit-property {
+  display: flex;
+
+  min-width: 0;
+
+  flex-direction: column;
+
+  gap: $space-2;
+
+  label {
+    color: $color-text-subtle;
+
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+  }
+
+  input {
+    width: 100%;
+
+    min-height: 2.5rem;
+
+    padding: 0.625rem $space-3;
+
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-md;
+
+    outline: none;
+
+    background: $color-surface;
+
+    color: $color-text;
+
+    font: inherit;
+
+    &:focus {
+      border-color: $color-border-active;
+    }
+  }
+
+  .pdf-edit-color-input {
+    height: 2.5rem;
+
+    padding: 0.25rem;
+
+    cursor: pointer;
+  }
+}
+
+.pdf-edit-property-text {
+  min-width: 0;
+}
+
+.pdf-edit-image-name {
+  display: flex;
+
+  min-height: 2.5rem;
+
+  align-items: center;
+
+  overflow: hidden;
+
+  padding: 0.625rem $space-3;
+
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+
+  background: $color-surface;
+
+  color: $color-text-secondary;
+
+  font-size: $font-size-base;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-edit-size-field {
+  position: relative;
+
+  input {
+    padding-right: 2.25rem;
+  }
+
+  span {
+    position: absolute;
+
+    top: 50%;
+    right: $space-3;
+
+    color: $color-text-subtle;
+
+    font-size: $font-size-md;
+
+    transform: translateY(-50%);
+
+    pointer-events: none;
+  }
+}
+
+.pdf-edit-delete-object {
+  min-height: 2.5rem;
+
+  padding: 0.625rem $space-3;
+
+  border: 1px solid $color-danger-border;
+  border-radius: $radius-md;
+
+  background: $color-danger-bg;
+
+  color: $color-danger-text;
+
+  font: inherit;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  cursor: pointer;
+
+  @include interactive;
+
+  &:hover {
+    background: rgba(
+      127,
+      29,
+      29,
+      0.45
+    );
+  }
+
+  @include tablet {
+    grid-column: 1 / -1;
+  }
+
+  @include mobile {
+    grid-column: auto;
+  }
+}
+
+.pdf-edit-canvas-shell {
+  display: flex;
+
+  min-height: 42rem;
+
+  align-items: flex-start;
+  justify-content: center;
+
+  overflow: auto;
+
+  padding: $space-6;
+
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+
+  background: $drop-background;
+
+  @include mobile {
+    min-height: 24rem;
+
+    padding: $space-3;
+  }
+}
+
+.pdf-edit-canvas {
+  position: relative;
+
+  display: inline-block;
+
+  width: min(100%, 62rem);
+
+  overflow: hidden;
+
+  background: white;
+
+  box-shadow: $shadow-overlay;
+}
+
+.pdf-edit-page-preview {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  user-select: none;
+
+  pointer-events: none;
+}
+
+.pdf-edit-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}

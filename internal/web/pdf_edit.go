@@ -1,39 +1,13 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/jayzone91/media-converter/internal/converter"
 )
 
-const (
-	maxPDFEditRequestSize int64 = 1 << 20
-
-	pdfEditTimeout = 30 * time.Minute
-)
-
-type pdfEditRequest struct {
-	UploadID string `json:"upload_id"`
-
-	Texts []pdfTextEditRequest `json:"texts"`
-}
-
-type pdfTextEditRequest struct {
-	Page int `json:"page"`
-
-	Text string `json:"text"`
-
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-
-	Size int `json:"size"`
-
-	Color string `json:"color"`
-}
+const maxPDFEditRequestSize int64 = 129 << 20
 
 func (s *Server) handlePDFEdit(
 	w http.ResponseWriter,
@@ -46,29 +20,47 @@ func (s *Server) handlePDFEdit(
 		r.Body,
 		maxPDFEditRequestSize,
 	)
-	defer r.Body.Close()
 
-	var request pdfEditRequest
-
-	decoder := json.NewDecoder(
-		r.Body,
-	)
-
-	decoder.DisallowUnknownFields()
-
-	if err := decoder.Decode(
-		&request,
+	if err := r.ParseMultipartForm(
+		multipartMemoryLimit,
 	); err != nil {
 		s.logWarn(
 			r,
 			"PDF edit rejected",
 			"reason",
-			"invalid request",
+			"invalid multipart request",
 		)
 
 		http.Error(
 			w,
 			"Ungültige Anfrage.",
+			http.StatusBadRequest,
+		)
+
+		return
+	}
+
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
+	}
+
+	request, err :=
+		decodePDFEditRequest(
+			r.FormValue(
+				"metadata",
+			),
+		)
+	if err != nil {
+		s.logWarn(
+			r,
+			"PDF edit rejected",
+			"reason",
+			err.Error(),
+		)
+
+		http.Error(
+			w,
+			"Ungültige PDF-Änderungen.",
 			http.StatusBadRequest,
 		)
 
@@ -85,7 +77,8 @@ func (s *Server) handlePDFEdit(
 		return
 	}
 
-	if len(request.Texts) == 0 {
+	if len(request.Texts) == 0 &&
+		len(request.Images) == 0 {
 		http.Error(
 			w,
 			"Es wurden keine Änderungen vorgenommen.",
@@ -110,43 +103,51 @@ func (s *Server) handlePDFEdit(
 		return
 	}
 
-	edits, err :=
+	textEdits, err :=
 		validatePDFTextEditRequest(
 			request.Texts,
 			upload.PageCount,
 		)
 	if err != nil {
-		s.logWarn(
+		handlePDFEditValidationError(
+			s,
+			w,
 			r,
-			"PDF edit rejected",
-			"reason",
-			err.Error(),
-			"upload_id",
 			upload.ID,
-		)
-
-		http.Error(
-			w,
-			"Die PDF-Änderungen sind ungültig.",
-			http.StatusBadRequest,
+			err,
 		)
 
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
-		http.Error(
+	imageHeaders :=
+		r.MultipartForm.File["image"]
+
+	if len(imageHeaders) !=
+		len(request.Images) {
+		handlePDFEditValidationError(
+			s,
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			r,
+			upload.ID,
+			errImageCountMismatch,
 		)
 
 		return
 	}
 
-	defer s.releaseConversionSlot()
+	if len(imageHeaders) >
+		maxPDFEditImages {
+		handlePDFEditValidationError(
+			s,
+			w,
+			r,
+			upload.ID,
+			errTooManyPDFEditImages,
+		)
+
+		return
+	}
 
 	tempDir, err := os.MkdirTemp(
 		"",
@@ -172,26 +173,62 @@ func (s *Server) handlePDFEdit(
 		tempDir,
 	)
 
+	imageEdits, err :=
+		savePDFEditImages(
+			tempDir,
+			imageHeaders,
+			request.Images,
+			upload.PageCount,
+		)
+	if err != nil {
+		handlePDFEditValidationError(
+			s,
+			w,
+			r,
+			upload.ID,
+			err,
+		)
+
+		return
+	}
+
+	if err := s.acquireConversionSlot(
+		r.Context(),
+	); err != nil {
+		http.Error(
+			w,
+			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
+			http.StatusServiceUnavailable,
+		)
+
+		return
+	}
+
+	defer s.releaseConversionSlot()
+
 	outputPath := filepath.Join(
 		tempDir,
 		"bearbeitet.pdf",
 	)
 
-	if err := s.pdf.AddTextEdits(
+	if err := s.pdf.ApplyEdits(
 		upload.Path,
 		outputPath,
-		edits,
+		textEdits,
+		imageEdits,
 	); err != nil {
 		s.logError(
 			r,
-			"PDF text edit failed",
+			"PDF edit failed",
 			err,
 			"upload_id",
 			upload.ID,
 			"filename",
 			upload.Filename,
 			"texts",
-			len(edits),
+			len(textEdits),
+			"images",
+			len(imageEdits),
 		)
 
 		http.Error(
@@ -243,7 +280,9 @@ func (s *Server) handlePDFEdit(
 		"pages",
 		upload.PageCount,
 		"texts",
-		len(edits),
+		len(textEdits),
+		"images",
+		len(imageEdits),
 		"input",
 		upload.Size,
 		"output",
@@ -251,79 +290,4 @@ func (s *Server) handlePDFEdit(
 		"duration",
 		time.Since(started),
 	)
-}
-
-func validatePDFTextEditRequest(
-	requests []pdfTextEditRequest,
-	pageCount int,
-) ([]converter.PDFTextEdit, error) {
-	edits := make(
-		[]converter.PDFTextEdit,
-		0,
-		len(requests),
-	)
-
-	for _, request := range requests {
-		edit :=
-			converter.PDFTextEdit{
-				Page: request.Page,
-
-				Text: request.Text,
-
-				X: request.X,
-				Y: request.Y,
-
-				Size: request.Size,
-
-				Color: request.Color,
-			}
-
-		if request.Page < 1 ||
-			request.Page > pageCount {
-			return nil,
-				&pdfEditValidationError{
-					Message: "invalid page",
-				}
-		}
-
-		if request.X < 0 ||
-			request.X > 1 ||
-			request.Y < 0 ||
-			request.Y > 1 {
-			return nil,
-				&pdfEditValidationError{
-					Message: "invalid position",
-				}
-		}
-
-		if request.Size < 6 ||
-			request.Size > 144 {
-			return nil,
-				&pdfEditValidationError{
-					Message: "invalid font size",
-				}
-		}
-
-		if request.Text == "" {
-			return nil,
-				&pdfEditValidationError{
-					Message: "empty text",
-				}
-		}
-
-		edits = append(
-			edits,
-			edit,
-		)
-	}
-
-	return edits, nil
-}
-
-type pdfEditValidationError struct {
-	Message string
-}
-
-func (e *pdfEditValidationError) Error() string {
-	return e.Message
 }

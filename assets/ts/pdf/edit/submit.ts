@@ -7,11 +7,32 @@ interface PDFEditDownloadResponse {
 
 interface PDFEditTextRequest {
   page: number;
+
   text: string;
+
   x: number;
   y: number;
+
   size: number;
+
   color: string;
+}
+
+interface PDFEditImageRequest {
+  page: number;
+
+  x: number;
+  y: number;
+
+  width: number;
+}
+
+interface PDFEditMetadata {
+  upload_id: string;
+
+  texts: PDFEditTextRequest[];
+
+  images: PDFEditImageRequest[];
 }
 
 export function setupPDFEditSubmit(): boolean {
@@ -49,7 +70,7 @@ export function updatePDFEditSubmitState(): void {
     return;
   }
 
-  button.disabled = !editorState.activeUpload || countTextObjects() === 0;
+  button.disabled = !editorState.activeUpload || !hasEdits();
 }
 
 async function submitPDFEdit(): Promise<void> {
@@ -74,9 +95,9 @@ async function submitPDFEdit(): Promise<void> {
     error.textContent = "";
   }
 
-  const texts = buildTextRequest();
+  const formData = buildEditFormData(upload.id);
 
-  if (texts.length === 0) {
+  if (!formData) {
     return;
   }
 
@@ -90,14 +111,7 @@ async function submitPDFEdit(): Promise<void> {
     const response = await fetch("/pdf/edit", {
       method: "POST",
 
-      headers: {
-        "Content-Type": "application/json",
-      },
-
-      body: JSON.stringify({
-        upload_id: upload.id,
-        texts,
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
@@ -128,6 +142,34 @@ async function submitPDFEdit(): Promise<void> {
   }
 }
 
+function buildEditFormData(uploadID: string): FormData | null {
+  const texts = buildTextRequest();
+
+  const images = buildImageRequest();
+
+  if (texts.length === 0 && images.metadata.length === 0) {
+    return null;
+  }
+
+  const metadata: PDFEditMetadata = {
+    upload_id: uploadID,
+
+    texts,
+
+    images: images.metadata,
+  };
+
+  const body = new FormData();
+
+  body.append("metadata", JSON.stringify(metadata));
+
+  for (const image of images.files) {
+    body.append("image", image.file, image.name);
+  }
+
+  return body;
+}
+
 function buildTextRequest(): PDFEditTextRequest[] {
   const texts: PDFEditTextRequest[] = [];
 
@@ -155,14 +197,58 @@ function buildTextRequest(): PDFEditTextRequest[] {
   return texts;
 }
 
-function countTextObjects(): number {
-  let count = 0;
+function buildImageRequest(): {
+  metadata: PDFEditImageRequest[];
+  files: Array<{
+    file: File;
+    name: string;
+  }>;
+} {
+  const metadata: PDFEditImageRequest[] = [];
 
-  for (const objects of editorState.pageTextObjects.values()) {
-    count += objects.length;
+  const files: Array<{
+    file: File;
+    name: string;
+  }> = [];
+
+  for (const [page, objects] of editorState.pageImageObjects) {
+    for (const object of objects) {
+      metadata.push({
+        page: page + 1,
+
+        x: object.x,
+        y: object.y,
+
+        width: object.width,
+      });
+
+      files.push({
+        file: object.file,
+        name: object.name,
+      });
+    }
   }
 
-  return count;
+  return {
+    metadata,
+    files,
+  };
+}
+
+function hasEdits(): boolean {
+  for (const objects of editorState.pageTextObjects.values()) {
+    if (objects.length > 0) {
+      return true;
+    }
+  }
+
+  for (const objects of editorState.pageImageObjects.values()) {
+    if (objects.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function isDownloadResponse(value: unknown): value is PDFEditDownloadResponse {

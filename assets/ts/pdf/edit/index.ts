@@ -7,6 +7,12 @@ import {
 
 import { clearEditorState, editorState } from "./state.ts";
 
+import {
+  renderImageObjects,
+  setupPDFEditImage,
+  updateImageProperties,
+} from "./image.ts";
+
 import { setupPDFEditSubmit, updatePDFEditSubmitState } from "./submit.ts";
 
 import {
@@ -37,7 +43,7 @@ export function setupPDFEdit(workspace: HTMLElement): void {
     return;
   }
 
-  if (!setupPDFEditText() || !setupPDFEditSubmit()) {
+  if (!setupPDFEditText() || !setupPDFEditImage() || !setupPDFEditSubmit()) {
     return;
   }
 
@@ -105,12 +111,14 @@ function setupPreviewScaling(preview: HTMLImageElement): void {
 
   previewResizeObserver = new ResizeObserver(() => {
     renderTextObjects();
+    renderImageObjects();
   });
 
   previewResizeObserver.observe(preview);
 
   preview.addEventListener("load", () => {
     renderTextObjects();
+    renderImageObjects();
   });
 }
 
@@ -258,6 +266,8 @@ function selectPage(index: number): void {
 
   editorState.selectedTextID = null;
 
+  editorState.selectedImageID = null;
+
   editorState.dragState = null;
 
   const preview = root.querySelector<HTMLImageElement>(
@@ -285,8 +295,10 @@ function selectPage(index: number): void {
     });
 
   renderTextObjects();
+  renderImageObjects();
 
   updateTextProperties();
+  updateImageProperties();
 }
 
 async function resetEditor(): Promise<void> {
@@ -318,7 +330,11 @@ async function resetEditor(): Promise<void> {
     "#pdf-edit-page-preview",
   );
 
-  const overlay = root.querySelector<HTMLElement>("#pdf-edit-overlay");
+  const textOverlay = root.querySelector<HTMLElement>("#pdf-edit-overlay");
+
+  const imageOverlay = root.querySelector<HTMLElement>(
+    "#pdf-edit-image-overlay",
+  );
 
   if (input) {
     input.value = "";
@@ -334,7 +350,8 @@ async function resetEditor(): Promise<void> {
 
   pages?.replaceChildren();
 
-  overlay?.replaceChildren();
+  textOverlay?.replaceChildren();
+  imageOverlay?.replaceChildren();
 
   if (preview) {
     preview.removeAttribute("src");
@@ -368,13 +385,8 @@ function setUploading(uploading: boolean): void {
 }
 
 function showError(message: string): void {
-  const root = editorState.root;
-
-  if (!root) {
-    return;
-  }
-
-  const element = root.querySelector<HTMLElement>("#pdf-edit-error");
+  const element =
+    editorState.root?.querySelector<HTMLElement>("#pdf-edit-error");
 
   if (!element) {
     return;
@@ -386,13 +398,8 @@ function showError(message: string): void {
 }
 
 function hideError(): void {
-  const root = editorState.root;
-
-  if (!root) {
-    return;
-  }
-
-  const element = root.querySelector<HTMLElement>("#pdf-edit-error");
+  const element =
+    editorState.root?.querySelector<HTMLElement>("#pdf-edit-error");
 
   if (!element) {
     return;
@@ -415,17 +422,11 @@ function formatFileSize(bytes: number): string {
     unit++;
   }
 
-  const decimals = unit === 0 ? 0 : 1;
-
-  return `${value.toFixed(decimals)} ${units[unit]}`;
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
 function pageLabel(count: number): string {
-  if (count === 1) {
-    return "1 Seite";
-  }
-
-  return `${count} Seiten`;
+  return count === 1 ? "1 Seite" : `${count} Seiten`;
 }
 
 function errorMessage(error: unknown): string {
