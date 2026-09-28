@@ -40,6 +40,7 @@ type Server struct {
 	pdfCompressionFlights *pdfCompressionFlightGroup
 
 	conversionSlots chan struct{}
+	workloads       *workloadLimiter
 
 	mux        *http.ServeMux
 	httpServer *http.Server
@@ -82,6 +83,8 @@ func NewServer(
 			chan struct{},
 			maxConcurrentConversions,
 		),
+
+		workloads: newWorkloadLimiter(),
 
 		mux: http.NewServeMux(),
 	}
@@ -244,6 +247,7 @@ func (s *Server) acquireConversionSlot(
 			ctx,
 			conversionQueueTimeout,
 		)
+
 	defer cancel()
 
 	select {
@@ -257,6 +261,24 @@ func (s *Server) acquireConversionSlot(
 
 func (s *Server) releaseConversionSlot() {
 	<-s.conversionSlots
+}
+
+func (s *Server) acquireWorkload(
+	ctx context.Context,
+	workload workloadType,
+) error {
+	return s.workloads.Acquire(
+		ctx,
+		workload,
+	)
+}
+
+func (s *Server) releaseWorkload(
+	workload workloadType,
+) {
+	s.workloads.Release(
+		workload,
+	)
 }
 
 func (s *Server) ListenAndServe(
@@ -286,7 +308,8 @@ func (s *Server) ListenAndServe(
 		conversionQueueTimeout,
 	)
 
-	err := s.httpServer.ListenAndServe()
+	err :=
+		s.httpServer.ListenAndServe()
 
 	if errors.Is(
 		err,
@@ -331,9 +354,10 @@ func (s *Server) Shutdown(
 		return nil
 	}
 
-	err := s.httpServer.Shutdown(
-		ctx,
-	)
+	err :=
+		s.httpServer.Shutdown(
+			ctx,
+		)
 
 	s.closeStores()
 
@@ -369,7 +393,8 @@ func (s *Server) Close() error {
 		return nil
 	}
 
-	err := s.httpServer.Close()
+	err :=
+		s.httpServer.Close()
 
 	if err != nil {
 		s.logger.Error(
