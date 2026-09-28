@@ -103,10 +103,10 @@
   - [x] Ghostscript-Ergebnisse mit problematischen PDFs weiter testen
   - [x] Formulare, Transparenzen und eingebettete Fonts testen
 
-- [ ] PDF optimieren
+- [x] PDF optimieren
   - [x] Fast-Web-View / Linearization mit größeren PDFs testen
   - [x] bereits optimierte PDFs testen
-  - [ ] PDFs mit Formularen und Signaturen testen
+  - [x] PDFs mit Formularen und Signaturen testen
 
 - [x] PDF verschlüsseln / entschlüsseln
   - [x] Passwortübergabe an qpdf prüfen
