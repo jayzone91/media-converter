@@ -81,6 +81,7 @@ func (s *Server) handleConvert(
 	upload, ok := s.uploads.Take(
 		uploadID,
 	)
+
 	if !ok {
 		s.logWarn(
 			r,
@@ -121,7 +122,9 @@ func (s *Server) handleConvert(
 	}
 
 	target := strings.ToLower(
-		r.FormValue("target"),
+		r.FormValue(
+			"target",
+		),
 	)
 
 	if target == "" {
@@ -169,9 +172,19 @@ func (s *Server) handleConvert(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
+	workloadPlan :=
+		conversionWorkloads(
+			upload.Format,
+			target,
+		)
+
+	releaseWorkloads, err :=
+		s.acquireConversionWorkloads(
+			r.Context(),
+			workloadPlan,
+		)
+
+	if err != nil {
 		s.logWarn(
 			r,
 			"convert queue failed",
@@ -198,34 +211,40 @@ func (s *Server) handleConvert(
 
 		return
 	}
-	defer s.releaseConversionSlot()
 
-	started := time.Now()
+	defer releaseWorkloads()
 
-	conversionCtx, cancel := context.WithTimeout(
-		r.Context(),
-		conversionTimeout,
-	)
+	started :=
+		time.Now()
+
+	conversionCtx, cancel :=
+		context.WithTimeout(
+			r.Context(),
+			conversionTimeout,
+		)
+
 	defer cancel()
 
 	var success bool
 
 	if len(upload.Files) == 1 {
-		success = s.convertSingleUpload(
-			w,
-			r,
-			conversionCtx,
-			upload,
-			target,
-		)
+		success =
+			s.convertSingleUpload(
+				w,
+				r,
+				conversionCtx,
+				upload,
+				target,
+			)
 	} else {
-		success = s.convertBatchUpload(
-			w,
-			r,
-			conversionCtx,
-			upload,
-			target,
-		)
+		success =
+			s.convertBatchUpload(
+				w,
+				r,
+				conversionCtx,
+				upload,
+				target,
+			)
 	}
 
 	if !success {
@@ -241,6 +260,8 @@ func (s *Server) handleConvert(
 		"files",
 		len(upload.Files),
 		"duration",
-		time.Since(started),
+		time.Since(
+			started,
+		),
 	)
 }
