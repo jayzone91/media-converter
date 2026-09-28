@@ -13,6 +13,12 @@ import {
   updateImageProperties,
 } from "./image.ts";
 
+import {
+  renderDrawStrokes,
+  resetPDFEditDraw,
+  setupPDFEditDraw,
+} from "./draw.ts";
+
 import { setupPDFEditSubmit, updatePDFEditSubmitState } from "./submit.ts";
 
 import {
@@ -43,7 +49,12 @@ export function setupPDFEdit(workspace: HTMLElement): void {
     return;
   }
 
-  if (!setupPDFEditText() || !setupPDFEditImage() || !setupPDFEditSubmit()) {
+  if (
+    !setupPDFEditText() ||
+    !setupPDFEditImage() ||
+    !setupPDFEditDraw() ||
+    !setupPDFEditSubmit()
+  ) {
     return;
   }
 
@@ -93,6 +104,8 @@ export async function destroyPDFEdit(): Promise<void> {
 
   previewResizeObserver = null;
 
+  resetPDFEditDraw();
+
   if (editorState.activeUpload) {
     await deletePDFUpload(editorState.activeUpload.id);
   }
@@ -112,6 +125,7 @@ function setupPreviewScaling(preview: HTMLImageElement): void {
   previewResizeObserver = new ResizeObserver(() => {
     renderTextObjects();
     renderImageObjects();
+    renderDrawStrokes();
   });
 
   previewResizeObserver.observe(preview);
@@ -119,6 +133,7 @@ function setupPreviewScaling(preview: HTMLImageElement): void {
   preview.addEventListener("load", () => {
     renderTextObjects();
     renderImageObjects();
+    renderDrawStrokes();
   });
 }
 
@@ -144,6 +159,7 @@ async function selectFile(file: File): Promise<void> {
       editorState.activeUpload = null;
     }
 
+    resetPDFEditDraw();
     clearEditorState();
 
     editorState.activeUpload = await uploadPDF(file);
@@ -296,6 +312,7 @@ function selectPage(index: number): void {
 
   renderTextObjects();
   renderImageObjects();
+  renderDrawStrokes();
 
   updateTextProperties();
   updateImageProperties();
@@ -314,6 +331,7 @@ async function resetEditor(): Promise<void> {
     editorState.activeUpload = null;
   }
 
+  resetPDFEditDraw();
   clearEditorState();
 
   editorState.activePage = 0;
@@ -336,6 +354,10 @@ async function resetEditor(): Promise<void> {
     "#pdf-edit-image-overlay",
   );
 
+  const drawOverlay = root.querySelector<SVGSVGElement>(
+    "#pdf-edit-draw-overlay",
+  );
+
   if (input) {
     input.value = "";
   }
@@ -352,6 +374,7 @@ async function resetEditor(): Promise<void> {
 
   textOverlay?.replaceChildren();
   imageOverlay?.replaceChildren();
+  drawOverlay?.replaceChildren();
 
   if (preview) {
     preview.removeAttribute("src");

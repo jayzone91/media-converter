@@ -19,6 +19,18 @@ export interface PDFImageObject {
   width: number;
 }
 
+export interface PDFDrawPoint {
+  x: number;
+  y: number;
+}
+
+export interface PDFDrawStroke {
+  id: string;
+  color: string;
+  width: number;
+  points: PDFDrawPoint[];
+}
+
 export interface PDFEditDragState {
   id: string;
   pointerId: number;
@@ -38,9 +50,11 @@ interface PDFEditState {
 
   textSequence: number;
   imageSequence: number;
+  drawSequence: number;
 
   pageTextObjects: Map<number, PDFTextObject[]>;
   pageImageObjects: Map<number, PDFImageObject[]>;
+  pageDrawStrokes: Map<number, PDFDrawStroke[]>;
 }
 
 export const editorState: PDFEditState = {
@@ -55,9 +69,11 @@ export const editorState: PDFEditState = {
 
   textSequence: 0,
   imageSequence: 0,
+  drawSequence: 0,
 
   pageTextObjects: new Map<number, PDFTextObject[]>(),
   pageImageObjects: new Map<number, PDFImageObject[]>(),
+  pageDrawStrokes: new Map<number, PDFDrawStroke[]>(),
 };
 
 export function clearEditorState(): void {
@@ -65,6 +81,7 @@ export function clearEditorState(): void {
 
   editorState.pageTextObjects.clear();
   editorState.pageImageObjects.clear();
+  editorState.pageDrawStrokes.clear();
 
   editorState.selectedTextID = null;
   editorState.selectedImageID = null;
@@ -72,6 +89,7 @@ export function clearEditorState(): void {
 
   editorState.textSequence = 0;
   editorState.imageSequence = 0;
+  editorState.drawSequence = 0;
 
   const textProperties = editorState.root?.querySelector<HTMLElement>(
     "#pdf-edit-text-properties",
@@ -81,12 +99,20 @@ export function clearEditorState(): void {
     "#pdf-edit-image-properties",
   );
 
+  const drawProperties = editorState.root?.querySelector<HTMLElement>(
+    "#pdf-edit-draw-properties",
+  );
+
   if (textProperties) {
     textProperties.hidden = true;
   }
 
   if (imageProperties) {
     imageProperties.hidden = true;
+  }
+
+  if (drawProperties) {
+    drawProperties.hidden = true;
   }
 }
 
@@ -96,6 +122,10 @@ export function getPageTextObjects(page: number): PDFTextObject[] {
 
 export function getPageImageObjects(page: number): PDFImageObject[] {
   return editorState.pageImageObjects.get(page) ?? [];
+}
+
+export function getPageDrawStrokes(page: number): PDFDrawStroke[] {
+  return editorState.pageDrawStrokes.get(page) ?? [];
 }
 
 export function findTextObject(page: number, id: string): PDFTextObject | null {
@@ -136,10 +166,37 @@ export function createImageObject(file: File): PDFImageObject {
   };
 }
 
+export function createDrawStroke(
+  color: string,
+  width: number,
+  point: PDFDrawPoint,
+): PDFDrawStroke {
+  editorState.drawSequence++;
+
+  return {
+    id: `draw-${editorState.drawSequence}`,
+    color,
+    width,
+    points: [point],
+  };
+}
+
 export function pageHasEdits(page: number): boolean {
   return (
-    getPageTextObjects(page).length > 0 || getPageImageObjects(page).length > 0
+    getPageTextObjects(page).length > 0 ||
+    getPageImageObjects(page).length > 0 ||
+    getPageDrawStrokes(page).length > 0
   );
+}
+
+export function hasDrawStrokes(): boolean {
+  for (const strokes of editorState.pageDrawStrokes.values()) {
+    if (strokes.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function clamp(value: number, min: number, max: number): number {

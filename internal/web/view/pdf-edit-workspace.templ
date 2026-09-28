@@ -108,10 +108,10 @@ templ PDFEditWorkspace() {
 							hidden
 						/>
 						<button
+							id="pdf-edit-draw-toggle"
 							class="pdf-button-secondary"
 							type="button"
-							data-pdf-edit-tool="draw"
-							disabled
+							aria-pressed="false"
 						>
 							✎ Freihand
 						</button>
@@ -211,6 +211,55 @@ templ PDFEditWorkspace() {
 							Bild löschen
 						</button>
 					</div>
+					<div
+						id="pdf-edit-draw-properties"
+						class="pdf-edit-properties pdf-edit-draw-properties"
+						hidden
+					>
+						<div class="pdf-edit-property">
+							<label for="pdf-edit-draw-color">
+								Farbe
+							</label>
+							<input
+								id="pdf-edit-draw-color"
+								class="pdf-edit-color-input"
+								type="color"
+								value="#dc2626"
+							/>
+						</div>
+						<div class="pdf-edit-property">
+							<label for="pdf-edit-draw-width">
+								Strichstärke
+							</label>
+							<div class="pdf-edit-size-field">
+								<input
+									id="pdf-edit-draw-width"
+									type="number"
+									min="1"
+									max="20"
+									step="1"
+									value="3"
+								/>
+								<span>pt</span>
+							</div>
+						</div>
+						<button
+							id="pdf-edit-draw-undo"
+							class="pdf-button-secondary"
+							type="button"
+							disabled
+						>
+							↶ Letzten Strich
+						</button>
+						<button
+							id="pdf-edit-draw-clear"
+							class="pdf-edit-delete-object"
+							type="button"
+							disabled
+						>
+							Zeichnung löschen
+						</button>
+					</div>
 					<div class="pdf-edit-canvas-shell">
 						<div
 							id="pdf-edit-canvas"
@@ -231,6 +280,12 @@ templ PDFEditWorkspace() {
 								class="pdf-edit-overlay"
 								aria-label="Textebene"
 							></div>
+							<svg
+								id="pdf-edit-draw-overlay"
+								class="pdf-edit-draw-overlay"
+								aria-label="Zeichenebene"
+								preserveAspectRatio="none"
+							></svg>
 						</div>
 					</div>
 				</section>

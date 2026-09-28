@@ -144,3 +144,45 @@
     cursor: grabbing;
   }
 }
+
+.pdf-edit-draw-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}
+
+.pdf-edit-draw-stroke {
+  pointer-events: none;
+}
+
+.pdf-edit-canvas {
+  &.drawing {
+    cursor: crosshair;
+
+    .pdf-edit-draw-overlay {
+      pointer-events: none;
+    }
+
+    .pdf-edit-text-object,
+    .pdf-edit-image-object {
+      pointer-events: none;
+    }
+  }
+}
+
+#pdf-edit-draw-toggle {
+  &.active {
+    border-color: $color-border-active;
+
+    background: $color-surface-raised;
+
+    color: $color-text;
+  }
+}

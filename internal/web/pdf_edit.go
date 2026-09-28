@@ -78,7 +78,8 @@ func (s *Server) handlePDFEdit(
 	}
 
 	if len(request.Texts) == 0 &&
-		len(request.Images) == 0 {
+		len(request.Images) == 0 &&
+		len(request.Drawings) == 0 {
 		http.Error(
 			w,
 			"Es wurden keine Änderungen vorgenommen.",
@@ -106,6 +107,23 @@ func (s *Server) handlePDFEdit(
 	textEdits, err :=
 		validatePDFTextEditRequest(
 			request.Texts,
+			upload.PageCount,
+		)
+	if err != nil {
+		handlePDFEditValidationError(
+			s,
+			w,
+			r,
+			upload.ID,
+			err,
+		)
+
+		return
+	}
+
+	drawEdits, err :=
+		validatePDFDrawEditRequest(
+			request.Drawings,
 			upload.PageCount,
 		)
 	if err != nil {
@@ -216,6 +234,7 @@ func (s *Server) handlePDFEdit(
 		outputPath,
 		textEdits,
 		imageEdits,
+		drawEdits,
 	); err != nil {
 		s.logError(
 			r,
@@ -229,6 +248,8 @@ func (s *Server) handlePDFEdit(
 			len(textEdits),
 			"images",
 			len(imageEdits),
+			"drawings",
+			len(drawEdits),
 		)
 
 		http.Error(
@@ -283,6 +304,8 @@ func (s *Server) handlePDFEdit(
 		len(textEdits),
 		"images",
 		len(imageEdits),
+		"drawings",
+		len(drawEdits),
 		"input",
 		upload.Size,
 		"output",

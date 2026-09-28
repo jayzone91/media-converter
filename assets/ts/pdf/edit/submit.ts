@@ -27,12 +27,29 @@ interface PDFEditImageRequest {
   width: number;
 }
 
+interface PDFEditDrawPointRequest {
+  x: number;
+  y: number;
+}
+
+interface PDFEditDrawRequest {
+  page: number;
+
+  color: string;
+
+  width: number;
+
+  points: PDFEditDrawPointRequest[];
+}
+
 interface PDFEditMetadata {
   upload_id: string;
 
   texts: PDFEditTextRequest[];
 
   images: PDFEditImageRequest[];
+
+  drawings: PDFEditDrawRequest[];
 }
 
 export function setupPDFEditSubmit(): boolean {
@@ -147,7 +164,13 @@ function buildEditFormData(uploadID: string): FormData | null {
 
   const images = buildImageRequest();
 
-  if (texts.length === 0 && images.metadata.length === 0) {
+  const drawings = buildDrawRequest();
+
+  if (
+    texts.length === 0 &&
+    images.metadata.length === 0 &&
+    drawings.length === 0
+  ) {
     return null;
   }
 
@@ -157,6 +180,8 @@ function buildEditFormData(uploadID: string): FormData | null {
     texts,
 
     images: images.metadata,
+
+    drawings,
   };
 
   const body = new FormData();
@@ -235,6 +260,33 @@ function buildImageRequest(): {
   };
 }
 
+function buildDrawRequest(): PDFEditDrawRequest[] {
+  const drawings: PDFEditDrawRequest[] = [];
+
+  for (const [page, strokes] of editorState.pageDrawStrokes) {
+    for (const stroke of strokes) {
+      if (stroke.points.length === 0) {
+        continue;
+      }
+
+      drawings.push({
+        page: page + 1,
+
+        color: stroke.color,
+
+        width: stroke.width,
+
+        points: stroke.points.map((point) => ({
+          x: point.x,
+          y: point.y,
+        })),
+      });
+    }
+  }
+
+  return drawings;
+}
+
 function hasEdits(): boolean {
   for (const objects of editorState.pageTextObjects.values()) {
     if (objects.length > 0) {
@@ -244,6 +296,12 @@ function hasEdits(): boolean {
 
   for (const objects of editorState.pageImageObjects.values()) {
     if (objects.length > 0) {
+      return true;
+    }
+  }
+
+  for (const strokes of editorState.pageDrawStrokes.values()) {
+    if (strokes.length > 0) {
       return true;
     }
   }

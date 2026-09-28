@@ -10,6 +10,11 @@ import (
 	"github.com/jayzone91/media-converter/internal/converter"
 )
 
+const (
+	maxPDFEditDrawStrokes         = 1000
+	maxPDFEditDrawPointsPerStroke = 5000
+)
+
 var (
 	errImageCountMismatch = errors.New(
 		"image metadata count does not match uploaded images",
@@ -26,6 +31,8 @@ type pdfEditRequest struct {
 	Texts []pdfTextEditRequest `json:"texts"`
 
 	Images []pdfImageEditRequest `json:"images"`
+
+	Drawings []pdfDrawEditRequest `json:"drawings"`
 }
 
 type pdfTextEditRequest struct {
@@ -48,6 +55,21 @@ type pdfImageEditRequest struct {
 	Y float64 `json:"y"`
 
 	Width float64 `json:"width"`
+}
+
+type pdfDrawEditRequest struct {
+	Page int `json:"page"`
+
+	Color string `json:"color"`
+
+	Width float64 `json:"width"`
+
+	Points []pdfDrawPointRequest `json:"points"`
+}
+
+type pdfDrawPointRequest struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 func decodePDFEditRequest(
@@ -188,6 +210,109 @@ func validatePDFImageEditRequest(
 		return fmt.Errorf(
 			"invalid image width",
 		)
+	}
+
+	return nil
+}
+
+func validatePDFDrawEditRequest(
+	requests []pdfDrawEditRequest,
+	pageCount int,
+) ([]converter.PDFDrawEdit, error) {
+	if len(requests) >
+		maxPDFEditDrawStrokes {
+		return nil,
+			fmt.Errorf(
+				"too many drawing strokes",
+			)
+	}
+
+	edits :=
+		make(
+			[]converter.PDFDrawEdit,
+			0,
+			len(requests),
+		)
+
+	for _, request := range requests {
+		if err := validatePDFDrawValues(
+			request,
+			pageCount,
+		); err != nil {
+			return nil, err
+		}
+
+		points :=
+			make(
+				[]converter.PDFDrawPoint,
+				0,
+				len(request.Points),
+			)
+
+		for _, point := range request.Points {
+			points =
+				append(
+					points,
+					converter.PDFDrawPoint{
+						X: point.X,
+						Y: point.Y,
+					},
+				)
+		}
+
+		edits =
+			append(
+				edits,
+				converter.PDFDrawEdit{
+					Page: request.Page,
+
+					Color: request.Color,
+
+					Width: request.Width,
+
+					Points: points,
+				},
+			)
+	}
+
+	return edits, nil
+}
+
+func validatePDFDrawValues(
+	request pdfDrawEditRequest,
+	pageCount int,
+) error {
+	if request.Page < 1 ||
+		request.Page > pageCount {
+		return fmt.Errorf(
+			"invalid drawing page",
+		)
+	}
+
+	if request.Width < 1 ||
+		request.Width > 20 {
+		return fmt.Errorf(
+			"invalid drawing width",
+		)
+	}
+
+	if len(request.Points) == 0 ||
+		len(request.Points) >
+			maxPDFEditDrawPointsPerStroke {
+		return fmt.Errorf(
+			"invalid drawing point count",
+		)
+	}
+
+	for _, point := range request.Points {
+		if point.X < 0 ||
+			point.X > 1 ||
+			point.Y < 0 ||
+			point.Y > 1 {
+			return fmt.Errorf(
+				"invalid drawing point",
+			)
+		}
 	}
 
 	return nil

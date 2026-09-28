@@ -74,7 +74,7 @@
   - [x] Text hinzufügen
   - [x] Textfelder positionieren
   - [x] Bilder hinzufügen
-  - [ ] ggf. Freihand / Zeichnen
+  - [x] ggf. Freihand / Zeichnen
   - [x] bestehende PDF-Seite als Hintergrund verwenden
   - [ ] Änderungen verlustfrei auf PDF anwenden
 
