@@ -99,7 +99,7 @@
   - [x] nicht für jeden Teil unnötig einen separaten qpdf-Prozess starten, falls vermeidbar
 
 - [ ] PDF komprimieren
-  - [ ] parallele Analyse desselben Uploads/Modus gegen doppelte Berechnung absichern
+  - [x] parallele Analyse desselben Uploads/Modus gegen doppelte Berechnung absichern
   - [ ] Ghostscript-Ergebnisse mit problematischen PDFs weiter testen
   - [ ] Formulare, Transparenzen und eingebettete Fonts testen
 

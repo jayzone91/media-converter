@@ -68,13 +68,6 @@ func (s *Server) createPDFCompressionResult(
 	upload storedPDFUpload,
 	mode string,
 ) (pdfCompressionResult, error) {
-	/*
-		Ein Request kann vor dem Eintritt in den
-		Single-Flight bereits am Cache vorbeigelaufen sein.
-
-		Daher innerhalb des exklusiven Flights
-		noch einmal prüfen.
-	*/
 	if result, ok :=
 		readCachedPDFCompressionResult(
 			upload,
@@ -96,11 +89,6 @@ func (s *Server) createPDFCompressionResult(
 
 	defer s.releaseConversionSlot()
 
-	/*
-		Während wir auf einen globalen Conversion-Slot
-		gewartet haben, könnte ein vorheriger Flight
-		ein Ergebnis erzeugt haben.
-	*/
 	if result, ok :=
 		readCachedPDFCompressionResult(
 			upload,
@@ -171,6 +159,16 @@ func (s *Server) createPDFCompressionResult(
 			err
 	}
 
+	if err :=
+		s.validatePDFCompressionOutput(
+			ctx,
+			tempPath,
+			upload.PageCount,
+		); err != nil {
+		return pdfCompressionResult{},
+			err
+	}
+
 	info, err :=
 		os.Stat(
 			tempPath,
@@ -224,14 +222,6 @@ func (s *Server) createPDFCompressionResult(
 			tempPath,
 			cachePath,
 		); err != nil {
-		/*
-			Der Single-Flight verhindert dies
-			normalerweise bereits.
-
-			Der Fallback bleibt trotzdem bestehen,
-			falls z. B. ein älterer Cache bereits
-			auf dem Dateisystem liegt.
-		*/
 		if existing, statErr :=
 			os.Stat(
 				cachePath,
