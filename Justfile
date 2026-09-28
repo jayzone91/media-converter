@@ -5,7 +5,7 @@ default:
 
 # Frontend-Abhängigkeiten installieren.
 install:
-    bun install
+    bun install --frozen-lockfile
 
 # templ Go-Code generieren.
 generate:
