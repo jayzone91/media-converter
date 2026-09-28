@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/jayzone91/media-converter/internal/converter"
 )
 
 const maxPDFRedactRequestSize int64 = 1 << 20
@@ -15,8 +16,6 @@ func (s *Server) handlePDFRedact(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	started :=
-		time.Now()
 
 	r.Body =
 		http.MaxBytesReader(
@@ -85,9 +84,10 @@ func (s *Server) handlePDFRedact(
 		return
 	}
 
-	if err := s.acquireConversionSlot(
-		r.Context(),
-	); err != nil {
+	if err :=
+		s.acquireConversionSlot(
+			r.Context(),
+		); err != nil {
 		http.Error(
 			w,
 			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
@@ -202,6 +202,35 @@ func (s *Server) handlePDFRedact(
 		return
 	}
 
+	attachmentFreePath :=
+		filepath.Join(
+			tempDir,
+			"without-attachments.pdf",
+		)
+
+	removedAttachments, err :=
+		converter.RemoveAllPDFAttachments(
+			assembledPath,
+			attachmentFreePath,
+		)
+	if err != nil {
+		s.logError(
+			r,
+			"PDF redaction attachment cleanup failed",
+			err,
+			"upload_id",
+			upload.ID,
+		)
+
+		http.Error(
+			w,
+			"Versteckte PDF-Inhalte konnten nicht sicher entfernt werden.",
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+
 	outputPath :=
 		filepath.Join(
 			tempDir,
@@ -211,7 +240,7 @@ func (s *Server) handlePDFRedact(
 	if err :=
 		s.qpdf.SanitizeRedactedPDF(
 			r.Context(),
-			assembledPath,
+			attachmentFreePath,
 			outputPath,
 		); err != nil {
 		s.logError(
@@ -294,12 +323,12 @@ func (s *Server) handlePDFRedact(
 		len(redactions),
 		"areas",
 		len(request.Redactions),
+		"attachments",
+		removedAttachments,
 		"input",
 		upload.Size,
 		"output",
 		outputSize,
-		"duration",
-		time.Since(started),
 	)
 }
 
