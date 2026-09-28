@@ -15,6 +15,10 @@ interface PDFRedactState {
 
   activeUpload: PDFUpload | null;
 
+  resultUploadID: string | null;
+
+  resultDownloadURL: string | null;
+
   activePage: number;
 
   selectedID: string | null;
@@ -28,6 +32,10 @@ export const redactState: PDFRedactState = {
   root: null,
 
   activeUpload: null,
+
+  resultUploadID: null,
+
+  resultDownloadURL: null,
 
   activePage: 0,
 

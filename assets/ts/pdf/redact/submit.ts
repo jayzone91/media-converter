@@ -1,5 +1,7 @@
 import { hasRedactions, redactState } from "./state.ts";
 
+import { showRedactResult, type PDFRedactResult } from "./result.ts";
+
 interface RedactionRequest {
   page: number;
 
@@ -14,11 +16,6 @@ interface PDFRedactRequest {
   upload_id: string;
 
   redactions: RedactionRequest[];
-}
-
-interface DownloadResponse {
-  download_url: string;
-  filename: string;
 }
 
 export function setupRedactSubmit(): boolean {
@@ -113,13 +110,13 @@ async function submitRedactions(): Promise<void> {
 
     const data = (await response.json()) as unknown;
 
-    if (!isDownloadResponse(data)) {
+    if (!isPDFRedactResult(data)) {
       throw new Error("Der Server hat eine ungültige Antwort geliefert.");
     }
 
     redactState.activeUpload = null;
 
-    window.location.assign(data.download_url);
+    showRedactResult(data);
   } catch (caught: unknown) {
     if (error) {
       error.textContent = errorMessage(caught);
@@ -155,7 +152,7 @@ function buildRedactionRequest(): RedactionRequest[] {
   return result;
 }
 
-function isDownloadResponse(value: unknown): value is DownloadResponse {
+function isPDFRedactResult(value: unknown): value is PDFRedactResult {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -164,7 +161,11 @@ function isDownloadResponse(value: unknown): value is DownloadResponse {
 
   return (
     typeof candidate.download_url === "string" &&
-    typeof candidate.filename === "string"
+    typeof candidate.filename === "string" &&
+    typeof candidate.preview_upload_id === "string" &&
+    Array.isArray(candidate.previews) &&
+    candidate.previews.every((preview) => typeof preview === "string") &&
+    typeof candidate.page_count === "number"
   );
 }
 

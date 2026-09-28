@@ -159,9 +159,46 @@ templ PDFRedactWorkspace() {
 					class="pdf-button-primary"
 					type="button"
 					disabled
-					title="Der sichere Redaction-Export wird im nächsten Schritt implementiert."
 				>
 					Schwärzung anwenden
+				</button>
+			</div>
+		</section>
+		<section
+			id="pdf-redact-result"
+			class="pdf-redact-result"
+			hidden
+		>
+			<header class="pdf-selection-header">
+				<div>
+					<strong>
+						Schwärzung abgeschlossen
+					</strong>
+					<span>
+						Kontrolliere die erzeugten Seiten vor dem Download.
+					</span>
+				</div>
+			</header>
+			<div
+				id="pdf-redact-result-pages"
+				class="pdf-redact-result-pages"
+			></div>
+			<div class="pdf-action-row">
+				<div>
+					<strong>
+						Sicher bereinigte PDF
+					</strong>
+					<span>
+						Klicke auf eine Seite, um die Vorschau in voller Größe zu öffnen.
+					</span>
+				</div>
+				<button
+					id="pdf-redact-result-download"
+					class="pdf-button-primary"
+					type="button"
+					disabled
+				>
+					PDF herunterladen
 				</button>
 			</div>
 		</section>

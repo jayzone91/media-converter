@@ -172,3 +172,55 @@
   font-size:
     $font-size-md;
 }
+
+.pdf-redact-result {
+  display: grid;
+  gap: 1rem;
+}
+
+.pdf-redact-result[hidden] {
+  display: none;
+}
+
+.pdf-redact-result-pages {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(160px, 1fr)
+  );
+  gap: 1rem;
+}
+
+.pdf-redact-result-page {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+
+  text-decoration: none;
+
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.pdf-redact-result-page:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.pdf-redact-result-page span {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pdf-redact-result-page img {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  border-radius: 0.35rem;
+}

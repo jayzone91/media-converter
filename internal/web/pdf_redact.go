@@ -304,12 +304,15 @@ func (s *Server) handlePDFRedact(
 		return
 	}
 
-	if !s.prepareDownloadResponse(
-		w,
-		r,
-		outputPath,
-		"geschwaerzt.pdf",
-	) {
+	_, ok =
+		s.preparePDFRedactResult(
+			w,
+			r,
+			outputPath,
+			outputSize,
+			upload.PageCount,
+		)
+	if !ok {
 		return
 	}
 

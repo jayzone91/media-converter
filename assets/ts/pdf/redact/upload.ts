@@ -13,6 +13,8 @@ import {
   updatePageIndicators,
 } from "./render.ts";
 
+import { clearRedactResult } from "./result.ts";
+
 import { resetRedactionInteraction } from "./interaction.ts";
 
 export function setupRedactUpload(): boolean {
@@ -80,6 +82,8 @@ export async function destroyRedactUpload(): Promise<void> {
     await deletePDFUpload(redactState.activeUpload.id);
   }
 
+  await clearRedactResult();
+
   clearRedactState();
 
   redactState.activeUpload = null;
@@ -108,6 +112,7 @@ async function selectFile(file: File): Promise<void> {
 
   try {
     if (redactState.activeUpload) {
+      await clearRedactResult();
       await deletePDFUpload(redactState.activeUpload.id);
     }
 
@@ -261,6 +266,7 @@ function selectPage(index: number): void {
 }
 
 async function resetWorkspace(): Promise<void> {
+  await clearRedactResult();
   const root = redactState.root;
 
   if (!root) {
