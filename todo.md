@@ -65,7 +65,6 @@
 - [x] Dateiendung und tatsächlichen MIME-/Dateityp gegeneinander validieren
 - [x] Ausgabe-Dateinamen konsistent aus dem ursprünglichen Dateinamen ableiten
 
-
 ## 2. PDF-Werkzeuge
 
 ### Noch offene Werkzeuge
@@ -74,7 +73,7 @@
   - [x] Funktionsumfang definieren
   - [x] Text hinzufügen
   - [x] Textfelder positionieren
-  - [ ] Bilder hinzufügen
+  - [x] Bilder hinzufügen
   - [ ] ggf. Freihand / Zeichnen
   - [x] bestehende PDF-Seite als Hintergrund verwenden
   - [ ] Änderungen verlustfrei auf PDF anwenden
@@ -137,7 +136,6 @@
   - [x] Markdown-Bilder weiterhin blockieren
   - [x] Raw HTML weiterhin nicht ausführen
 
-
 ## 3. Sicherheit
 
 ### Web-/Chromium-Rendering
@@ -170,7 +168,6 @@
 - [x] Zip-Bomb-/Decompression-Bomb-Risiken prüfen
 - [x] maximale entpackte/verarbeitete Dateigrößen definieren
 
-
 ## 4. Upload- und Dateiverwaltung
 
 - [x] Upload-Store gegen Race Conditions absichern
@@ -187,7 +184,6 @@
 
 - [ ] einheitliche Lebensdauer für temporäre Uploads dokumentieren
 
-
 ## 5. Downloads und große Dateien
 
 - [x] große Downloads nicht vollständig mit `fetch().blob()` im Browser puffern
@@ -200,7 +196,6 @@
 - [x] bestehende PDF-Handler vereinheitlichen
   - [x] Quelldatei erst nach erfolgreichem Ergebnis löschen
   - [x] Fehler während des Downloads korrekt behandeln
-
 
 ## 6. Parallelisierung und Ressourcen
 
@@ -222,7 +217,6 @@
   - [ ] PDF-Previews konkurrieren aktuell mit normalen Conversion-Slots
   - [ ] ggf. eigenen Preview-Pool verwenden
 
-
 ## 7. Fehlerbehandlung
 
 - [ ] Fehlerantworten vereinheitlichen
@@ -243,7 +237,6 @@
   - [ ] Poppler
   - [ ] Tesseract
   - [ ] Chromium
-
 
 ## 8. Logging und Observability
 
@@ -286,7 +279,6 @@
   - [ ] temporärer Speicherverbrauch
   - [ ] verfügbare Converter
 
-
 ## 9. Abhängigkeiten und Systemprüfung
 
 - [x] beim Start alle erforderlichen Tools prüfen
@@ -307,7 +299,6 @@
 - [ ] Debian-Installationsanleitung aktualisieren
 - [ ] Ghostscript explizit in Debian-Abhängigkeiten aufnehmen
 - [ ] Chromium explizit dokumentieren
-
 
 ## 10. Tests
 
@@ -363,7 +354,6 @@
 - [ ] mehrfaches Öffnen/Schließen der Workspaces testen
 - [ ] parallele Requests testen
 
-
 ## 11. UI / UX
 
 - [ ] einheitliche Drop-Zones
@@ -388,7 +378,6 @@
 
 - [ ] Mobile Layout aller Werkzeuge prüfen
 
-
 ## 12. Code-Qualität
 
 - [x] 500-LOC-Limit automatisiert über `cmd/checkloc` / `just check` durchsetzen
@@ -405,7 +394,6 @@
 - [ ] ungenutzten Code regelmäßig mit `gopls` / Compiler bereinigen
 - [ ] `go vet` in `just check` prüfen/integrieren
 - [ ] `staticcheck` optional integrieren
-
 
 ## 13. Deployment / Produktion
 
@@ -430,7 +418,6 @@
   - [ ] 100 MiB
   - [ ] 250 MiB
   - [ ] 500 MiB
-
 
 ## 14. Später / optionale Erweiterungen
 
