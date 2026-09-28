@@ -128,11 +128,11 @@
   - [x] lokale Server-IP weiterhin blockieren
   - [x] localhost / Loopback weiterhin blockieren
 
-- [ ] PDF erstellen
-  - [ ] Markdown-Modus mit größeren Dokumenten testen
-  - [ ] Tabellen über Seitenumbrüche testen
-  - [ ] lange Codeblöcke testen
-  - [ ] sehr lange URLs / Wörter testen
+- [x] PDF erstellen
+  - [x] Markdown-Modus mit größeren Dokumenten testen
+  - [x] Tabellen über Seitenumbrüche testen
+  - [x] lange Codeblöcke testen
+  - [x] sehr lange URLs / Wörter testen
   - [x] Markdown-Bilder weiterhin blockieren
   - [x] Raw HTML weiterhin nicht ausführen
 
