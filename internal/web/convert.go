@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"os"
 	"slices"
@@ -230,32 +229,9 @@ func (s *Server) handleConvert(
 			err,
 		)
 
-		if errors.Is(
-			err,
-			context.DeadlineExceeded,
-		) {
-			writeAPIError(
-				w,
-				http.StatusServiceUnavailable,
-				apiErrorQueueTimeout,
-				"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			)
-
-			return
-		}
-
-		if errors.Is(
-			err,
-			context.Canceled,
-		) {
-			return
-		}
-
-		writeAPIError(
+		writeQueueAPIError(
 			w,
-			http.StatusServiceUnavailable,
-			apiErrorInternal,
-			"Die Konvertierung konnte nicht gestartet werden.",
+			err,
 		)
 
 		return

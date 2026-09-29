@@ -12,6 +12,10 @@ import (
 
 const pdfPreviewTimeout = 2 * time.Minute
 
+var errPDFPreviewQueue = errors.New(
+	"PDF preview queue failed",
+)
+
 func (s *Server) handlePDFPreview(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -19,7 +23,11 @@ func (s *Server) handlePDFPreview(
 	id := r.PathValue("id")
 	pageValue := r.PathValue("page")
 
-	page, err := strconv.Atoi(pageValue)
+	page, err :=
+		strconv.Atoi(
+			pageValue,
+		)
+
 	if err != nil ||
 		page < 1 {
 		s.logWarn(
@@ -127,10 +135,11 @@ func (s *Server) handlePDFPreview(
 			page,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"PDF-Vorschau konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"PDF-Vorschau konnte nicht gelesen werden.",
 		)
 
 		return
@@ -178,21 +187,42 @@ func (s *Server) handlePDFPreviewError(
 
 	if errors.Is(
 		err,
-		context.DeadlineExceeded,
+		errPDFPreviewQueue,
 	) {
-		http.Error(
+		writeQueueAPIError(
 			w,
-			"PDF-Vorschau konnte nicht rechtzeitig erstellt werden.",
-			http.StatusGatewayTimeout,
+			err,
 		)
 
 		return
 	}
 
-	http.Error(
+	if errors.Is(
+		err,
+		context.DeadlineExceeded,
+	) {
+		writeAPIError(
+			w,
+			http.StatusGatewayTimeout,
+			apiErrorTimeout,
+			"PDF-Vorschau konnte nicht rechtzeitig erstellt werden.",
+		)
+
+		return
+	}
+
+	if errors.Is(
+		err,
+		context.Canceled,
+	) {
+		return
+	}
+
+	writeAPIError(
 		w,
-		"PDF-Vorschau konnte nicht erstellt werden.",
 		http.StatusInternalServerError,
+		apiErrorInternal,
+		"PDF-Vorschau konnte nicht erstellt werden.",
 	)
 }
 
@@ -208,7 +238,8 @@ func (s *Server) renderPDFPreview(
 			workloadPDFPreview,
 		); err != nil {
 		return fmt.Errorf(
-			"failed to acquire PDF preview workload: %w",
+			"%w: %w",
+			errPDFPreviewQueue,
 			err,
 		)
 	}

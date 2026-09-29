@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -132,10 +131,11 @@ func (s *Server) convertBatchUpload(
 			len(upload.Files),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"failed to create conversion archive",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Das Konvertierungsarchiv konnte nicht erstellt werden.",
 		)
 
 		return false
@@ -158,45 +158,36 @@ func (s *Server) handleConversionError(
 	target string,
 	filename string,
 ) bool {
-	if errors.Is(
-		ctx.Err(),
-		context.DeadlineExceeded,
+	if writeTimeoutAPIError(
+		w,
+		ctx,
+		"Die Konvertierung hat zu lange gedauert.",
 	) {
-		s.logError(
-			r,
-			"conversion timed out",
-			ctx.Err(),
-			"source",
-			source,
-			"target",
-			target,
-			"file",
-			filename,
-		)
-
-		http.Error(
-			w,
-			"conversion timed out",
-			http.StatusGatewayTimeout,
-		)
-
-		return false
-	}
-
-	if errors.Is(
-		ctx.Err(),
-		context.Canceled,
-	) {
-		s.logWarn(
-			r,
-			"conversion canceled",
-			"source",
-			source,
-			"target",
-			target,
-			"file",
-			filename,
-		)
+		if ctx.Err() ==
+			context.DeadlineExceeded {
+			s.logError(
+				r,
+				"conversion timed out",
+				ctx.Err(),
+				"source",
+				source,
+				"target",
+				target,
+				"file",
+				filename,
+			)
+		} else {
+			s.logWarn(
+				r,
+				"conversion canceled",
+				"source",
+				source,
+				"target",
+				target,
+				"file",
+				filename,
+			)
+		}
 
 		return false
 	}
@@ -214,10 +205,11 @@ func (s *Server) handleConversionError(
 			filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"conversion failed",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die Konvertierung ist fehlgeschlagen.",
 		)
 
 		return false
