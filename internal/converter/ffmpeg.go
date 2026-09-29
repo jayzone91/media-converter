@@ -24,32 +24,44 @@ func NewFFmpeg() (*FFmpeg, error) {
 	}, nil
 }
 
-func (c *FFmpeg) Convert(ctx context.Context, input, output string) error {
-	target := strings.TrimPrefix(
-		strings.ToLower(filepath.Ext(output)),
-		".",
-	)
+func (c *FFmpeg) Convert(
+	ctx context.Context,
+	input string,
+	output string,
+) error {
+	target :=
+		strings.TrimPrefix(
+			strings.ToLower(
+				filepath.Ext(
+					output,
+				),
+			),
+			".",
+		)
 
-	args, err := ffmpegArguments(input, output, target)
+	args, err :=
+		ffmpegArguments(
+			input,
+			output,
+			target,
+		)
+
 	if err != nil {
 		return err
 	}
 
-	cmd := externalCommandContext(
-		ctx,
-		c.binary,
-		args...,
-	)
-
-	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"ffmpeg failed: %w: %s",
-			err,
-			string(result),
+	cmd :=
+		externalCommandContext(
+			ctx,
+			c.binary,
+			args...,
 		)
-	}
 
-	return nil
+	return runExternalTool(
+		ctx,
+		"ffmpeg",
+		cmd,
+	)
 }
 
 func ffmpegArguments(input, output, target string) ([]string, error) {

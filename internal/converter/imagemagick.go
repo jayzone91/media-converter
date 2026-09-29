@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"strings"
 )
 
 type ImageMagick struct {
@@ -13,7 +12,11 @@ type ImageMagick struct {
 }
 
 func NewImageMagick() (*ImageMagick, error) {
-	binary, err := exec.LookPath("magick")
+	binary, err :=
+		exec.LookPath(
+			"magick",
+		)
+
 	if err != nil {
 		return nil,
 			fmt.Errorf(
@@ -31,35 +34,20 @@ func (c *ImageMagick) Validate(
 	ctx context.Context,
 	input string,
 ) error {
-	cmd := externalCommandContext(
+	cmd :=
+		externalCommandContext(
+			ctx,
+			c.binary,
+			"identify",
+			"-regard-warnings",
+			input,
+		)
+
+	return runExternalTool(
 		ctx,
-		c.binary,
-		"identify",
-		"-regard-warnings",
-		input,
+		"imagemagick",
+		cmd,
 	)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			return fmt.Errorf(
-				"imagemagick validation failed: %w",
-				ctxErr,
-			)
-		}
-
-		message := strings.TrimSpace(
-			string(output),
-		)
-
-		return fmt.Errorf(
-			"imagemagick validation failed: %w: %s",
-			err,
-			message,
-		)
-	}
-
-	return nil
 }
 
 func (c *ImageMagick) Convert(
@@ -67,21 +55,17 @@ func (c *ImageMagick) Convert(
 	input string,
 	output string,
 ) error {
-	cmd := externalCommandContext(
-		ctx,
-		c.binary,
-		input,
-		output,
-	)
-
-	if output, err :=
-		cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"imagemagick failed: %w: %s",
-			err,
-			string(output),
+	cmd :=
+		externalCommandContext(
+			ctx,
+			c.binary,
+			input,
+			output,
 		)
-	}
 
-	return nil
+	return runExternalTool(
+		ctx,
+		"imagemagick",
+		cmd,
+	)
 }

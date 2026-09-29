@@ -13,11 +13,23 @@ type LibreOffice struct {
 }
 
 func NewLibreOffice() (*LibreOffice, error) {
-	binary, err := exec.LookPath("soffice")
+	binary, err :=
+		exec.LookPath(
+			"soffice",
+		)
+
 	if err != nil {
-		binary, err = exec.LookPath("libreoffice")
+		binary, err =
+			exec.LookPath(
+				"libreoffice",
+			)
+
 		if err != nil {
-			return nil, fmt.Errorf("libreoffice not found: %w", err)
+			return nil,
+				fmt.Errorf(
+					"libreoffice not found: %w",
+					err,
+				)
 		}
 	}
 
@@ -26,26 +38,41 @@ func NewLibreOffice() (*LibreOffice, error) {
 	}, nil
 }
 
-func (c *LibreOffice) Convert(ctx context.Context, input, output string) error {
-	target := strings.TrimPrefix(strings.ToLower(filepath.Ext(output)), ".")
+func (c *LibreOffice) Convert(
+	ctx context.Context,
+	input string,
+	output string,
+) error {
+	target :=
+		strings.TrimPrefix(
+			strings.ToLower(
+				filepath.Ext(
+					output,
+				),
+			),
+			".",
+		)
 
-	outputDir := filepath.Dir(output)
+	outputDir :=
+		filepath.Dir(
+			output,
+		)
 
-	cmd := externalCommandContext(
+	cmd :=
+		externalCommandContext(
+			ctx,
+			c.binary,
+			"--headless",
+			"--convert-to",
+			target,
+			"--outdir",
+			outputDir,
+			input,
+		)
+
+	return runExternalTool(
 		ctx,
-		c.binary,
-		"--headless",
-		"--convert-to",
-		target,
-		"--outdir",
-		outputDir,
-		input,
+		"libreoffice",
+		cmd,
 	)
-
-	result, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("libreoffice failed: %w: %s", err, string(result))
-	}
-
-	return nil
 }
