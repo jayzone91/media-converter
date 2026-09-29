@@ -228,15 +228,15 @@
 - [x] Queue-Timeout einheitlich behandeln
 - [x] Client-Abbruch im zentralen Request-Logging nicht als Serverfehler behandeln
 
-- [ ] Fehler externer Programme vereinheitlichen
+- [x] Fehler externer Programme vereinheitlichen
   - [x] FFmpeg
   - [x] ImageMagick
   - [x] LibreOffice
-  - [ ] Ghostscript
-  - [ ] qpdf
-  - [ ] Poppler
-  - [ ] Tesseract
-  - [ ] Chromium
+  - [x] Ghostscript
+  - [x] qpdf
+  - [x] Poppler
+  - [x] Tesseract
+  - [x] Chromium
 
 ## 8. Logging und Observability
 

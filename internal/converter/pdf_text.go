@@ -114,12 +114,13 @@ func (c *PDF) extractText(
 		output,
 	)
 
-	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"pdftotext failed: %w: %s",
-			err,
-			string(result),
-		)
+	if err :=
+		runExternalTool(
+			ctx,
+			"pdftotext",
+			cmd,
+		); err != nil {
+		return err
 	}
 
 	return nil

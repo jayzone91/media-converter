@@ -180,23 +180,13 @@ func (c *PDF) renderRedactionPage(
 			prefix,
 		)
 
-	result, err :=
-		cmd.CombinedOutput()
-
-	if err != nil {
-		if ctxErr :=
-			ctx.Err(); ctxErr != nil {
-			return fmt.Errorf(
-				"PDF redaction rendering failed: %w",
-				ctxErr,
-			)
-		}
-
-		return fmt.Errorf(
-			"pdftoppm redaction rendering failed: %w: %s",
-			err,
-			string(result),
-		)
+	if err :=
+		runExternalTool(
+			ctx,
+			"pdftoppm",
+			cmd,
+		); err != nil {
+		return err
 	}
 
 	if _, err := os.Stat(

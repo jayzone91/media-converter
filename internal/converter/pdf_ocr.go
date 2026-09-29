@@ -1,13 +1,11 @@
 package converter
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
 func (c *PDF) extractTextWithOCR(
@@ -42,12 +40,13 @@ func (c *PDF) extractTextWithOCR(
 		prefix,
 	)
 
-	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"pdftoppm failed: %w: %s",
-			err,
-			string(result),
-		)
+	if err :=
+		runExternalTool(
+			ctx,
+			"pdftoppm",
+			cmd,
+		); err != nil {
+		return err
 	}
 
 	pages, err := filepath.Glob(
@@ -140,12 +139,13 @@ func (c *PDF) ocrPDFPage(
 		prefix,
 	)
 
-	if result, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf(
-			"pdftoppm failed: %w: %s",
-			err,
-			string(result),
-		)
+	if err :=
+		runExternalTool(
+			ctx,
+			"pdftoppm",
+			cmd,
+		); err != nil {
+		return "", err
 	}
 
 	imagePath := prefix + ".png"
@@ -167,32 +167,30 @@ func (c *PDF) ocrPage(
 	ctx context.Context,
 	image string,
 ) (string, error) {
-	cmd := externalCommandContext(
-		ctx,
-		c.tesseract,
-		image,
-		"stdout",
-		"--tessdata-dir",
-		c.tessdataDir,
-		"-l",
-		"deu+eng",
-		"--psm",
-		"3",
-	)
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf(
-			"tesseract failed: %w: %s",
-			err,
-			strings.TrimSpace(
-				stderr.String(),
-			),
+	cmd :=
+		externalCommandContext(
+			ctx,
+			c.tesseract,
+			image,
+			"stdout",
+			"--tessdata-dir",
+			c.tessdataDir,
+			"-l",
+			"deu+eng",
+			"--psm",
+			"3",
 		)
+
+	stdout, _, err :=
+		runExternalToolCapture(
+			ctx,
+			"tesseract",
+			cmd,
+		)
+
+	if err != nil {
+		return "", err
 	}
 
-	return string(output), nil
+	return stdout, nil
 }

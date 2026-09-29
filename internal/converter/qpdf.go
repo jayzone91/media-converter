@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
@@ -203,46 +202,37 @@ func (q *QPDF) PageCount(
 	ctx context.Context,
 	input string,
 ) (QPDFPageCountResult, error) {
-	cmd := externalCommandContext(
-		ctx,
-		q.binary,
-		"--warning-exit-0",
-		"--show-npages",
-		input,
-	)
+	cmd :=
+		externalCommandContext(
+			ctx,
+			q.binary,
+			"--warning-exit-0",
+			"--show-npages",
+			input,
+		)
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	stdout, stderr, err :=
+		runExternalToolCapture(
+			ctx,
+			"qpdf page-count",
+			cmd,
+		)
 
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			return QPDFPageCountResult{},
-				fmt.Errorf(
-					"qpdf page count failed: %w",
-					ctxErr,
-				)
-		}
-
+	if err != nil {
 		return QPDFPageCountResult{},
-			fmt.Errorf(
-				"qpdf page count failed: %w: %s",
-				err,
-				strings.TrimSpace(
-					stderr.String(),
-				),
-			)
+			err
 	}
 
-	output := strings.TrimSpace(
-		stdout.String(),
-	)
+	output :=
+		strings.TrimSpace(
+			stdout,
+		)
 
-	count, err := strconv.Atoi(
-		output,
-	)
+	count, err :=
+		strconv.Atoi(
+			output,
+		)
+
 	if err != nil {
 		return QPDFPageCountResult{},
 			fmt.Errorf(
@@ -263,7 +253,7 @@ func (q *QPDF) PageCount(
 		Count: count,
 
 		Warnings: strings.TrimSpace(
-			stderr.String(),
+			stderr,
 		),
 	}, nil
 }
@@ -273,46 +263,18 @@ func (q *QPDF) run(
 	operation string,
 	args []string,
 ) error {
-	cmd := externalCommandContext(
+	cmd :=
+		externalCommandContext(
+			ctx,
+			q.binary,
+			args...,
+		)
+
+	return runExternalTool(
 		ctx,
-		q.binary,
-		args...,
+		"qpdf "+operation,
+		cmd,
 	)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			return fmt.Errorf(
-				"qpdf %s failed: %w",
-				operation,
-				ctxErr,
-			)
-		}
-
-		message := strings.TrimSpace(
-			stderr.String(),
-		)
-
-		if message == "" {
-			message = strings.TrimSpace(
-				stdout.String(),
-			)
-		}
-
-		return fmt.Errorf(
-			"qpdf %s failed: %w: %s",
-			operation,
-			err,
-			message,
-		)
-	}
-
-	return nil
 }
 
 func groupPDFRotations(

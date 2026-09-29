@@ -301,17 +301,11 @@ func (c *WebPDF) Render(
 	}
 
 	if runErr != nil {
-		if ctxErr :=
-			ctx.Err(); ctxErr != nil {
-			return fmt.Errorf(
-				"render webpage: %w",
-				ctxErr,
-			)
-		}
-
-		return fmt.Errorf(
-			"render webpage: %w",
+		return newExternalToolError(
+			ctx,
+			"chromium",
 			runErr,
+			"",
 		)
 	}
 

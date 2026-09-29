@@ -75,12 +75,13 @@ func (c *PDF) ConvertToImages(
 		args...,
 	)
 
-	if result, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
-			"pdftoppm failed: %w: %s",
-			err,
-			string(result),
-		)
+	if err :=
+		runExternalTool(
+			ctx,
+			"pdftoppm",
+			cmd,
+		); err != nil {
+		return err
 	}
 
 	extension := "." + format

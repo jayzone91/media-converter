@@ -1,10 +1,12 @@
 package converter
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 const externalToolOutputLimit = 16 << 10
@@ -37,6 +39,8 @@ func (e *ExternalToolError) Unwrap() error {
 }
 
 type limitedToolOutput struct {
+	mu sync.Mutex
+
 	data      []byte
 	limit     int
 	truncated bool
@@ -58,6 +62,9 @@ func newLimitedToolOutput(
 func (w *limitedToolOutput) Write(
 	data []byte,
 ) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	originalLength := len(data)
 
 	if w.limit <= 0 {
@@ -100,6 +107,9 @@ func (w *limitedToolOutput) Write(
 }
 
 func (w *limitedToolOutput) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	output :=
 		strings.TrimSpace(
 			string(w.data),
@@ -115,6 +125,54 @@ func (w *limitedToolOutput) String() string {
 
 	return output +
 		"\n[Ausgabe gekürzt]"
+}
+
+func limitExternalToolOutput(
+	output string,
+) string {
+	output =
+		strings.TrimSpace(
+			output,
+		)
+
+	if len(output) <=
+		externalToolOutputLimit {
+		return output
+	}
+
+	output =
+		strings.ToValidUTF8(
+			output[:externalToolOutputLimit],
+			"�",
+		)
+
+	return strings.TrimSpace(
+		output,
+	) + "\n[Ausgabe gekürzt]"
+}
+
+func newExternalToolError(
+	ctx context.Context,
+	tool string,
+	err error,
+	output string,
+) error {
+	if err == nil {
+		return nil
+	}
+
+	if ctxErr :=
+		ctx.Err(); ctxErr != nil {
+		err = ctxErr
+	}
+
+	return &ExternalToolError{
+		Tool: tool,
+
+		Err: err,
+
+		Output: output,
+	}
 }
 
 func runExternalTool(
@@ -136,16 +194,63 @@ func runExternalTool(
 		return nil
 	}
 
-	if ctxErr :=
-		ctx.Err(); ctxErr != nil {
-		err = ctxErr
+	return newExternalToolError(
+		ctx,
+		tool,
+		err,
+		output.String(),
+	)
+}
+
+func runExternalToolCapture(
+	ctx context.Context,
+	tool string,
+	cmd *exec.Cmd,
+) (
+	string,
+	string,
+	error,
+) {
+	var stdout bytes.Buffer
+
+	stderr :=
+		newLimitedToolOutput(
+			externalToolOutputLimit,
+		)
+
+	cmd.Stdout = &stdout
+	cmd.Stderr = stderr
+
+	err := cmd.Run()
+
+	stdoutValue :=
+		stdout.String()
+
+	stderrValue :=
+		stderr.String()
+
+	if err == nil {
+		return stdoutValue,
+			stderrValue,
+			nil
 	}
 
-	return &ExternalToolError{
-		Tool: tool,
+	diagnostic :=
+		stderrValue
 
-		Err: err,
-
-		Output: output.String(),
+	if diagnostic == "" {
+		diagnostic =
+			limitExternalToolOutput(
+				stdoutValue,
+			)
 	}
+
+	return stdoutValue,
+		stderrValue,
+		newExternalToolError(
+			ctx,
+			tool,
+			err,
+			diagnostic,
+		)
 }

@@ -1,12 +1,10 @@
 package converter
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
-	"strings"
 )
 
 type Ghostscript struct {
@@ -53,53 +51,29 @@ func (g *Ghostscript) CompressPDF(
 	output string,
 	preset PDFCompressionPreset,
 ) error {
-	args, err := ghostscriptCompressionArgs(
-		input,
-		output,
-		preset,
-	)
+	args, err :=
+		ghostscriptCompressionArgs(
+			input,
+			output,
+			preset,
+		)
+
 	if err != nil {
 		return err
 	}
 
-	cmd := externalCommandContext(
+	cmd :=
+		externalCommandContext(
+			ctx,
+			g.binary,
+			args...,
+		)
+
+	return runExternalTool(
 		ctx,
-		g.binary,
-		args...,
+		"ghostscript",
+		cmd,
 	)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			return fmt.Errorf(
-				"ghostscript compression failed: %w",
-				ctxErr,
-			)
-		}
-
-		message := strings.TrimSpace(
-			stderr.String(),
-		)
-
-		if message == "" {
-			message = strings.TrimSpace(
-				stdout.String(),
-			)
-		}
-
-		return fmt.Errorf(
-			"ghostscript compression failed: %w: %s",
-			err,
-			message,
-		)
-	}
-
-	return nil
 }
 
 func ghostscriptCompressionArgs(

@@ -87,17 +87,19 @@ func (c *PDF) RenderPreviewPage(
 		tempPrefix,
 	)
 
-	result, err := cmd.CombinedOutput()
+	err =
+		runExternalTool(
+			ctx,
+			"pdftoppm",
+			cmd,
+		)
+
 	if err != nil {
 		_ = os.Remove(
 			tempPrefix + ".jpg",
 		)
 
-		return fmt.Errorf(
-			"pdftoppm preview rendering failed: %w: %s",
-			err,
-			string(result),
-		)
+		return err
 	}
 
 	renderedPath :=
