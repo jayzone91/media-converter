@@ -239,10 +239,11 @@ func (s *Server) readPDFOptimizeRequest(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return request,
@@ -251,10 +252,11 @@ func (s *Server) readPDFOptimizeRequest(
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return request,
@@ -268,10 +270,11 @@ func (s *Server) readPDFOptimizeRequest(
 		)
 
 	if !ok {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return request,
@@ -304,32 +307,22 @@ func (s *Server) handlePDFOptimizeError(
 			upload.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Diese PDF enthält eine digitale Signatur. Eine Optimierung würde die Signatur ungültig machen.",
 			http.StatusUnprocessableEntity,
+			apiErrorInvalidRequest,
+			"Diese PDF enthält eine digitale Signatur. Eine Optimierung würde die Signatur ungültig machen.",
 		)
 
 		return true
 	}
 
-	if errors.Is(
-		ctx.Err(),
-		context.Canceled,
+	if writeOperationContextAPIError(
+		w,
+		ctx,
+		err,
+		"Die PDF-Optimierung hat zu lange gedauert.",
 	) {
-		return true
-	}
-
-	if errors.Is(
-		ctx.Err(),
-		context.DeadlineExceeded,
-	) {
-		http.Error(
-			w,
-			"Die PDF-Optimierung hat zu lange gedauert.",
-			http.StatusGatewayTimeout,
-		)
-
 		return true
 	}
 
@@ -343,10 +336,11 @@ func (s *Server) handlePDFOptimizeError(
 		upload.Filename,
 	)
 
-	http.Error(
+	writeAPIError(
 		w,
-		"Die PDF konnte nicht optimiert werden.",
 		http.StatusInternalServerError,
+		apiErrorInternal,
+		"Die PDF konnte nicht optimiert werden.",
 	)
 
 	return true

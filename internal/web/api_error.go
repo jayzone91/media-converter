@@ -116,3 +116,52 @@ func writeTimeoutAPIError(
 
 	return true
 }
+
+func writeOperationContextAPIError(
+	w http.ResponseWriter,
+	ctx context.Context,
+	err error,
+	timeoutMessage string,
+) bool {
+	/*
+		Der äußere Operations-Context entscheidet zuerst.
+
+		Ist er abgelaufen, handelt es sich um den eigentlichen
+		Verarbeitungs-Timeout und nicht um einen Queue-Timeout.
+	*/
+	if writeTimeoutAPIError(
+		w,
+		ctx,
+		timeoutMessage,
+	) {
+		return true
+	}
+
+	/*
+		Ein Workload-Limiter besitzt einen eigenen Queue-Context.
+
+		Wenn dieser abläuft, ist ctx selbst weiterhin aktiv,
+		während der zurückgegebene Fehler
+		context.DeadlineExceeded enthält.
+	*/
+	if errors.Is(
+		err,
+		context.DeadlineExceeded,
+	) {
+		writeQueueAPIError(
+			w,
+			err,
+		)
+
+		return true
+	}
+
+	if errors.Is(
+		err,
+		context.Canceled,
+	) {
+		return true
+	}
+
+	return false
+}

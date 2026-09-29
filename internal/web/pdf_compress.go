@@ -82,10 +82,11 @@ func (s *Server) handlePDFCompressionAnalyze(
 			request.Mode,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die mögliche Kompression konnte nicht berechnet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die mögliche Kompression konnte nicht berechnet werden.",
 		)
 
 		return
@@ -264,10 +265,11 @@ func (s *Server) parsePDFCompressionRequest(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return request,
@@ -276,10 +278,11 @@ func (s *Server) parsePDFCompressionRequest(
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return request,
@@ -290,10 +293,11 @@ func (s *Server) parsePDFCompressionRequest(
 	if !validPDFCompressionMode(
 		request.Mode,
 	) {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültiger Kompressionsmodus.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültiger Kompressionsmodus.",
 		)
 
 		return request,
@@ -307,10 +311,11 @@ func (s *Server) parsePDFCompressionRequest(
 		)
 
 	if !ok {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return request,
@@ -356,10 +361,11 @@ func (s *Server) handlePDFCompressionError(
 		upload.Size,
 	)
 
-	http.Error(
+	writeAPIError(
 		w,
-		"Die PDF konnte nicht komprimiert werden.",
 		http.StatusInternalServerError,
+		apiErrorInternal,
+		"Die PDF konnte nicht komprimiert werden.",
 	)
 }
 
@@ -386,32 +392,20 @@ func (s *Server) handlePDFCompressionSpecialError(
 			mode,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Diese PDF enthält interaktive Formularfelder. Verwende den Modus „Verlustfrei“, damit das Formular erhalten bleibt.",
 			http.StatusUnprocessableEntity,
+			apiErrorInvalidRequest,
+			"Diese PDF enthält interaktive Formularfelder. Verwende den Modus „Verlustfrei“, damit das Formular erhalten bleibt.",
 		)
 
 		return true
 	}
 
-	if compressionWasCancelled(
-		err,
+	return writeOperationContextAPIError(
+		w,
 		ctx,
-	) {
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"Die PDF-Komprimierung hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
-		}
-
-		return true
-	}
-
-	return false
+		err,
+		"Die PDF-Komprimierung hat zu lange gedauert.",
+	)
 }

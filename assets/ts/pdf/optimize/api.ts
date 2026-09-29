@@ -1,3 +1,4 @@
+import { readAPIError } from "../../shared/api-error.ts";
 import { requestDownload, type DownloadResult } from "../../shared/download.ts";
 
 export interface PDFOptimizationAnalysis {
@@ -42,11 +43,12 @@ export async function analyzePDFOptimization(
   });
 
   if (!response.ok) {
-    const message = await response.text();
-
-    throw new Error(
-      message.trim() || "Die PDF-Optimierung konnte nicht berechnet werden.",
+    const error = await readAPIError(
+      response,
+      "Die PDF-Optimierung konnte nicht berechnet werden.",
     );
+
+    throw new Error(error.message);
   }
 
   const data = (await response.json()) as unknown;

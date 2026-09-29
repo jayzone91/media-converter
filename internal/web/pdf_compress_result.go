@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -465,19 +464,4 @@ func validPDFCompressionMode(
 	default:
 		return false
 	}
-}
-
-func compressionWasCancelled(
-	err error,
-	ctx context.Context,
-) bool {
-	return errors.Is(
-		err,
-		context.Canceled,
-	) ||
-		errors.Is(
-			err,
-			context.DeadlineExceeded,
-		) ||
-		ctx.Err() != nil
 }

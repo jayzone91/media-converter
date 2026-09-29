@@ -1,3 +1,4 @@
+import { readAPIError } from "../../shared/api-error.ts";
 import { requestDownload, type DownloadResult } from "../../shared/download.ts";
 
 export type PDFCompressionMode = "lossless" | "balanced" | "strong";
@@ -41,12 +42,12 @@ export async function analyzePDFCompression(
   });
 
   if (!response.ok) {
-    const message = await response.text();
-
-    throw new Error(
-      message.trim() ||
-        "Die mögliche Kompression konnte nicht berechnet werden.",
+    const error = await readAPIError(
+      response,
+      "Die mögliche Kompression konnte nicht berechnet werden.",
     );
+
+    throw new Error(error.message);
   }
 
   const data = (await response.json()) as unknown;
