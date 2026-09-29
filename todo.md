@@ -219,13 +219,13 @@
 
 ## 7. Fehlerbehandlung
 
-- [ ] Fehlerantworten vereinheitlichen
-- [ ] strukturierte Fehlercodes für Frontend einführen
+- [x] Fehlerantworten vereinheitlichen
+- [x] strukturierte Fehlercodes für Frontend einführen
 - [x] technische Details nur serverseitig loggen
 - [x] Benutzer bekommt kurze verständliche Fehlermeldung bei Medien-Konvertierungen
-- [ ] Fehlertexte aller PDF-Werkzeuge vereinheitlichen
-- [ ] Timeout-Fehler einheitlich behandeln
-- [ ] Queue-Timeout einheitlich behandeln
+- [x] Fehlertexte aller PDF-Werkzeuge vereinheitlichen
+- [x] Timeout-Fehler einheitlich behandeln
+- [x] Queue-Timeout einheitlich behandeln
 - [x] Client-Abbruch im zentralen Request-Logging nicht als Serverfehler behandeln
 
 - [ ] Fehler externer Programme vereinheitlichen
