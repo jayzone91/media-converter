@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +17,6 @@ func (s *Server) handlePDFRedact(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-
 	r.Body =
 		http.MaxBytesReader(
 			w,
@@ -28,6 +28,7 @@ func (s *Server) handlePDFRedact(
 		decodePDFRedactRequestBody(
 			r,
 		)
+
 	if err != nil {
 		s.logWarn(
 			r,
@@ -36,10 +37,11 @@ func (s *Server) handlePDFRedact(
 			err.Error(),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Schwärzungsdaten.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Schwärzungsdaten.",
 		)
 
 		return
@@ -51,10 +53,11 @@ func (s *Server) handlePDFRedact(
 		)
 
 	if !ok {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -65,6 +68,7 @@ func (s *Server) handlePDFRedact(
 			request,
 			upload.PageCount,
 		)
+
 	if err != nil {
 		s.logWarn(
 			r,
@@ -75,10 +79,11 @@ func (s *Server) handlePDFRedact(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Schwärzungsbereiche sind ungültig.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die Schwärzungsbereiche sind ungültig.",
 		)
 
 		return
@@ -97,10 +102,17 @@ func (s *Server) handlePDFRedact(
 		)
 
 	if err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"PDF redaction queue failed",
+			err,
+			"upload_id",
+			upload.ID,
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -113,6 +125,7 @@ func (s *Server) handlePDFRedact(
 			"",
 			"media-converter-pdf-redact-*",
 		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -120,18 +133,29 @@ func (s *Server) handlePDFRedact(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
 	}
 
-	defer os.RemoveAll(
-		tempDir,
-	)
+	defer func() {
+		if err := os.RemoveAll(
+			tempDir,
+		); err != nil {
+			s.logError(
+				r,
+				"PDF redaction cleanup failed",
+				err,
+				"directory",
+				tempDir,
+			)
+		}
+	}()
 
 	replacements :=
 		make(
@@ -157,6 +181,12 @@ func (s *Server) handlePDFRedact(
 				page,
 				pageRedactions,
 			); err != nil {
+			if requestContextEnded(
+				r.Context(),
+			) {
+				return
+			}
+
 			s.logError(
 				r,
 				"PDF redaction page rendering failed",
@@ -167,10 +197,11 @@ func (s *Server) handlePDFRedact(
 				page,
 			)
 
-			http.Error(
+			writeAPIError(
 				w,
-				"Die PDF konnte nicht sicher geschwärzt werden.",
 				http.StatusInternalServerError,
+				apiErrorInternal,
+				"Die PDF konnte nicht sicher geschwärzt werden.",
 			)
 
 			return
@@ -194,6 +225,12 @@ func (s *Server) handlePDFRedact(
 			upload.PageCount,
 			assembledPath,
 		); err != nil {
+		if requestContextEnded(
+			r.Context(),
+		) {
+			return
+		}
+
 		s.logError(
 			r,
 			"PDF redaction assembly failed",
@@ -202,10 +239,11 @@ func (s *Server) handlePDFRedact(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die geschwärzte PDF konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die geschwärzte PDF konnte nicht erstellt werden.",
 		)
 
 		return
@@ -222,6 +260,7 @@ func (s *Server) handlePDFRedact(
 			assembledPath,
 			attachmentFreePath,
 		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -231,10 +270,11 @@ func (s *Server) handlePDFRedact(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Versteckte PDF-Inhalte konnten nicht sicher entfernt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Versteckte PDF-Inhalte konnten nicht sicher entfernt werden.",
 		)
 
 		return
@@ -252,6 +292,12 @@ func (s *Server) handlePDFRedact(
 			attachmentFreePath,
 			outputPath,
 		); err != nil {
+		if requestContextEnded(
+			r.Context(),
+		) {
+			return
+		}
+
 		s.logError(
 			r,
 			"PDF redaction sanitization failed",
@@ -260,10 +306,11 @@ func (s *Server) handlePDFRedact(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die geschwärzte PDF konnte nicht sicher bereinigt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die geschwärzte PDF konnte nicht sicher bereinigt werden.",
 		)
 
 		return
@@ -274,6 +321,12 @@ func (s *Server) handlePDFRedact(
 			r.Context(),
 			outputPath,
 		); err != nil {
+		if requestContextEnded(
+			r.Context(),
+		) {
+			return
+		}
+
 		s.logError(
 			r,
 			"PDF redaction output validation failed",
@@ -282,10 +335,11 @@ func (s *Server) handlePDFRedact(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF hat die Sicherheitsprüfung nicht bestanden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF hat die Sicherheitsprüfung nicht bestanden.",
 		)
 
 		return
@@ -295,6 +349,7 @@ func (s *Server) handlePDFRedact(
 		downloadFileSize(
 			outputPath,
 		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -304,10 +359,11 @@ func (s *Server) handlePDFRedact(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
@@ -321,6 +377,7 @@ func (s *Server) handlePDFRedact(
 			outputSize,
 			upload.PageCount,
 		)
+
 	if !ok {
 		return
 	}
@@ -344,6 +401,12 @@ func (s *Server) handlePDFRedact(
 	)
 }
 
+func requestContextEnded(
+	ctx context.Context,
+) bool {
+	return ctx.Err() != nil
+}
+
 func decodePDFRedactRequestBody(
 	r *http.Request,
 ) (pdfRedactRequest, error) {
@@ -356,6 +419,7 @@ func decodePDFRedactRequestBody(
 				maxPDFRedactRequestSize+1,
 			),
 		)
+
 	if err != nil {
 		return pdfRedactRequest{},
 			fmt.Errorf(

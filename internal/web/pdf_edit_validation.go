@@ -334,9 +334,10 @@ func handlePDFEditValidationError(
 		uploadID,
 	)
 
-	http.Error(
+	writeAPIError(
 		w,
-		"Die PDF-Änderungen sind ungültig.",
 		http.StatusBadRequest,
+		apiErrorInvalidRequest,
+		"Die PDF-Änderungen sind ungültig.",
 	)
 }

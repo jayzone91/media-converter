@@ -31,10 +31,11 @@ func (s *Server) handlePDFEdit(
 			"invalid multipart request",
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return
@@ -50,6 +51,7 @@ func (s *Server) handlePDFEdit(
 				"metadata",
 			),
 		)
+
 	if err != nil {
 		s.logWarn(
 			r,
@@ -58,20 +60,22 @@ func (s *Server) handlePDFEdit(
 			err.Error(),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige PDF-Änderungen.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige PDF-Änderungen.",
 		)
 
 		return
 	}
 
 	if request.UploadID == "" {
-		http.Error(
+		writeAPIError(
 			w,
-			"Upload-ID fehlt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Upload-ID fehlt.",
 		)
 
 		return
@@ -80,10 +84,11 @@ func (s *Server) handlePDFEdit(
 	if len(request.Texts) == 0 &&
 		len(request.Images) == 0 &&
 		len(request.Drawings) == 0 {
-		http.Error(
+		writeAPIError(
 			w,
-			"Es wurden keine Änderungen vorgenommen.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Es wurden keine Änderungen vorgenommen.",
 		)
 
 		return
@@ -95,10 +100,11 @@ func (s *Server) handlePDFEdit(
 		)
 
 	if !ok {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 			http.StatusGone,
+			apiErrorUploadExpired,
+			"Die PDF ist nicht mehr verfügbar. Bitte erneut hochladen.",
 		)
 
 		return
@@ -109,6 +115,7 @@ func (s *Server) handlePDFEdit(
 			request.Texts,
 			upload.PageCount,
 		)
+
 	if err != nil {
 		handlePDFEditValidationError(
 			s,
@@ -126,6 +133,7 @@ func (s *Server) handlePDFEdit(
 			request.Drawings,
 			upload.PageCount,
 		)
+
 	if err != nil {
 		handlePDFEditValidationError(
 			s,
@@ -167,10 +175,12 @@ func (s *Server) handlePDFEdit(
 		return
 	}
 
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-pdf-edit-*",
-	)
+	tempDir, err :=
+		os.MkdirTemp(
+			"",
+			"media-converter-pdf-edit-*",
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -178,18 +188,29 @@ func (s *Server) handlePDFEdit(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
 	}
 
-	defer os.RemoveAll(
-		tempDir,
-	)
+	defer func() {
+		if err := os.RemoveAll(
+			tempDir,
+		); err != nil {
+			s.logError(
+				r,
+				"PDF edit cleanup failed",
+				err,
+				"directory",
+				tempDir,
+			)
+		}
+	}()
 
 	imageEdits, err :=
 		savePDFEditImages(
@@ -198,6 +219,7 @@ func (s *Server) handlePDFEdit(
 			request.Images,
 			upload.PageCount,
 		)
+
 	if err != nil {
 		handlePDFEditValidationError(
 			s,
@@ -210,14 +232,22 @@ func (s *Server) handlePDFEdit(
 		return
 	}
 
-	if err := s.acquireWorkload(
-		r.Context(),
-		workloadPDFCPU,
-	); err != nil {
-		http.Error(
+	if err :=
+		s.acquireWorkload(
+			r.Context(),
+			workloadPDFCPU,
+		); err != nil {
+		s.logError(
+			r,
+			"PDF edit queue failed",
+			err,
+			"upload_id",
+			upload.ID,
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -227,18 +257,20 @@ func (s *Server) handlePDFEdit(
 		workloadPDFCPU,
 	)
 
-	outputPath := filepath.Join(
-		tempDir,
-		"bearbeitet.pdf",
-	)
+	outputPath :=
+		filepath.Join(
+			tempDir,
+			"bearbeitet.pdf",
+		)
 
-	if err := s.pdf.ApplyEdits(
-		upload.Path,
-		outputPath,
-		textEdits,
-		imageEdits,
-		drawEdits,
-	); err != nil {
+	if err :=
+		s.pdf.ApplyEdits(
+			upload.Path,
+			outputPath,
+			textEdits,
+			imageEdits,
+			drawEdits,
+		); err != nil {
 		s.logError(
 			r,
 			"PDF edit failed",
@@ -255,10 +287,11 @@ func (s *Server) handlePDFEdit(
 			len(drawEdits),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die PDF konnte nicht bearbeitet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die PDF konnte nicht bearbeitet werden.",
 		)
 
 		return
@@ -268,6 +301,7 @@ func (s *Server) handlePDFEdit(
 		downloadFileSize(
 			outputPath,
 		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -277,10 +311,11 @@ func (s *Server) handlePDFEdit(
 			upload.ID,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
