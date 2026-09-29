@@ -18,26 +18,30 @@ func (s *Server) handlePDFRawUpload(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	r.Body = http.MaxBytesReader(
-		w,
-		r.Body,
-		maxFileSize+pdfUploadRequestOverhead,
-	)
+	r.Body =
+		http.MaxBytesReader(
+			w,
+			r.Body,
+			maxFileSize+pdfUploadRequestOverhead,
+		)
 
-	if err := r.ParseMultipartForm(
-		multipartMemoryLimit,
-	); err != nil {
+	if err :=
+		r.ParseMultipartForm(
+			multipartMemoryLimit,
+		); err != nil {
 		var maxBytesError *http.MaxBytesError
 
 		if errors.As(
 			err,
 			&maxBytesError,
 		) {
-			http.Error(
+			writeAPIError(
 				w,
-				"Die PDF ist größer als 512 MiB.",
 				http.StatusRequestEntityTooLarge,
+				apiErrorInvalidRequest,
+				"Die PDF ist größer als 512 MiB.",
 			)
+
 			return
 		}
 
@@ -47,11 +51,13 @@ func (s *Server) handlePDFRawUpload(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültiger Upload.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültiger Upload.",
 		)
+
 		return
 	}
 
@@ -60,33 +66,43 @@ func (s *Server) handlePDFRawUpload(
 	}
 
 	file, header, err :=
-		r.FormFile("file")
+		r.FormFile(
+			"file",
+		)
 
 	if err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Keine PDF-Datei ausgewählt.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Keine PDF-Datei ausgewählt.",
 		)
+
 		return
 	}
+
 	defer file.Close()
 
-	if err := validatePDFUpload(
-		header,
-	); err != nil {
-		http.Error(
+	if err :=
+		validatePDFUpload(
+			header,
+		); err != nil {
+		writeAPIError(
 			w,
-			err.Error(),
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			err.Error(),
 		)
+
 		return
 	}
 
-	tempDir, err := os.MkdirTemp(
-		"",
-		"media-converter-pdf-raw-*",
-	)
+	tempDir, err :=
+		os.MkdirTemp(
+			"",
+			"media-converter-pdf-raw-*",
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -96,11 +112,13 @@ func (s *Server) handlePDFRawUpload(
 			header.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
+
 		return
 	}
 
@@ -112,9 +130,10 @@ func (s *Server) handlePDFRawUpload(
 			return
 		}
 
-		if err := os.RemoveAll(
-			tempDir,
-		); err != nil {
+		if err :=
+			os.RemoveAll(
+				tempDir,
+			); err != nil {
 			s.logError(
 				r,
 				"failed to remove raw PDF temporary directory",
@@ -125,15 +144,18 @@ func (s *Server) handlePDFRawUpload(
 		}
 	}()
 
-	inputPath := filepath.Join(
-		tempDir,
-		"input.pdf",
-	)
+	inputPath :=
+		filepath.Join(
+			tempDir,
+			"input.pdf",
+		)
 
-	size, err := savePDFUpload(
-		file,
-		inputPath,
-	)
+	size, err :=
+		savePDFUpload(
+			file,
+			inputPath,
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -143,17 +165,20 @@ func (s *Server) handlePDFRawUpload(
 			header.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"PDF konnte nicht gespeichert werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"PDF konnte nicht gespeichert werden.",
 		)
+
 		return
 	}
 
-	if err := validatePDFSignature(
-		inputPath,
-	); err != nil {
+	if err :=
+		validatePDFSignature(
+			inputPath,
+		); err != nil {
 		s.logWarn(
 			r,
 			"raw PDF signature validation failed",
@@ -163,27 +188,32 @@ func (s *Server) handlePDFRawUpload(
 			size,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Datei ist keine gültige PDF.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die Datei ist keine gültige PDF.",
 		)
+
 		return
 	}
 
-	previewDirectory := filepath.Join(
-		tempDir,
-		"previews",
-	)
+	previewDirectory :=
+		filepath.Join(
+			tempDir,
+			"previews",
+		)
 
-	upload, err := s.pdfUploads.Add(
-		tempDir,
-		inputPath,
-		previewDirectory,
-		header.Filename,
-		size,
-		0,
-	)
+	upload, err :=
+		s.pdfUploads.Add(
+			tempDir,
+			inputPath,
+			previewDirectory,
+			header.Filename,
+			size,
+			0,
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -193,11 +223,13 @@ func (s *Server) handlePDFRawUpload(
 			header.Filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"PDF-Upload konnte nicht gespeichert werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"PDF-Upload konnte nicht gespeichert werden.",
 		)
+
 		return
 	}
 
@@ -223,11 +255,12 @@ func (s *Server) handlePDFRawUpload(
 		"no-store",
 	)
 
-	if err := json.NewEncoder(
-		w,
-	).Encode(
-		response,
-	); err != nil {
+	if err :=
+		json.NewEncoder(
+			w,
+		).Encode(
+			response,
+		); err != nil {
 		s.logError(
 			r,
 			"failed to encode raw PDF upload response",
