@@ -22,10 +22,15 @@ func (s *Server) handleQRGenerate(
 
 	var request qrGenerateRequest
 
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(
+		r.Body,
+	)
+
 	decoder.DisallowUnknownFields()
 
-	if err := decoder.Decode(&request); err != nil {
+	if err := decoder.Decode(
+		&request,
+	); err != nil {
 		s.logWarn(
 			r,
 			"QR generate rejected",
@@ -35,15 +40,21 @@ func (s *Server) handleQRGenerate(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
+			http.StatusBadRequest,
+			apiErrorInvalidRequest,
 			"Ungültige QR-Code-Anfrage.",
-			http.StatusBadRequest,
 		)
+
 		return
 	}
 
-	payload, err := buildQRPayload(request)
+	payload, err :=
+		buildQRPayload(
+			request,
+		)
+
 	if err != nil {
 		s.logWarn(
 			r,
@@ -54,15 +65,21 @@ func (s *Server) handleQRGenerate(
 			err.Error(),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			err.Error(),
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			err.Error(),
 		)
+
 		return
 	}
 
-	style, err := buildQRStyle(request.Style)
+	style, err :=
+		buildQRStyle(
+			request.Style,
+		)
+
 	if err != nil {
 		s.logWarn(
 			r,
@@ -73,18 +90,22 @@ func (s *Server) handleQRGenerate(
 			err.Error(),
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			err.Error(),
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			err.Error(),
 		)
+
 		return
 	}
 
-	matrix, err := qrservice.Generate(
-		payload,
-		style,
-	)
+	matrix, err :=
+		qrservice.Generate(
+			payload,
+			style,
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -94,18 +115,22 @@ func (s *Server) handleQRGenerate(
 			request.Type,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"QR Code konnte nicht erzeugt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"QR Code konnte nicht erzeugt werden.",
 		)
+
 		return
 	}
 
-	svg, err := qrservice.RenderSVG(
-		matrix,
-		style,
-	)
+	svg, err :=
+		qrservice.RenderSVG(
+			matrix,
+			style,
+		)
+
 	if err != nil {
 		s.logError(
 			r,
@@ -117,26 +142,40 @@ func (s *Server) handleQRGenerate(
 			matrix.Version,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"QR Code konnte nicht gerendert werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"QR Code konnte nicht gerendert werden.",
 		)
+
 		return
 	}
 
-	response := qrGenerateResponse{
-		SVG:             string(svg),
-		Version:         matrix.Version,
-		ErrorCorrection: string(matrix.ErrorCorrection),
-	}
+	response :=
+		qrGenerateResponse{
+			SVG: string(
+				svg,
+			),
+
+			Version: matrix.Version,
+
+			ErrorCorrection: string(
+				matrix.ErrorCorrection,
+			),
+		}
 
 	w.Header().Set(
 		"Content-Type",
 		"application/json; charset=utf-8",
 	)
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+	if err :=
+		json.NewEncoder(
+			w,
+		).Encode(
+			response,
+		); err != nil {
 		s.logError(
 			r,
 			"QR response failed",
@@ -157,6 +196,8 @@ func (s *Server) handleQRGenerate(
 		"ecc",
 		matrix.ErrorCorrection,
 		"duration",
-		time.Since(started),
+		time.Since(
+			started,
+		),
 	)
 }
