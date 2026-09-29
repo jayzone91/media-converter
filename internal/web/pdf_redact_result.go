@@ -38,10 +38,11 @@ func (s *Server) preparePDFRedactResult(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Ergebnisvorschau konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die Ergebnisvorschau konnte nicht vorbereitet werden.",
 		)
 
 		return storedPDFUpload{}, false
@@ -63,10 +64,11 @@ func (s *Server) preparePDFRedactResult(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Download konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Download konnte nicht vorbereitet werden.",
 		)
 
 		return storedPDFUpload{}, false

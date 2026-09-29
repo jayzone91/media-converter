@@ -33,10 +33,11 @@ func (s *Server) prepareDownloadResponse(
 			filename,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Download konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Download konnte nicht vorbereitet werden.",
 		)
 
 		return false
@@ -60,11 +61,12 @@ func (s *Server) prepareDownloadResponse(
 		"no-store",
 	)
 
-	if err := json.NewEncoder(
-		w,
-	).Encode(
-		response,
-	); err != nil {
+	if err :=
+		json.NewEncoder(
+			w,
+		).Encode(
+			response,
+		); err != nil {
 		s.logError(
 			r,
 			"download response failed",
@@ -82,9 +84,10 @@ func (s *Server) prepareDownloadResponse(
 func downloadFileSize(
 	path string,
 ) (int64, error) {
-	info, err := os.Stat(
-		path,
-	)
+	info, err :=
+		os.Stat(
+			path,
+		)
 
 	if err != nil {
 		return 0, err
