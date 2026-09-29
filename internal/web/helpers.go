@@ -57,19 +57,21 @@ func parseMultipartForm(
 			err,
 			&maxBytesError,
 		) {
-			http.Error(
+			writeAPIError(
 				w,
-				"upload too large",
 				http.StatusRequestEntityTooLarge,
+				apiErrorInvalidRequest,
+				"Der Upload ist größer als 512 MiB.",
 			)
 
 			return false
 		}
 
-		http.Error(
+		writeAPIError(
 			w,
-			"invalid multipart form",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültiger Upload.",
 		)
 
 		return false
