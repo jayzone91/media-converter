@@ -229,9 +229,9 @@
 - [x] Client-Abbruch im zentralen Request-Logging nicht als Serverfehler behandeln
 
 - [ ] Fehler externer Programme vereinheitlichen
-  - [ ] FFmpeg
-  - [ ] ImageMagick
-  - [ ] LibreOffice
+  - [x] FFmpeg
+  - [x] ImageMagick
+  - [x] LibreOffice
   - [ ] Ghostscript
   - [ ] qpdf
   - [ ] Poppler
