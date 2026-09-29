@@ -3,7 +3,6 @@ package web
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -55,10 +54,17 @@ func (s *Server) handlePDFWeb(
 			r.Context(),
 			workloadChromium,
 		); err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"webpage PDF queue failed",
+			err,
+			"host",
+			parsedURL.Hostname(),
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -81,10 +87,11 @@ func (s *Server) handlePDFWeb(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -126,22 +133,10 @@ func (s *Server) handlePDFWeb(
 			outputPath,
 			options,
 		); err != nil {
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"Die Webseite konnte nicht rechtzeitig geladen werden.",
-				http.StatusGatewayTimeout,
-			)
-
-			return
-		}
-
-		if errors.Is(
-			ctx.Err(),
-			context.Canceled,
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Die Webseite konnte nicht rechtzeitig geladen werden.",
 		) {
 			return
 		}
@@ -160,10 +155,11 @@ func (s *Server) handlePDFWeb(
 			request.Landscape,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die Webseite konnte nicht als PDF erstellt werden.",
 			http.StatusBadGateway,
+			apiErrorInternal,
+			"Die Webseite konnte nicht als PDF erstellt werden.",
 		)
 
 		return
@@ -181,10 +177,11 @@ func (s *Server) handlePDFWeb(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
@@ -243,10 +240,11 @@ func readPDFWebRequest(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return request,
@@ -266,10 +264,11 @@ func readPDFWebRequest(
 		)
 
 	if err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Bitte eine gültige HTTP- oder HTTPS-Adresse eingeben.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Bitte eine gültige HTTP- oder HTTPS-Adresse eingeben.",
 		)
 
 		return request,
@@ -283,13 +282,14 @@ func readPDFWebRequest(
 			r.Context(),
 			parsedURL,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
+			http.StatusBadRequest,
+			apiErrorInvalidRequest,
 			pdfWebTargetError(
 				r,
 				parsedURL,
 			),
-			http.StatusBadRequest,
 		)
 
 		return request,
@@ -312,11 +312,13 @@ func readPDFWebRequest(
 
 	switch request.PaperSize {
 	case "a4", "letter":
+
 	default:
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültiges Papierformat.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültiges Papierformat.",
 		)
 
 		return request,
@@ -345,10 +347,11 @@ func readPDFWebRequest(
 		"print":
 
 	default:
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Darstellungsart.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Darstellungsart.",
 		)
 
 		return request,
@@ -362,10 +365,11 @@ func readPDFWebRequest(
 			request.WaitMilliseconds,
 		)*time.Millisecond >
 			maxPDFWebWait {
-		http.Error(
+		writeAPIError(
 			w,
-			"Die zusätzliche Wartezeit darf maximal 10 Sekunden betragen.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Die zusätzliche Wartezeit darf maximal 10 Sekunden betragen.",
 		)
 
 		return request,

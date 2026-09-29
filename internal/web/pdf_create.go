@@ -61,10 +61,11 @@ func (s *Server) handlePDFCreate(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Das PDF-Dokument konnte nicht vorbereitet werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Das PDF-Dokument konnte nicht vorbereitet werden.",
 		)
 
 		return
@@ -75,10 +76,15 @@ func (s *Server) handlePDFCreate(
 			r.Context(),
 			workloadChromium,
 		); err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"PDF create queue failed",
+			err,
+		)
+
+		writeQueueAPIError(
 			w,
-			"Der Server ist momentan ausgelastet. Bitte später erneut versuchen.",
-			http.StatusServiceUnavailable,
+			err,
 		)
 
 		return
@@ -101,10 +107,11 @@ func (s *Server) handlePDFCreate(
 			err,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Temporäres Verzeichnis konnte nicht erstellt werden.",
 		)
 
 		return
@@ -157,22 +164,10 @@ func (s *Server) handlePDFCreate(
 			outputPath,
 			options,
 		); err != nil {
-		if errors.Is(
-			ctx.Err(),
-			context.DeadlineExceeded,
-		) {
-			http.Error(
-				w,
-				"Die PDF-Erstellung hat zu lange gedauert.",
-				http.StatusGatewayTimeout,
-			)
-
-			return
-		}
-
-		if errors.Is(
-			ctx.Err(),
-			context.Canceled,
+		if writeTimeoutAPIError(
+			w,
+			ctx,
+			"Die PDF-Erstellung hat zu lange gedauert.",
 		) {
 			return
 		}
@@ -189,10 +184,11 @@ func (s *Server) handlePDFCreate(
 			request.Markdown,
 		)
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Das PDF-Dokument konnte nicht erstellt werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Das PDF-Dokument konnte nicht erstellt werden.",
 		)
 
 		return
@@ -237,10 +233,11 @@ func readPDFCreateRequest(
 		decoder.Decode(
 			&request,
 		); err != nil {
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültige Anfrage.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültige Anfrage.",
 		)
 
 		return request,
@@ -257,11 +254,13 @@ func readPDFCreateRequest(
 
 	switch request.PaperSize {
 	case "a4", "letter":
+
 	default:
-		http.Error(
+		writeAPIError(
 			w,
-			"Ungültiges Papierformat.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Ungültiges Papierformat.",
 		)
 
 		return request,
@@ -286,10 +285,11 @@ func readPDFCreateRequest(
 			err,
 			errPDFCreateMarkdownImage,
 		) {
-			http.Error(
+			writeAPIError(
 				w,
-				"Bilder sind im Markdown-Modus aus Sicherheitsgründen nicht erlaubt.",
 				http.StatusBadRequest,
+				apiErrorInvalidRequest,
+				"Bilder sind im Markdown-Modus aus Sicherheitsgründen nicht erlaubt.",
 			)
 
 			return request,
@@ -297,10 +297,11 @@ func readPDFCreateRequest(
 				false
 		}
 
-		http.Error(
+		writeAPIError(
 			w,
-			"Das Dokument ist leer oder enthält ungültige Angaben.",
 			http.StatusBadRequest,
+			apiErrorInvalidRequest,
+			"Das Dokument ist leer oder enthält ungültige Angaben.",
 		)
 
 		return request,
@@ -326,10 +327,17 @@ func writeCreatedPDF(
 		)
 
 	if err != nil {
-		http.Error(
+		s.logError(
+			r,
+			"failed to inspect created PDF",
+			err,
+		)
+
+		writeAPIError(
 			w,
-			"Die erzeugte PDF konnte nicht gelesen werden.",
 			http.StatusInternalServerError,
+			apiErrorInternal,
+			"Die erzeugte PDF konnte nicht gelesen werden.",
 		)
 
 		return
